@@ -9,13 +9,12 @@ public class BaseballSimulator {
 	public static final int INNINGS_PER_GAME = 9;
 	
 	static int currentBasesSituation = 0;
-	static int[] gameScore = {0, 0};
 	static int[] hits = {0, 0};
 	static int[] errors = {0, 0};
-	static int[][] boxScore = new int[2][25];
+	static int[] battingOrder = {1, 1};
+	static Game game = new Game();
 	static int inning = 1;
 	static int top = 0;
-	static boolean walkOff = false;
 	
 	static Map<Integer, String> baseSituations  = new HashMap<Integer, String>() {
 		private static final long serialVersionUID = 1L;
@@ -56,8 +55,8 @@ public class BaseballSimulator {
 
 	public static void main(String[] args) {
 		System.out.println("START GAME");
-		while (inning <= INNINGS_PER_GAME || gameScore[0] == gameScore[1]) {
-			for (top = 0; top < 2; top++) {
+		while (inning <= INNINGS_PER_GAME || game.getScore(inning)[0] == game.getScore(inning)[1]) {
+			for (int top = 0; top < 2; top++) {
 				System.out.println((top == 0 ? "TOP " : "BOTTOM ") + " INN: " + inning);
 				int outs  = 0;
 				boolean gameTiedStartOfAB;
@@ -67,7 +66,7 @@ public class BaseballSimulator {
 					int rando = getRandomNumberInRange(1, 1000);
 					
 					System.out.print("BATTER ");
-					gameTiedStartOfAB = gameScore[1] == gameScore[0] ? true : false;
+					gameTiedStartOfAB = game.getScore(inning)[1] == game.getScore(inning)[0] ? true : false;
 					if (rando <= 680) {
 						System.out.print("OUT ");
 						getOutResult();
@@ -82,8 +81,7 @@ public class BaseballSimulator {
 								System.out.println("WALKED");
 							}
 							if (baseSituations.get(currentBasesSituation).equalsIgnoreCase("BASES LOADED")) {
-								gameScore[top]++;
-								boxScore[top][inning-1]++;
+								game.setBoxScore(top, inning, 1);
 							}
 							currentBasesSituation = getBasesSituationWalk(currentBasesSituation);
 						}
@@ -93,15 +91,15 @@ public class BaseballSimulator {
 							currentBasesSituation = getBasesSituation(noOutResult, currentBasesSituation);
 							hits[top]++;
 						}
-						if (inning >= 9 && gameScore[1] > gameScore[0] && gameTiedStartOfAB) {
-							walkOff = true;
+						if (inning >= 9 && game.getScore(inning)[1] > game.getScore(inning)[0] && gameTiedStartOfAB) {
+							game.setWalkOff(true);
 							System.out.println("WALKOFF ");
 							break;
 						}
 					}
 				} // outs
 				// Did game end after top of inning?
-				if (inning >= 9 && gameScore[1] > gameScore[0] && top == 0) {
+				if (inning >= 9 && game.getScore(inning)[1] > game.getScore(inning)[0] && top == 0) {
 					System.out.println("GAME OVER AFTER " + (inning - 1) + " 1/2");
 					break;
 				}
@@ -113,18 +111,18 @@ public class BaseballSimulator {
 			System.out.println("EXTRA INNINGS: " + (inning - 1));
 		}
 		// Output Box Score
-		for (top = 0; top < 2; top++) {
+		for (int top = 0; top < 2; top++) {
 			String team = (top == 0) ? "Vis:  " : "Home: ";
 			System.out.print(team + " ");
-			for (int i = 1; i <= (inning - 1); i++) {
-				if (i == (inning - 1) && (gameScore[1] > gameScore[0] && top == 1) && !walkOff) {
+			for (int i = 1; i < inning; i++) {
+				if (i == (inning - 1) && (game.getScore(i)[1] > game.getScore(i)[0] && top == 1) && !game.isWalkOff()) {
 					System.out.print("X "); // Bottom of inning was not necessary
 				}
 				else {
-					System.out.print(boxScore[top][i-1] + " ");
+					System.out.print(game.getBoxScore(top, i-1) + (game.getBoxScore(top == 0 ? 1: 0, i-1) < 10 ? " " : "  "));
 				}
 			}
-			System.out.println(" " + gameScore[top] + (gameScore[top] < 10 ? " " : "") + " " + hits[top] + (hits[top] < 10 ? " " : "") + " " +  errors[top]);
+			System.out.println(" " + game.getScore(inning)[top] + (game.getScore(inning)[top] < 10 ? " " : "") + " " + hits[top] + (hits[top] < 10 ? " " : "") + " " +  errors[top]);
 		}
 	}
 	
@@ -191,10 +189,9 @@ public class BaseballSimulator {
 		if (event == 4) {
 			runsScored++;
 		}
-		gameScore[top] += runsScored;
-		boxScore[top][inning-1] += runsScored;
+		game.setBoxScore(top, inning, runsScored);
 		if (runsScored > 0) {
-			System.out.println(runsScored + " RUNS SCORED - VIS: " + gameScore[0]  + " HOME: " + gameScore[1]);
+			System.out.println(runsScored + " RUNS SCORED - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
 		}
 	}
 	
