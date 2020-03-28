@@ -7,10 +7,11 @@ public class Game {
 	int[] errors = {0, 0};
 	int[][] boxScore = new int[2][25];
 	boolean walkOff = false;
-	Player[] lineup = new Player[NUM_OF_PLAYERS_IN_LINEUP];
+	Player[][] lineup;
+	String[] teamNames = new String[2];
 
 	public Game() {
-		// TODO Auto-generated constructor stub
+		this.lineup = new Player[2][NUM_OF_PLAYERS_IN_LINEUP];
 	}
 
 	public int getCurrentBasesSituation() {
@@ -30,20 +31,28 @@ public class Game {
 		return score;
 	}
 
-	public int getHits(int inning) {
-		return hits[inning];
+	public int[] getHits() {
+		return hits;
 	}
 
-	public void setHits(int inning, int hits) {
-		this.hits[inning] = hits;
+	public void setHits(int top, int hits) {
+		this.hits[top] = hits;
+	}
+	
+	public void incrementHits(int top) {
+		this.hits[top]++;
 	}
 
-	public int getErrors(int inning) {
-		return errors[inning];
+	public int[] getErrors() {
+		return errors;
 	}
 
-	public void setErrors(int inning, int errors) {
-		this.errors[inning] = errors;
+	public void setErrors(int top, int errors) {
+		this.errors[top] = errors;
+	}
+	
+	public void incrementErrors(int top) {
+		this.errors[top]++;
 	}
 
 	public int getBoxScore(int top, int inning) {
@@ -62,12 +71,20 @@ public class Game {
 		this.walkOff = walkOff;
 	}
 
-	public Player[] getLineup() {
+	public Player[][] getLineup() {
 		return lineup;
 	}
 
-	public void setLineup(Player[] lineup) {
+	public void setLineup(Player[][] lineup) {
 		this.lineup = lineup;
+	}
+
+	public String[] getTeamNames() {
+		return teamNames;
+	}
+
+	public void setTeamNames(String[] teamNames) {
+		this.teamNames = teamNames;
 	}
 
 }

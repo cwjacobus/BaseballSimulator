@@ -4,9 +4,16 @@ public class Player {
 	
 	private String name;
 	private int id;
-
+	private Stats gameStats;
+	
 	public Player() {
-		// TODO Auto-generated constructor stub
+		this.gameStats = new Stats();
+	}
+
+	public Player(String name, int id) {
+		this.name = name;
+		this.id = id;
+		this.gameStats = new Stats();
 	}
 
 	public String getName() {
@@ -23,6 +30,14 @@ public class Player {
 
 	public void setId(int id) {
 		this.id = id;
+	}
+
+	public Stats getGameStats() {
+		return gameStats;
+	}
+
+	public void setGameStats(Stats gameStats) {
+		this.gameStats = gameStats;
 	}
 
 }
