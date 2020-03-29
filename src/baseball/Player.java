@@ -4,16 +4,16 @@ public class Player {
 	
 	private String name;
 	private int id;
-	private Stats gameStats;
+	private BattingStats gameStats;
 	
 	public Player() {
-		this.gameStats = new Stats();
+		this.gameStats = new BattingStats();
 	}
 
 	public Player(String name, int id) {
 		this.name = name;
 		this.id = id;
-		this.gameStats = new Stats();
+		this.gameStats = new BattingStats();
 	}
 
 	public String getName() {
@@ -32,11 +32,11 @@ public class Player {
 		this.id = id;
 	}
 
-	public Stats getGameStats() {
+	public BattingStats getGameStats() {
 		return gameStats;
 	}
 
-	public void setGameStats(Stats gameStats) {
+	public void setGameStats(BattingStats gameStats) {
 		this.gameStats = gameStats;
 	}
 

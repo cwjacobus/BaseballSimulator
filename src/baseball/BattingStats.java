@@ -1,6 +1,6 @@
 package baseball;
 
-public class Stats {
+public class BattingStats {
 	
 	private int atBats;
 	private int hits;
@@ -13,8 +13,10 @@ public class Stats {
 	private int errors;
 	private int runs;
 	private int rbis;
+	private int stolenBases;
+	private int plateAppearances;
 
-	public Stats() {
+	public BattingStats() {
 		// TODO Auto-generated constructor stub
 	}
 
@@ -136,6 +138,22 @@ public class Stats {
 
 	public void setRbis(int rbis) {
 		this.rbis = rbis;
+	}
+
+	public int getStolenBases() {
+		return stolenBases;
+	}
+
+	public void setStolenBases(int stolenBases) {
+		this.stolenBases = stolenBases;
+	}
+
+	public int getPlateAppearances() {
+		return plateAppearances;
+	}
+
+	public void setPlateAppearances(int plateAppearances) {
+		this.plateAppearances = plateAppearances;
 	}
 
 }
