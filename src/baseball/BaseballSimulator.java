@@ -75,14 +75,15 @@ public class BaseballSimulator {
 		game.setTeamNames(teamNames);
 		getPlayerStats();
 		while (inning <= INNINGS_PER_GAME || game.getScore(inning)[0] == game.getScore(inning)[1]) {
-			for (int top = 0; top < 2; top++) {
+			for (top = 0; top < 2; top++) {
 				System.out.println((top == 0 ? "\n***TOP " : "***BOTTOM ") + " INN: " + inning + " ***");
 				int outs  = 0;
 				boolean gameTiedStartOfAB;
 				currentBasesSituation = 0;
 				Arrays.fill(runnersOnBase, 0);
 				while (outs < OUTS_PER_INNING) {
-					System.out.println(game.getLineup()[top][battingOrder[top] - 1].getName() + " UP OUTS: " + outs + " " + baseSituations.get(currentBasesSituation));
+					System.out.println(game.getLineup()[top][battingOrder[top] - 1].getName() + " UP OUTS: " + outs + " " 
+						+ baseSituations.get(currentBasesSituation) + " " + runnersOnBase[0] + " " + runnersOnBase[1] + " " + runnersOnBase[2]);
 					BattingStats currentBatterGameStats = game.getLineup()[top][battingOrder[top] - 1].getGameStats();
 					int rando = getRandomNumberInRange(1, 1000);
 					
@@ -104,7 +105,7 @@ public class BaseballSimulator {
 						}
 						else {
 							int noOutResult = getNotOutResult(currentBatterGameStats);
-							setRunsScored(noOutResult, top);
+							setRunsScored(noOutResult);
 							setCurrentBasesSituation(noOutResult);
 							game.incrementHits(top);
 							currentBatterGameStats.incrementHits();
@@ -167,7 +168,6 @@ public class BaseballSimulator {
 	
 	private static int getOutResult(BattingStats currentBatterGameStats, int outs) {
 		int outsRecorded = 1;
-		boolean doublePlay = false;
 		int notOutRando = getRandomNumberInRange(1, 100);
 		if (notOutRando > 1 && notOutRando <= 20) {
 			System.out.println(outTypes.get(1)); // STRUCK OUT
@@ -191,7 +191,7 @@ public class BaseballSimulator {
 		return outsRecorded;
 	}
 	
-	private static void setRunsScored(int event, int top) {
+	private static void setRunsScored(int event) {
 		int runsScored = 0;
 		if ((currentBasesSituation&4) == 4) { // man on third scored
    			runsScored++;
@@ -217,6 +217,28 @@ public class BaseballSimulator {
 			basesSituation = basesSituation % 8;
 		}
 		currentBasesSituation = basesSituation;
+		
+		for (int x = 0; x < event; x++) {
+			for (int y = 2; y >= 0; y--) {
+				if (y > 0) {
+					runnersOnBase[y] = runnersOnBase[y-1];
+				}
+				else if (y == 0 && x == 0) {
+					runnersOnBase[y] = game.getLineup()[top][battingOrder[top] - 1].getId();
+				}
+				else {
+					runnersOnBase[0] = 0;
+				}
+				/*if (player on third id != 0) {
+					player on third.incrmentRuns;
+					runsScored++;
+				}*/
+			}
+			/*game.setBoxScore(top, inning, runsScored);
+			if (runsScored > 0) {
+				System.out.println(runsScored + " RUNS SCORED - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
+			}*/
+		}
 	}
 	
 	private static void setBasesSituationWalk() {
@@ -235,6 +257,18 @@ public class BaseballSimulator {
 			System.out.println("RUN SCORES - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
 		}
 		currentBasesSituation = basesSituation;
+		
+		// No need for checking empty, 2, 3, or 23
+		if ((runnersOnBase[0] != 0 && runnersOnBase[1] != 0 && runnersOnBase[2] != 0) || // 123
+			(runnersOnBase[0] != 0 && runnersOnBase[1] != 0 && runnersOnBase[2] == 0)) { // 12
+			// if 123 runner 3 scores
+			runnersOnBase[2] = runnersOnBase[1]; // runner 2->3
+		}
+		if (runnersOnBase[0] != 0) { // Runner on first
+			runnersOnBase[1] = runnersOnBase[0]; // runner 1->2
+		}
+		runnersOnBase[0] = game.getLineup()[top][battingOrder[top] - 1].getId();
+		
 	}
 	
 	private static void setBasesSituationDoublePlay() {
