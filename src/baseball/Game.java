@@ -74,6 +74,10 @@ public class Game {
 	public Player[][] getLineup() {
 		return lineup;
 	}
+	
+	public Player[] getLineup(int top) {
+		return lineup[top];
+	}
 
 	public void setLineup(Player[][] lineup) {
 		this.lineup = lineup;

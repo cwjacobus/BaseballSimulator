@@ -131,6 +131,10 @@ public class BattingStats {
 	public void setRuns(int runs) {
 		this.runs = runs;
 	}
+	
+	public void incrementRuns() {
+		this.runs++;
+	}
 
 	public int getRbis() {
 		return rbis;

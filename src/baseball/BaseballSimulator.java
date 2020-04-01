@@ -22,23 +22,31 @@ public class BaseballSimulator {
 	static Game game = new Game();
 	static int inning = 1;
 	static int top = 0;
-	static int currentBasesSituation = 0;
 	static int[] runnersOnBase = {0, 0, 0};
 	static int[] battingOrder = {1, 1};
 	static HashMap<Integer, BattingStats> playerStatsMap = new HashMap<Integer, BattingStats>();
 	static int year = 2019;
 	
+	static final int BASES_EMPTY = 0;
+	static final int MAN_ON_FIRST = 1;
+	static final int MAN_ON_SECOND = 2;
+	static final int MAN_ON_FIRST_AND_SECOND = 3;
+	static final int MAN_ON_THIRD = 4;
+	static final int MAN_ON_FIRST_AND_THIRD = 5;
+	static final int MAN_ON_SECOND_AND_THIRD = 6;
+	static final int BASES_LOADED = 7;
+	
 	static Map<Integer, String> baseSituations  = new HashMap<Integer, String>() {
 		private static final long serialVersionUID = 1L;
 	{
-	    put(0, "BASES EMPTY");
-	    put(1, "MAN ON FIRST");
-	    put(2, "MAN ON SECOND");
-	    put(3, "MAN ON FIRST AND SECOND");
-	    put(4, "MAN ON THIRD");
-	    put(5, "MAN ON FIRST AND THIRD");
-	    put(6, "MAN ON SECOND AND THIRD");
-	    put(7, "BASES LOADED");
+	    put(BASES_EMPTY, "BASES EMPTY");
+	    put(MAN_ON_FIRST, "MAN ON FIRST");
+	    put(MAN_ON_SECOND, "MAN ON SECOND");
+	    put(MAN_ON_FIRST_AND_SECOND, "MAN ON FIRST AND SECOND");
+	    put(MAN_ON_THIRD, "MAN ON THIRD");
+	    put(MAN_ON_FIRST_AND_THIRD, "MAN ON FIRST AND THIRD");
+	    put(MAN_ON_SECOND_AND_THIRD, "MAN ON SECOND AND THIRD");
+	    put(BASES_LOADED, "BASES LOADED");
 	}};
 	
 	static Map<Integer, String> positions  = new HashMap<Integer, String>() {
@@ -79,11 +87,10 @@ public class BaseballSimulator {
 				System.out.println((top == 0 ? "\n***TOP " : "***BOTTOM ") + " INN: " + inning + " ***");
 				int outs  = 0;
 				boolean gameTiedStartOfAB;
-				currentBasesSituation = 0;
 				Arrays.fill(runnersOnBase, 0);
 				while (outs < OUTS_PER_INNING) {
 					System.out.println(game.getLineup()[top][battingOrder[top] - 1].getName() + " UP OUTS: " + outs + " " 
-						+ baseSituations.get(currentBasesSituation) + " " + runnersOnBase[0] + " " + runnersOnBase[1] + " " + runnersOnBase[2]);
+						+ baseSituations.get(getCurrentBasesSituation()) + " " + runnersOnBase[0] + " " + runnersOnBase[1] + " " + runnersOnBase[2]);
 					BattingStats currentBatterGameStats = game.getLineup()[top][battingOrder[top] - 1].getGameStats();
 					int rando = getRandomNumberInRange(1, 1000);
 					
@@ -101,12 +108,11 @@ public class BaseballSimulator {
 								System.out.println("WALKED");
 								currentBatterGameStats.incrementWalks();
 							}
-							setBasesSituationWalk();
+							updateBasesSituationWalk();
 						}
 						else {
 							int noOutResult = getNotOutResult(currentBatterGameStats);
-							setRunsScored(noOutResult);
-							setCurrentBasesSituation(noOutResult);
+							updateBasesSituationAndScore(noOutResult);
 							game.incrementHits(top);
 							currentBatterGameStats.incrementHits();
 							currentBatterGameStats.incrementAtBats();
@@ -191,77 +197,49 @@ public class BaseballSimulator {
 		return outsRecorded;
 	}
 	
-	private static void setRunsScored(int event) {
-		int runsScored = 0;
-		if ((currentBasesSituation&4) == 4) { // man on third scored
-   			runsScored++;
-   		}
-		if (event > 1 && (currentBasesSituation&2) == 2) { // man on second scored
-			runsScored++;
-		}
-		if (event > 2 && (currentBasesSituation&1) == 1) { // man on first scored
-			runsScored++;
-		}
-		if (event == 4) { // batter scored (home run)
-			runsScored++; 
-		}
-		game.setBoxScore(top, inning, runsScored);
-		if (runsScored > 0) {
-			System.out.println(runsScored + " RUNS SCORED - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
-		}
-	}
 	
-	private static void setCurrentBasesSituation(int event) {
-		int basesSituation = (currentBasesSituation << event) + (int)Math.pow(2, (event - 1));
+	private static void updateBasesSituationAndScore(int event) {
+	  /*int basesSituation = (currentBasesSituation << event) + (int)Math.pow(2, (event - 1));
 		if (basesSituation > 7) {
 			basesSituation = basesSituation % 8;
 		}
-		currentBasesSituation = basesSituation;
+		currentBasesSituation = basesSituation;*/
 		
-		for (int x = 0; x < event; x++) {
-			for (int y = 2; y >= 0; y--) {
-				if (y > 0) {
-					runnersOnBase[y] = runnersOnBase[y-1];
+		int runsScored = 0;
+		for (int e = 0; e < event; e++) {
+			for (int b = 3; b >= 0; b--) {
+				if (b > 0) {
+					if (b != 3) {
+						runnersOnBase[b] = runnersOnBase[b-1];
+					}
 				}
-				else if (y == 0 && x == 0) {
-					runnersOnBase[y] = game.getLineup()[top][battingOrder[top] - 1].getId();
+				else if (b == 0 && e == 0) {
+					runnersOnBase[b] = game.getLineup()[top][battingOrder[top] - 1].getId();
 				}
 				else {
 					runnersOnBase[0] = 0;
 				}
-				/*if (player on third id != 0) {
-					player on third.incrmentRuns;
+				if (b == 3 && runnersOnBase[2] != 0) {     // If runner on 3rd run scores
+					int bo = getBattingOrderForPlayer(runnersOnBase[2]);
+					game.getLineup()[top][bo - 1].getGameStats().incrementRuns();
 					runsScored++;
-				}*/
+				}
 			}
-			/*game.setBoxScore(top, inning, runsScored);
-			if (runsScored > 0) {
-				System.out.println(runsScored + " RUNS SCORED - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
-			}*/
+		}
+		if (runsScored > 0) {
+			game.setBoxScore(top, inning, runsScored);
+			System.out.println(runsScored + " RUNS SCORED - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
 		}
 	}
 	
-	private static void setBasesSituationWalk() {
-		int basesSituation = 7; // Bases loaded is default for loaded, 2+3, 1+3 or 1+2
-		if (baseSituations.get(currentBasesSituation).equals("BASES EMPTY")) {
-			basesSituation = 1; // 1
-		}
-		else if (baseSituations.get(currentBasesSituation).equals("MAN ON FIRST") || baseSituations.get(currentBasesSituation).equals("MAN ON SECOND")) {
-			basesSituation = 3; // 1+2
-		}
-		else if (baseSituations.get(currentBasesSituation).equals("MAN ON THIRD")) {
-			basesSituation = 5; // 1+3
-		}
-		else if (baseSituations.get(currentBasesSituation).equals("BASES LOADED")) {
-			game.setBoxScore(top, inning, 1); // run scores
-			System.out.println("RUN SCORES - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
-		}
-		currentBasesSituation = basesSituation;
-		
+	private static void updateBasesSituationWalk() {
 		// No need for checking empty, 2, 3, or 23
-		if ((runnersOnBase[0] != 0 && runnersOnBase[1] != 0 && runnersOnBase[2] != 0) || // 123
-			(runnersOnBase[0] != 0 && runnersOnBase[1] != 0 && runnersOnBase[2] == 0)) { // 12
+		if (getCurrentBasesSituation() == BASES_LOADED || getCurrentBasesSituation() == MAN_ON_FIRST_AND_SECOND) { // 123 or 12
 			// if 123 runner 3 scores
+			if (getCurrentBasesSituation() == BASES_LOADED) {
+				int bo = getBattingOrderForPlayer(runnersOnBase[2]);
+				game.getLineup()[top][bo - 1].getGameStats().incrementRuns();
+			}
 			runnersOnBase[2] = runnersOnBase[1]; // runner 2->3
 		}
 		if (runnersOnBase[0] != 0) { // Runner on first
@@ -271,17 +249,20 @@ public class BaseballSimulator {
 		
 	}
 	
-	private static void setBasesSituationDoublePlay() {
-		int basesSituation = 0; // Covers bases loaded and 1 and 13
-		boolean runScores = baseSituations.get(currentBasesSituation).equals("BASES LOADED") || baseSituations.get(currentBasesSituation).equals("MAN ON FIRST AND THIRD");
-		if (baseSituations.get(currentBasesSituation).equals("MAN ON FIRST AND SECOND") || baseSituations.get(currentBasesSituation).equals("BASES LOADED")) {
-			basesSituation = 4;
+	private static void updateBasesSituationDoublePlay() {
+		//int basesSituation = 0; // Covers bases loaded and 1 and 13
+		boolean runScores = getCurrentBasesSituation() == BASES_LOADED || getCurrentBasesSituation() == MAN_ON_FIRST_AND_THIRD;
+		if (getCurrentBasesSituation() == MAN_ON_FIRST_AND_SECOND || getCurrentBasesSituation() == BASES_LOADED) {
+			runnersOnBase[2] = runnersOnBase[1]; // 2->3
 		}
+		runnersOnBase[1] = 0;
+		runnersOnBase[0] = 0;
 		if (runScores) {
 			game.setBoxScore(top, inning, 1); // run scores
 			System.out.println("RUN SCORES - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
+			int bo = getBattingOrderForPlayer(runnersOnBase[2]);
+			game.getLineup()[top][bo - 1].getGameStats().incrementRuns();
 		}
-		currentBasesSituation = basesSituation;
 	}
 	
 	private static boolean doublePlay(boolean ground, int outs) {
@@ -290,9 +271,9 @@ public class BaseballSimulator {
 		
 		//TBD factor in speed of runner
 		// Ground ball, less than 2 outs, man on first
-		if (ground && outs != 2 && dpRando > 1 && (currentBasesSituation&1) == 1) {
+		if (ground && outs != 2 && dpRando > 1 && runnersOnBase[0] != 0) {
 			dp = true;
-			setBasesSituationDoublePlay();
+			updateBasesSituationDoublePlay();
 			System.out.println("DOUBLE PLAY");
 		}
 		return dp;
@@ -462,72 +443,111 @@ public class BaseballSimulator {
 		}
 	}
 	
-	private static void getPlayerStats() {
-	  //String getStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_hitting_tm.bam?league_list_id='mlb'&game_type='R'&season='2019'&player_id='592450'";	
-      //String searchAPI = "http://lookup-service-prod.mlb.com/json/named.search_player_all.bam?sport_code='mlb'&active_sw='Y'&name_part='Aaron Judge'";
-        try {
-        	
-        	BattingStats battingStats;
-        	for (int top = 0; top < 2; top++) {
-    			for (int p = 0; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
-    				String searchAPI = "http://lookup-service-prod.mlb.com/json/named.search_player_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&name_part=";
-    				String getStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_hitting_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + year + "%27&player_id=";
-    				battingStats = new BattingStats();
-    				String playerName = game.getLineup()[top][p].getName();
-    				System.out.print(playerName + " ");
-    				searchAPI += ("%27" + playerName.replace(" ", "%20") + "%27");
-    				URL obj = new URL(searchAPI);
-    				HttpURLConnection con = (HttpURLConnection)obj.openConnection();
-    				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream())); 
-    				JSONObject row = null;
-    				try {
-    					JSONObject player = new JSONObject(in.readLine());
-    					JSONObject searchAll = new JSONObject(player.getString("search_player_all"));
-    					JSONObject queryResults = new JSONObject(searchAll.getString("queryResults"));
-    					row = new JSONObject(queryResults.getString("row"));
-    					String playerId = row.getString("player_id");
-        				game.getLineup()[top][p].setId(Integer.parseInt(playerId));
-        				System.out.println(playerId + " ");
-        				getStatsAPI += ("%27" + playerId + "%27");
-    				}
-    				catch (JSONException e) {
-    			        System.out.println("PLAYER NOT FOUND!");
-    			        continue;
-    				}
-    				in.close();
-    				obj = new URL(getStatsAPI);
-		        	con = (HttpURLConnection)obj.openConnection();
-		        	in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-		        	try {	
-		        		JSONObject playerStats = new JSONObject(in.readLine());
-		        		JSONObject sportHittingTm = new JSONObject(playerStats.getString("sport_hitting_tm"));
-		        		JSONObject queryResults = new JSONObject(sportHittingTm.getString("queryResults"));
-		        		row = new JSONObject(queryResults.getString("row"));
-		        		battingStats.setHomeRuns(Integer.parseInt(row.getString("hr")));
-		        		battingStats.setDoubles(Integer.parseInt(row.getString("d")));
-		        		battingStats.setTriples(Integer.parseInt(row.getString("t")));
-		        		battingStats.setAtBats(Integer.parseInt(row.getString("ab")));
-		        		battingStats.setPlateAppearances(Integer.parseInt(row.getString("tpa")));
-		        		battingStats.setHits(Integer.parseInt(row.getString("h")));
-		        		battingStats.setHitByPitch(Integer.parseInt(row.getString("hbp")));
-		        		battingStats.setWalks(Integer.parseInt(row.getString("bb")));
-			        	playerStatsMap.put(game.getLineup()[top][p].getId(), battingStats);
-		        	}
-    				catch (JSONException e) {
-    			        System.out.println("STATS NOT FOUND!");
-    			        continue;
-    				}
-		        	in.close();	
-    			}
-    		}
-        	
-        }
-        catch (MalformedURLException e) { 	
-        	e.printStackTrace();
-        }
-        catch (IOException e) { 
-        	e.printStackTrace();
-        }     		
+	static int getBattingOrderForPlayer(int id) {
+		int order = 1;
+		
+		for (Player p : game.getLineup(top)) {
+			if (p.getId() == id) {
+				return order;
+			}
+			order++;
+		}
+		return order;
 	}
+	
+	static int getCurrentBasesSituation() {
+		int baseSituation = BASES_EMPTY;
+		if ((runnersOnBase[0] != 0 && runnersOnBase[1] == 0 && runnersOnBase[2] == 0)) {
+			baseSituation = MAN_ON_FIRST;
+		}
+		else if ((runnersOnBase[0] == 0 && runnersOnBase[1] != 0 && runnersOnBase[2] == 0)) {
+			baseSituation = MAN_ON_SECOND;
+		}
+		else if ((runnersOnBase[0] == 0 && runnersOnBase[1] == 0 && runnersOnBase[2] != 0)) {
+			baseSituation = MAN_ON_THIRD;
+		}
+		else if ((runnersOnBase[0] != 0 && runnersOnBase[1] != 0 && runnersOnBase[2] == 0)) {
+			baseSituation = MAN_ON_FIRST_AND_SECOND;
+		}
+		else if ((runnersOnBase[0] == 0 && runnersOnBase[1] != 0 && runnersOnBase[2] != 0)) {
+			baseSituation = MAN_ON_SECOND_AND_THIRD;
+		}
+		else if ((runnersOnBase[0] != 0 && runnersOnBase[1] == 0 && runnersOnBase[2] != 0)) {
+			baseSituation = MAN_ON_FIRST_AND_THIRD;
+		}
+		else if ((runnersOnBase[0] != 0 && runnersOnBase[1] != 0 && runnersOnBase[2] != 0)) {
+			baseSituation = BASES_LOADED;
+		}
+		return baseSituation;
+	}
+	
+	// Get player stats from API
+	private static void getPlayerStats() {
+		  //String getStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_hitting_tm.bam?league_list_id='mlb'&game_type='R'&season='2019'&player_id='592450'";	
+	      //String searchAPI = "http://lookup-service-prod.mlb.com/json/named.search_player_all.bam?sport_code='mlb'&active_sw='Y'&name_part='Aaron Judge'";
+	        try {
+	        	
+	        	BattingStats battingStats;
+	        	for (int top = 0; top < 2; top++) {
+	    			for (int p = 0; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
+	    				String searchAPI = "http://lookup-service-prod.mlb.com/json/named.search_player_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&name_part=";
+	    				String getStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_hitting_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + year + "%27&player_id=";
+	    				battingStats = new BattingStats();
+	    				String playerName = game.getLineup()[top][p].getName();
+	    				System.out.print(playerName + " ");
+	    				searchAPI += ("%27" + playerName.replace(" ", "%20") + "%27");
+	    				URL obj = new URL(searchAPI);
+	    				HttpURLConnection con = (HttpURLConnection)obj.openConnection();
+	    				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream())); 
+	    				JSONObject row = null;
+	    				try {
+	    					JSONObject player = new JSONObject(in.readLine());
+	    					JSONObject searchAll = new JSONObject(player.getString("search_player_all"));
+	    					JSONObject queryResults = new JSONObject(searchAll.getString("queryResults"));
+	    					row = new JSONObject(queryResults.getString("row"));
+	    					String playerId = row.getString("player_id");
+	        				game.getLineup()[top][p].setId(Integer.parseInt(playerId));
+	        				System.out.println(playerId + " ");
+	        				getStatsAPI += ("%27" + playerId + "%27");
+	    				}
+	    				catch (JSONException e) {
+	    			        System.out.println("PLAYER NOT FOUND!");
+	    			        continue;
+	    				}
+	    				in.close();
+	    				obj = new URL(getStatsAPI);
+			        	con = (HttpURLConnection)obj.openConnection();
+			        	in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+			        	try {	
+			        		JSONObject playerStats = new JSONObject(in.readLine());
+			        		JSONObject sportHittingTm = new JSONObject(playerStats.getString("sport_hitting_tm"));
+			        		JSONObject queryResults = new JSONObject(sportHittingTm.getString("queryResults"));
+			        		row = new JSONObject(queryResults.getString("row"));
+			        		battingStats.setHomeRuns(Integer.parseInt(row.getString("hr")));
+			        		battingStats.setDoubles(Integer.parseInt(row.getString("d")));
+			        		battingStats.setTriples(Integer.parseInt(row.getString("t")));
+			        		battingStats.setAtBats(Integer.parseInt(row.getString("ab")));
+			        		battingStats.setPlateAppearances(Integer.parseInt(row.getString("tpa")));
+			        		battingStats.setHits(Integer.parseInt(row.getString("h")));
+			        		battingStats.setHitByPitch(Integer.parseInt(row.getString("hbp")));
+			        		battingStats.setWalks(Integer.parseInt(row.getString("bb")));
+				        	playerStatsMap.put(game.getLineup()[top][p].getId(), battingStats);
+			        	}
+	    				catch (JSONException e) {
+	    			        System.out.println("STATS NOT FOUND!");
+	    			        continue;
+	    				}
+			        	in.close();	
+	    			}
+	    		}
+	        	
+	        }
+	        catch (MalformedURLException e) { 	
+	        	e.printStackTrace();
+	        }
+	        catch (IOException e) { 
+	        	e.printStackTrace();
+	        }     		
+		}
 
 }
