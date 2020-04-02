@@ -62,6 +62,10 @@ public class Game {
 	public void setBoxScore(int top, int inning, int score) {
 		this.boxScore[top][inning - 1] += score;
 	}
+	
+	public void incrementBoxScore(int top, int inning) {
+		this.boxScore[top][inning - 1]++;
+	}
 
 	public boolean isWalkOff() {
 		return walkOff;

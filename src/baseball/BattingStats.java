@@ -15,6 +15,7 @@ public class BattingStats {
 	private int rbis;
 	private int stolenBases;
 	private int plateAppearances;
+	private int caughtStealing;
 
 	public BattingStats() {
 		// TODO Auto-generated constructor stub
@@ -158,6 +159,34 @@ public class BattingStats {
 
 	public void setPlateAppearances(int plateAppearances) {
 		this.plateAppearances = plateAppearances;
+	}
+	
+	public int getCaughtStealing() {
+		return caughtStealing;
+	}
+
+	public void setCaughtStealing(int caughtStealing) {
+		this.caughtStealing = caughtStealing;
+	}
+
+	public int getSpeedRating() {
+		int sr = 0;
+		if (stolenBases > 20) { 
+			sr = 5;
+		}
+		else if (stolenBases > 10 && stolenBases <= 20) { // 11-20
+			sr = 4;
+		}
+		else if (stolenBases > 6 && stolenBases <= 10) {  // 7-10
+			sr = 3;
+		}
+		else if (stolenBases > 2 && stolenBases <= 6) {  // 3-6
+			sr = 2;
+		}
+		else if (stolenBases > 0) { // 1-2
+			sr = 1;
+		}
+		return sr;
 	}
 
 }

@@ -26,6 +26,7 @@ public class BaseballSimulator {
 	static int[] battingOrder = {1, 1};
 	static HashMap<Integer, BattingStats> playerStatsMap = new HashMap<Integer, BattingStats>();
 	static int year = 2019;
+	static DecimalFormat df = new DecimalFormat(".000");
 	
 	static final int BASES_EMPTY = 0;
 	static final int MAN_ON_FIRST = 1;
@@ -35,6 +36,13 @@ public class BaseballSimulator {
 	static final int MAN_ON_FIRST_AND_THIRD = 5;
 	static final int MAN_ON_SECOND_AND_THIRD = 6;
 	static final int BASES_LOADED = 7;
+	
+	static final int STRUCK_OUT = 0;
+	static final int GROUNDED_OUT = 1;
+	static final int FLEW_OUT = 2;
+	static final int FLEW_OUT_DEEP = 3;
+	static final int LINED_OUT = 4;
+	static final int POPPED_OUT = 5;
 	
 	static Map<Integer, String> baseSituations  = new HashMap<Integer, String>() {
 		private static final long serialVersionUID = 1L;
@@ -66,11 +74,12 @@ public class BaseballSimulator {
 	static Map<Integer, String> outTypes  = new HashMap<Integer, String>() {
 		private static final long serialVersionUID = 1L;
 	{
-	    put(1, "STRUCK OUT");
-	    put(2, "GROUNDED OUT");
-	    put(3, "FLEW OUT");
-	    put(4, "LINED OUT");
-	    put(5, "POPPED OUT");
+	    put(STRUCK_OUT, "STRUCK OUT");
+	    put(GROUNDED_OUT, "GROUNDED OUT");
+	    put(FLEW_OUT, "FLEW OUT");
+	    put(FLEW_OUT_DEEP, "FLEW OUT DEEP");
+	    put(LINED_OUT, "LINED OUT");
+	    put(POPPED_OUT, "POPPED OUT");
 	}};
 
 	public static void main(String[] args) {
@@ -92,6 +101,10 @@ public class BaseballSimulator {
 					System.out.println(game.getLineup()[top][battingOrder[top] - 1].getName() + " UP OUTS: " + outs + " " 
 						+ baseSituations.get(getCurrentBasesSituation()) + " " + runnersOnBase[0] + " " + runnersOnBase[1] + " " + runnersOnBase[2]);
 					BattingStats currentBatterGameStats = game.getLineup()[top][battingOrder[top] - 1].getGameStats();
+					outs += stealBase(outs);
+					if (outs == OUTS_PER_INNING) {
+						break;
+					}
 					int rando = getRandomNumberInRange(1, 1000);
 					
 					gameTiedStartOfAB = game.getScore(inning)[1] == game.getScore(inning)[0] ? true : false;
@@ -108,7 +121,7 @@ public class BaseballSimulator {
 								System.out.println("WALKED");
 								currentBatterGameStats.incrementWalks();
 							}
-							updateBasesSituationWalk();
+							updateBasesSituationWalkAndHbp();
 						}
 						else {
 							int noOutResult = getNotOutResult(currentBatterGameStats);
@@ -176,23 +189,29 @@ public class BaseballSimulator {
 		int outsRecorded = 1;
 		int notOutRando = getRandomNumberInRange(1, 100);
 		if (notOutRando > 1 && notOutRando <= 20) {
-			System.out.println(outTypes.get(1)); // STRUCK OUT
+			System.out.println(outTypes.get(STRUCK_OUT)); // STRUCK OUT
 			currentBatterGameStats.incremenStrikeOuts();
 		}
 		else if (notOutRando > 20 && notOutRando <= 50) {
-			System.out.println(outTypes.get(2) + " TO " + positions.get(getRandomNumberInRange(1, 6))); //GROUNDED OUT
+			System.out.println(outTypes.get(GROUNDED_OUT) + " TO " + positions.get(getRandomNumberInRange(1, 6))); //GROUNDED OUT
 			if (doublePlay(true, outs)) {
 				outsRecorded++;
 			}
 		}
-		else if (notOutRando > 50 && notOutRando <= 80) {
-			System.out.println(outTypes.get(3) + " TO " + positions.get(getRandomNumberInRange(7, 9))); // FLEW OUT
+		else if (notOutRando > 50 && notOutRando <= 65) {
+			System.out.println(outTypes.get(FLEW_OUT) +  " TO " + positions.get(getRandomNumberInRange(7, 9))); // FLEW OUT
+		}
+		else if (notOutRando > 65 && notOutRando <= 80) {
+			System.out.println(outTypes.get(FLEW_OUT_DEEP) +  " TO " + positions.get(getRandomNumberInRange(7, 9))); // FLEW OUT DEEP
+			if (outs < 2 && runnersOnBase[2] != 0) {
+				updateBasesSituationSacFly();
+			}
 		}
 		else if (notOutRando > 80 && notOutRando < 90) {
-			System.out.println(outTypes.get(4) + " TO " + positions.get(getRandomNumberInRange(1, 9, 2))); // LINED OUT
+			System.out.println(outTypes.get(LINED_OUT) + " TO " + positions.get(getRandomNumberInRange(1, 9, 2))); // LINED OUT
 		}
 		else {
-			System.out.println(outTypes.get(5) + " TO " + positions.get(getRandomNumberInRange(1, 6))); // POPPED OUT
+			System.out.println(outTypes.get(POPPED_OUT) + " TO " + positions.get(getRandomNumberInRange(1, 6))); // POPPED OUT
 		}
 		return outsRecorded;
 	}
@@ -232,13 +251,15 @@ public class BaseballSimulator {
 		}
 	}
 	
-	private static void updateBasesSituationWalk() {
+	private static void updateBasesSituationWalkAndHbp() {
 		// No need for checking empty, 2, 3, or 23
 		if (getCurrentBasesSituation() == BASES_LOADED || getCurrentBasesSituation() == MAN_ON_FIRST_AND_SECOND) { // 123 or 12
 			// if 123 runner 3 scores
 			if (getCurrentBasesSituation() == BASES_LOADED) {
+				game.incrementBoxScore(top, inning); // run scores
 				int bo = getBattingOrderForPlayer(runnersOnBase[2]);
 				game.getLineup()[top][bo - 1].getGameStats().incrementRuns();
+				System.out.println("1 RUN SCORED - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
 			}
 			runnersOnBase[2] = runnersOnBase[1]; // runner 2->3
 		}
@@ -247,6 +268,14 @@ public class BaseballSimulator {
 		}
 		runnersOnBase[0] = game.getLineup()[top][battingOrder[top] - 1].getId();
 		
+	}
+	
+	private static void updateBasesSituationSacFly() {
+		game.incrementBoxScore(top, inning); // run scores
+		int bo = getBattingOrderForPlayer(runnersOnBase[2]);
+		game.getLineup()[top][bo - 1].getGameStats().incrementRuns();
+		runnersOnBase[2] = 0;	
+		System.out.println("SAC FLY - 1 RUN SCORED - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
 	}
 	
 	private static void updateBasesSituationDoublePlay() {
@@ -258,7 +287,7 @@ public class BaseballSimulator {
 		runnersOnBase[1] = 0;
 		runnersOnBase[0] = 0;
 		if (runScores) {
-			game.setBoxScore(top, inning, 1); // run scores
+			game.incrementBoxScore(top, inning); // run scores
 			System.out.println("RUN SCORES - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
 			int bo = getBattingOrderForPlayer(runnersOnBase[2]);
 			game.getLineup()[top][bo - 1].getGameStats().incrementRuns();
@@ -277,6 +306,30 @@ public class BaseballSimulator {
 			System.out.println("DOUBLE PLAY");
 		}
 		return dp;
+	}
+	
+	private static int stealBase(int outs) {
+		int outStealing = 0;
+		if (runnersOnBase[0] != 0 && runnersOnBase[1] == 0) {
+			int bo = getBattingOrderForPlayer(runnersOnBase[0]);
+			BattingStats bs = playerStatsMap.get(game.getLineup()[top][bo - 1].getId());
+			int stealRando = getRandomNumberInRange(0, 5) + bs.getSpeedRating();
+			if (stealRando > 5) {
+				double stealPctg = (double)bs.getStolenBases()/(bs.getStolenBases() + bs.getCaughtStealing());
+				System.out.print(game.getLineup()[top][bo - 1].getName() + " ATTEMPTING TO STEAL SECOND - SR: " + bs.getSpeedRating() + " SP: " + df.format(stealPctg));
+				if (getRandomNumberInRange(1, 10) < stealPctg*10) { // safe
+					System.out.println("- SAFE!");
+					runnersOnBase[1] = runnersOnBase[0];
+				}
+				else { // out
+					System.out.println("- OUT!");
+					outStealing = 1;
+				}
+				runnersOnBase[0] = 0;
+				System.out.println("OUTS: " + (outs + outStealing) + " " + baseSituations.get(getCurrentBasesSituation()) + " " + runnersOnBase[0] + " " + runnersOnBase[1] + " " + runnersOnBase[2]);
+			}
+		}
+		return outStealing;
 	}
 	
 	private static int getRandomNumberInRange(int min, int max) {
@@ -363,7 +416,6 @@ public class BaseballSimulator {
 				System.out.print(gameStats.getRbis() + (gameStats.getRbis() > 9 ? "  " : "   "));
 				System.out.print(gameStats.getWalks() + (gameStats.getWalks() > 9 ? "  " : "   "));
 				System.out.print(gameStats.getStrikeOuts() + (gameStats.getStrikeOuts() > 9 ? "  " : "   "));
-				DecimalFormat df = new DecimalFormat(".000");
 				String roundAvgString = ".000";
 				String roundOBPString = ".000";
 				String roundSlgString = ".000";
@@ -445,7 +497,6 @@ public class BaseballSimulator {
 	
 	static int getBattingOrderForPlayer(int id) {
 		int order = 1;
-		
 		for (Player p : game.getLineup(top)) {
 			if (p.getId() == id) {
 				return order;
@@ -507,7 +558,7 @@ public class BaseballSimulator {
 	    					row = new JSONObject(queryResults.getString("row"));
 	    					String playerId = row.getString("player_id");
 	        				game.getLineup()[top][p].setId(Integer.parseInt(playerId));
-	        				System.out.println(playerId + " ");
+	        				System.out.print(playerId + " ");
 	        				getStatsAPI += ("%27" + playerId + "%27");
 	    				}
 	    				catch (JSONException e) {
@@ -531,7 +582,10 @@ public class BaseballSimulator {
 			        		battingStats.setHits(Integer.parseInt(row.getString("h")));
 			        		battingStats.setHitByPitch(Integer.parseInt(row.getString("hbp")));
 			        		battingStats.setWalks(Integer.parseInt(row.getString("bb")));
+			        		battingStats.setStolenBases(Integer.parseInt(row.getString("sb")));
+			        		battingStats.setCaughtStealing(Integer.parseInt(row.getString("cs")));
 				        	playerStatsMap.put(game.getLineup()[top][p].getId(), battingStats);
+				        	System.out.println(" SR: " + battingStats.getSpeedRating());
 			        	}
 	    				catch (JSONException e) {
 	    			        System.out.println("STATS NOT FOUND!");
