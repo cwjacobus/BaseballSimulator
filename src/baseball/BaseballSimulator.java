@@ -7,8 +7,10 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.json.JSONException;
@@ -27,6 +29,7 @@ public class BaseballSimulator {
 	static HashMap<Integer, BattingStats> playerStatsMap = new HashMap<Integer, BattingStats>();
 	static int year = 2019;
 	static DecimalFormat df = new DecimalFormat(".000");
+	static List<String> randoLog = new ArrayList<String>();
 	
 	static final int BASES_EMPTY = 0;
 	static final int MAN_ON_FIRST = 1;
@@ -153,6 +156,10 @@ public class BaseballSimulator {
 		}
 		// Output Box Score
 		 outputBoxScore();
+		 
+		 /*for (int i = 0; i < randoLog.size(); i++) {
+			 System.out.println(randoLog.get(i));
+		 }*/
 	}
 	
 	private static int getNotOutResult(BattingStats currentBatterGameStats) {
@@ -200,11 +207,18 @@ public class BaseballSimulator {
 		}
 		else if (notOutRando > 50 && notOutRando <= 65) {
 			System.out.println(outTypes.get(FLEW_OUT) +  " TO " + positions.get(getRandomNumberInRange(7, 9))); // FLEW OUT
+			if (outs < 2 && runnersOnBase[2] != 0) {
+				if (updateBasesSituationSacFly(false) == 1) {
+					outsRecorded++;
+				}
+			}
 		}
 		else if (notOutRando > 65 && notOutRando <= 80) {
 			System.out.println(outTypes.get(FLEW_OUT_DEEP) +  " TO " + positions.get(getRandomNumberInRange(7, 9))); // FLEW OUT DEEP
 			if (outs < 2 && runnersOnBase[2] != 0) {
-				updateBasesSituationSacFly();
+				if (updateBasesSituationSacFly(true) == 1) {
+					outsRecorded++;
+				}
 			}
 		}
 		else if (notOutRando > 80 && notOutRando < 90) {
@@ -270,16 +284,28 @@ public class BaseballSimulator {
 		
 	}
 	
-	private static void updateBasesSituationSacFly() {
-		game.incrementBoxScore(top, inning); // run scores
+	private static int updateBasesSituationSacFly(boolean deep) {
+		int outAdvancing = 0;
 		int bo = getBattingOrderForPlayer(runnersOnBase[2]);
-		game.getLineup()[top][bo - 1].getGameStats().incrementRuns();
-		runnersOnBase[2] = 0;	
-		System.out.println("SAC FLY - 1 RUN SCORED - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
+		BattingStats bs = playerStatsMap.get(game.getLineup()[top][bo - 1].getId());
+		int sacRando = getRandomNumberInRange(0, 5) + bs.getSpeedRating();
+		if (deep || (!deep && bs.getSpeedRating() > 2)) {  // If going to try to score on fly ball
+			System.out.println(game.getLineup()[top][bo - 1].getName() + " TAGGING UP ON A FLY BALL");
+			if (deep ||(sacRando > 5)) { // safe
+				game.incrementBoxScore(top, inning); // run scores
+				game.getLineup()[top][bo - 1].getGameStats().incrementRuns();
+				System.out.println("SAC FLY - 1 RUN SCORED - VIS: " + game.getScore(inning)[0]  + " HOME: " + game.getScore(inning)[1]);
+			}
+			else { // out
+				outAdvancing = 1;
+				System.out.println("OUT AT THE PLATE");
+			}
+			runnersOnBase[2] = 0;
+		}
+		return outAdvancing;
 	}
 	
 	private static void updateBasesSituationDoublePlay() {
-		//int basesSituation = 0; // Covers bases loaded and 1 and 13
 		boolean runScores = getCurrentBasesSituation() == BASES_LOADED || getCurrentBasesSituation() == MAN_ON_FIRST_AND_THIRD;
 		if (getCurrentBasesSituation() == MAN_ON_FIRST_AND_SECOND || getCurrentBasesSituation() == BASES_LOADED) {
 			runnersOnBase[2] = runnersOnBase[1]; // 2->3
@@ -336,7 +362,9 @@ public class BaseballSimulator {
 		if (min >= max) {
 			throw new IllegalArgumentException("max must be greater than min");
 		}
-		return (int)(Math.random() * ((max - min) + 1)) + min;
+		int rando = (int)(Math.random() * ((max - min) + 1)) + min;
+		randoLog.add(rando + " " + min + " to " + max);
+		return rando;
 	}
 	
 	private static int getRandomNumberInRange(int min, int max, int excluding) {
@@ -347,6 +375,7 @@ public class BaseballSimulator {
 		if (rando == excluding) {
 			rando = getRandomNumberInRange(min, max, excluding);
 		}
+		randoLog.add(rando + " " + min + " to " + max + " ex: " + excluding);
 		return rando;
 	}
 	
