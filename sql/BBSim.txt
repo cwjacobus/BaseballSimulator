@@ -1,11 +1,12 @@
 CREATE TABLE MLB_TEAM
 (
-TEAM_ID int(11) PRIMARY KEY,
+MLB_TEAM_ID int(11) PRIMARY KEY AUTO_INCREMENT,
+TEAM_ID int(11),
 FULL_NAME varchar(50),
 SHORT_NAME varchar(10),
-LEAGUE varchar(5)
+LEAGUE varchar(5),
+FIRST_YEAR_PLAYED int(11),
+ACTIVE boolean
 );
 
-insert into MLB_TEAM (TEAM_ID, FULL_NAME, SHORT_NAME, LEAGUE) values (147, 'New York Yankees', 'NYY', 'AL');
-
-/json/named.team_all_season.bam?sport_code='mlb'&all_star_sw='N'&sort_order='name_asc'&season='2019'
+insert into MLB_TEAM (TEAM_ID, FULL_NAME, SHORT_NAME, LEAGUE, ACTIVE) values (147, 'New York Yankees', 'NYY', 'AL', true);
