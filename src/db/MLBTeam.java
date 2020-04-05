@@ -1,21 +1,19 @@
 package db;
 
-public class Team {
-	Integer mlbTeamId;
-	Integer teamId;
-	String fullTeamName;
-	String shortTeamName;
-	String league;
-	Integer firstYearPlayed;
-	boolean active;
+public class MLBTeam {
+	private Integer mlbTeamId;
+	private Integer teamId;
+	private Integer mlbFranchiseId;
+	private String fullTeamName;
+	private String shortTeamName;
+	private String league;
 
-	public Team(Integer teamId, String fullTeamName, String shortTeamName, String league, Integer firstYearPlayed, boolean active) {
+	public MLBTeam(Integer teamId, Integer mlbFranchiseId, String fullTeamName, String shortTeamName, String league) {
 		this.teamId = teamId;
+		this.mlbFranchiseId = mlbFranchiseId;
 		this.fullTeamName = fullTeamName;
 		this.shortTeamName = shortTeamName;
 		this.league = league;
-		this.firstYearPlayed = firstYearPlayed;
-		this.active = active;
 	}
 
 	public Integer getMlbTeamId() {
@@ -58,20 +56,12 @@ public class Team {
 		this.league = league;
 	}
 
-	public Integer getFirstYearPlayed() {
-		return firstYearPlayed;
+	public Integer getMlbFranchiseId() {
+		return mlbFranchiseId;
 	}
 
-	public void setFirstYearPlayed(Integer firstYearPlayed) {
-		this.firstYearPlayed = firstYearPlayed;
-	}
-
-	public boolean isActive() {
-		return active;
-	}
-
-	public void setActive(boolean active) {
-		this.active = active;
+	public void setMlbFranchiseId(Integer mlbFranchiseId) {
+		this.mlbFranchiseId = mlbFranchiseId;
 	}
 
 }

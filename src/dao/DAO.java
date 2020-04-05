@@ -6,30 +6,29 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import db.Team;
+import db.MLBFranchise;
+import db.MLBTeam;
 
 public class DAO {
 	
 	public static Connection conn; 
 	
-	public static void createBatchTeams(HashMap<String, Team> teamsMap) {
+	public static void createBatchTeams(HashMap<String, MLBTeam> teamsMap) {
 		try {
 			conn.setAutoCommit(false);
 			Statement stmt = conn.createStatement();
 			int teamsCount = 0;
-			for (Map.Entry<String, Team> entry : teamsMap.entrySet()) {
-			    Team t = entry.getValue();
-				String insertSQL = "INSERT IGNORE INTO MLB_TEAM (TEAM_ID, FULL_NAME, SHORT_NAME, LEAGUE, FIRST_YEAR_PLAYED, ACTIVE) VALUES (" + 
-					t.getTeamId() + ", '" + t.getFullTeamName().replace("'", "") + "', '" + t.getShortTeamName() + "', '" + 
-						t.getLeague() + "', " + t.getFirstYearPlayed() + ", " + t.isActive() + ");";
+			for (Map.Entry<String, MLBTeam> entry : teamsMap.entrySet()) {
+			    MLBTeam t = entry.getValue();
+				String insertSQL = "INSERT INTO MLB_TEAM (TEAM_ID, MLB_FRANCHISE_ID, FULL_NAME, SHORT_NAME, LEAGUE) VALUES (" + 
+					t.getTeamId() + " ," + t.getMlbFranchiseId() + ", '" + t.getFullTeamName().replace("'", "") + "', '" + t.getShortTeamName() + "', '" + t.getLeague() + "');";
 				stmt.addBatch(insertSQL);
 				teamsCount++;
 				// Every 500 lines, insert the records
 				if (teamsCount % 250 == 0) {
-					System.out.println("Insert picks " + (teamsCount - 250) + " : " + teamsCount);
+					System.out.println("Insert teams " + (teamsCount - 250) + " : " + teamsCount);
 					stmt.executeBatch();
 					conn.commit();
 					stmt.close();
@@ -37,7 +36,7 @@ public class DAO {
 				}
 			}
 			// Insert the remaining records
-			System.out.println("Insert remaining picks " + (teamsCount - (teamsCount % 250)) + " : " + teamsCount);
+			System.out.println("Insert remaining teams " + (teamsCount - (teamsCount % 250)) + " : " + teamsCount);
 			stmt.executeBatch();
 			conn.commit();
 			conn.setAutoCommit(true); // set auto commit back to true for next inserts
@@ -47,14 +46,45 @@ public class DAO {
 		}
 	}
 	
-	public static Map<Integer, Team> getTeamsMap() {
-		Map<Integer, Team> teamsMap = new HashMap<Integer, Team>();
+	public static void createBatchMlbFranchises(HashMap<Integer, MLBFranchise> mlbFranchisesMap) {
+		try {
+			conn.setAutoCommit(false);
+			Statement stmt = conn.createStatement();
+			int mlbFranchisesCount = 0;
+			for (Map.Entry<Integer, MLBFranchise> entry : mlbFranchisesMap.entrySet()) {
+				MLBFranchise mlf = entry.getValue();
+			    String insertSQL = "INSERT INTO MLB_FRANCHISE (MLB_FRANCHISE_ID, FULL_NAME, SHORT_NAME, FIRST_YEAR_PLAYED) VALUES (" + 
+					mlf.getMlbFranchiseId() + ", '" + mlf.getFullTeamName().replace("'", "") + "', '" + mlf.getShortTeamName() + "', " + mlf.getFirstYearPlayed() + ");";
+				stmt.addBatch(insertSQL);
+				mlbFranchisesCount++;
+				// Every 500 lines, insert the records
+				if (mlbFranchisesCount % 250 == 0) {
+					System.out.println("Insert mlb franchises " + (mlbFranchisesCount - 250) + " : " + mlbFranchisesCount);
+					stmt.executeBatch();
+					conn.commit();
+					stmt.close();
+					stmt = conn.createStatement();
+				}
+			}
+			// Insert the remaining records
+			System.out.println("Insert remaining mlb franchises " + (mlbFranchisesCount - (mlbFranchisesCount % 250)) + " : " + mlbFranchisesCount);
+			stmt.executeBatch();
+			conn.commit();
+			conn.setAutoCommit(true); // set auto commit back to true for next inserts
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static Map<Integer, MLBTeam> getTeamsMap() {
+		Map<Integer, MLBTeam> teamsMap = new HashMap<Integer, MLBTeam>();
 		try {
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("SELECT * FROM MLB_TEAM ORDER BY FULL_NAME");
-			Team team;
+			MLBTeam team;
 			while (rs.next()) {
-				team = new Team(rs.getInt("TEAM_ID"), rs.getString("FULL_NAME"), rs.getString("SHORT_NAME"), rs.getString("LEAGUE"), rs.getInt("FIRST_YEAR_PLAYED"), rs.getBoolean("ACTIVE"));
+				team = new MLBTeam(rs.getInt("TEAM_ID"), rs.getInt("MLB_FRANCHISE_ID"), rs.getString("FULL_NAME"), rs.getString("SHORT_NAME"), rs.getString("LEAGUE"));
 				teamsMap.put(team.getTeamId(), team);
 			}
 		}

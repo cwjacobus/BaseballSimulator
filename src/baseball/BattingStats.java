@@ -1,7 +1,6 @@
 package baseball;
 
 public class BattingStats {
-	
 	private int atBats;
 	private int hits;
 	private int doubles;
@@ -10,7 +9,6 @@ public class BattingStats {
 	private int walks;
 	private int strikeOuts;
 	private int hitByPitch;
-	private int errors;
 	private int runs;
 	private int rbis;
 	private int stolenBases;
@@ -18,8 +16,26 @@ public class BattingStats {
 	private int caughtStealing;
 
 	public BattingStats() {
-		// TODO Auto-generated constructor stub
 	}
+	
+
+	public BattingStats(int atBats, int hits, int doubles, int triples, int homeRuns, int walks, int strikeOuts,
+			int hitByPitch, int runs, int rbis, int stolenBases, int plateAppearances, int caughtStealing) {
+		this.atBats = atBats;
+		this.hits = hits;
+		this.doubles = doubles;
+		this.triples = triples;
+		this.homeRuns = homeRuns;
+		this.walks = walks;
+		this.strikeOuts = strikeOuts;
+		this.hitByPitch = hitByPitch;
+		this.runs = runs;
+		this.rbis = rbis;
+		this.stolenBases = stolenBases;
+		this.plateAppearances = plateAppearances;
+		this.caughtStealing = caughtStealing;
+	}
+
 
 	public int getAtBats() {
 		return atBats;
@@ -115,14 +131,6 @@ public class BattingStats {
 
 	public void setHitByPitch(int hitByPitch) {
 		this.hitByPitch = hitByPitch;
-	}
-
-	public int getErrors() {
-		return errors;
-	}
-
-	public void setErrors(int errors) {
-		this.errors = errors;
 	}
 
 	public int getRuns() {
