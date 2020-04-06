@@ -6,7 +6,8 @@ public class TeamPlayer {
 	private Integer mlbPlayerId;
 	private Integer year;
 
-	public TeamPlayer(Integer mlbTeamId, Integer mlbPlayerId, Integer year) {
+	public TeamPlayer(Integer teamPlayerId, Integer mlbTeamId, Integer mlbPlayerId, Integer year) {
+		this.teamPlayerId = teamPlayerId;
 		this.mlbTeamId = mlbTeamId;
 		this.mlbPlayerId = mlbPlayerId;
 		this.year = year;
