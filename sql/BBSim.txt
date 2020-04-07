@@ -27,6 +27,7 @@ BATS varchar(5),
 JERSEY_NUMBER int(5)
 );
 
+/* Not using right now - all data can be found in stats tables */
 CREATE TABLE TEAM_PLAYER
 (
 TEAM_PLAYER_ID int(11) PRIMARY KEY AUTO_INCREMENT,
@@ -56,9 +57,21 @@ RBIS int(11),
 STOLEN_BASES int(11),
 PLATE_APPEARANCES int(11),
 CAUGHT_STEALING int(11),
-CONSTRAINT BS_CONST1 UNIQUE (MLB_TEAM_PLAYER_ID, MLB_TEAM_ID, YEAR)
+CONSTRAINT BS_CONST1 UNIQUE (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR)
 );
 
 
 
 insert into MLB_TEAM (TEAM_ID, FULL_NAME, SHORT_NAME, LEAGUE, ACTIVE) values (147, 'New York Yankees', 'NYY', 'AL', true);
+
+// set some short names for some cities with multiple franchises with same short name
+update mlb_franchise set short_name = 'BLO' where mlb_franchise_id = 298;
+update mlb_franchise set short_name = 'BTT' where mlb_franchise_id = 165;
+update mlb_franchise set short_name = 'KCP' where mlb_franchise_id = 128;
+
+// Get MLB HR leaders
+select p.full_name, f.short_name, ms.home_runs from mlb_batting_stats ms, mlb_player p, mlb_franchise f where ms.mlb_player_id = p.mlb_player_id and 
+f.mlb_franchise_id = ms.mlb_team_id order by ms.home_runs desc;
+
+// Get players with stats to team distrib
+select f.short_name, count(*) from mlb_batting_stats ms, mlb_franchise f where ms.mlb_team_id = f.mlb_franchise_id  group by ms.mlb_team_id order by f.short_name;

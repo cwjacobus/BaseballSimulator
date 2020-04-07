@@ -5,7 +5,9 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import baseball.BattingStats;
@@ -17,13 +19,50 @@ import db.TeamPlayer;
 
 public class DAO {
 	
-	public static Connection conn; 
+	public static Connection conn;
+	
+	public static void createBatchDataFromList(ArrayList<Object> mlbDataList) {
+		try {
+			conn.setAutoCommit(false);
+			Statement stmt = conn.createStatement();
+			int mlbDataCount = 0;
+			for (Object mlbData : mlbDataList) {
+				String insertSQL = "";
+				if (mlbData instanceof MLBBattingStats) {
+					MLBBattingStats mbs = (MLBBattingStats)mlbData;
+					BattingStats bs = mbs.getBattingStats();
+					insertSQL = "INSERT IGNORE INTO MLB_BATTING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, AT_BATS, HITS, DOUBLES, TRIPLES, HOME_RUNS, WALKS, STRIKEOUTS, HIT_BY_PITCH, RUNS, RBIS, STOLEN_BASES, PLATE_APPEARANCES, CAUGHT_STEALING) VALUES (" +
+						mbs.getMlbPlayerId() + ", " + mbs.getMlbTeamId() + ", " + mbs.getYear() + ", " + bs.getAtBats() + ", " + bs.getHits() + ", " + bs.getDoubles() + ", " + bs.getTriples() + ", " + bs.getHomeRuns() +
+						", " + bs.getWalks() + ", " + bs.getStrikeOuts() + ", " + bs.getHitByPitch() + ", " + bs.getRuns() + ", " + bs.getRbis() + ", " + bs.getStolenBases() +
+						", " + bs.getPlateAppearances() + ", " + bs.getCaughtStealing() +");";
+				}
+				stmt.addBatch(insertSQL);
+				mlbDataCount++;
+				// Every 500 lines, insert the records
+				if (mlbDataCount % 250 == 0) {
+					System.out.println("Insert " + (mlbDataCount - 250) + " : " + mlbDataCount);
+					stmt.executeBatch();
+					conn.commit();
+					stmt.close();
+					stmt = conn.createStatement();
+				}
+			}
+			// Insert the remaining records
+			System.out.println("Insert remaining " + (mlbDataCount - (mlbDataCount % 250)) + " : " + mlbDataCount);
+			stmt.executeBatch();
+			conn.commit();
+			conn.setAutoCommit(true); // set auto commit back to true for next inserts
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
 	
 	public static void createBatchDataFromMap(HashMap<?, ?> mlbDataMap) {
 		try {
 			conn.setAutoCommit(false);
 			Statement stmt = conn.createStatement();
-			int mlbFranchisesCount = 0;
+			int mlbDataCount = 0;
 			for (Map.Entry<?, ?> entry : mlbDataMap.entrySet()) {
 				String insertSQL = "";
 				if (entry.getValue() instanceof MLBTeam) {
@@ -33,7 +72,7 @@ public class DAO {
 				}
 				else if (entry.getValue() instanceof MLBFranchise) {
 					MLBFranchise mlf = (MLBFranchise)entry.getValue();
-					insertSQL = "INSERT INTO MLB_FRANCHISE (MLB_FRANCHISE_ID, FULL_NAME, SHORT_NAME, FIRST_YEAR_PLAYED) VALUES (" + 
+					insertSQL = "INSERT IGNORE INTO MLB_FRANCHISE (MLB_FRANCHISE_ID, FULL_NAME, SHORT_NAME, FIRST_YEAR_PLAYED) VALUES (" + 
 							mlf.getMlbFranchiseId() + ", '" + mlf.getFullTeamName().replace("'", "") + "', '" + mlf.getShortTeamName() + "', " + mlf.getFirstYearPlayed() + ");";
 				}
 				else if (entry.getValue() instanceof MLBPlayer) {
@@ -51,16 +90,16 @@ public class DAO {
 				else if (entry.getValue() instanceof MLBBattingStats) {
 					MLBBattingStats mbs = (MLBBattingStats)entry.getValue();
 					BattingStats bs = mbs.getBattingStats();
-					insertSQL = "INSERT INTO MLB_BATTING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, AT_BATS, HITS, DOUBLES, TRIPLES, HOME_RUNS, WALKS, STRIKEOUTS, HIT_BY_PITCH, RUNS, RBIS, STOLEN_BASES, PLATE_APPEARANCES, CAUGHT_STEALING) VALUES (" +
+					insertSQL = "INSERT IGNORE INTO MLB_BATTING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, AT_BATS, HITS, DOUBLES, TRIPLES, HOME_RUNS, WALKS, STRIKEOUTS, HIT_BY_PITCH, RUNS, RBIS, STOLEN_BASES, PLATE_APPEARANCES, CAUGHT_STEALING) VALUES (" +
 						mbs.getMlbPlayerId() + ", " + mbs.getMlbTeamId() + ", " + mbs.getYear() + ", " + bs.getAtBats() + ", " + bs.getHits() + ", " + bs.getDoubles() + ", " + bs.getTriples() + ", " + bs.getHomeRuns() +
 						", " + bs.getWalks() + ", " + bs.getStrikeOuts() + ", " + bs.getHitByPitch() + ", " + bs.getRuns() + ", " + bs.getRbis() + ", " + bs.getStolenBases() +
 						", " + bs.getPlateAppearances() + ", " + bs.getCaughtStealing() +");";
 				}
 				stmt.addBatch(insertSQL);
-				mlbFranchisesCount++;
+				mlbDataCount++;
 				// Every 500 lines, insert the records
-				if (mlbFranchisesCount % 250 == 0) {
-					System.out.println("Insert " + (mlbFranchisesCount - 250) + " : " + mlbFranchisesCount);
+				if (mlbDataCount % 250 == 0) {
+					System.out.println("Insert " + (mlbDataCount - 250) + " : " + mlbDataCount);
 					stmt.executeBatch();
 					conn.commit();
 					stmt.close();
@@ -68,7 +107,7 @@ public class DAO {
 				}
 			}
 			// Insert the remaining records
-			System.out.println("Insert remaining " + (mlbFranchisesCount - (mlbFranchisesCount % 250)) + " : " + mlbFranchisesCount);
+			System.out.println("Insert remaining " + (mlbDataCount - (mlbDataCount % 250)) + " : " + mlbDataCount);
 			stmt.executeBatch();
 			conn.commit();
 			conn.setAutoCommit(true); // set auto commit back to true for next inserts
@@ -78,38 +117,25 @@ public class DAO {
 		}
 	}
 	
-	public static HashMap<Integer, MLBTeam> getTeamsMap() {
-		HashMap<Integer, MLBTeam> teamsMap = new HashMap<Integer, MLBTeam>();
+	public static HashMap<Object, Object> getDataMap(String table) {
+		HashMap<Object, Object> dataMap = new HashMap<Object, Object>();
 		try {
 			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery("SELECT * FROM MLB_TEAM ORDER BY FULL_NAME");
-			MLBTeam team;
+			ResultSet rs = stmt.executeQuery("SELECT * FROM " + table);
 			while (rs.next()) {
-				team = new MLBTeam(rs.getInt("TEAM_ID"), rs.getInt("MLB_FRANCHISE_ID"), rs.getString("FULL_NAME"), rs.getString("SHORT_NAME"), rs.getString("LEAGUE"));
-				teamsMap.put(team.getTeamId(), team);
+				if (table.equals("MLB_FRANCHISE")) {
+					dataMap.put(rs.getString("SHORT_NAME"), rs.getInt("MLB_FRANCHISE_ID"));
+				}
+				else if (table.equals("MLB_TEAM")) {
+					MLBTeam team = new MLBTeam(rs.getInt("TEAM_ID"), rs.getInt("MLB_FRANCHISE_ID"), rs.getString("FULL_NAME"), rs.getString("SHORT_NAME"), rs.getString("LEAGUE"));
+					dataMap.put(team.getTeamId(), team);
+				}	
 			}
 		}
 		catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return teamsMap;
-	}
-	
-	public static HashMap<Integer, TeamPlayer> getTeamPlayersMap() {
-		HashMap<Integer, TeamPlayer> teamPlayersMap = new HashMap<Integer, TeamPlayer>();
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery("SELECT * FROM TEAM_PLAYER");
-			TeamPlayer teamPlayer;
-			while (rs.next()) {
-				teamPlayer = new TeamPlayer(rs.getInt("TEAM_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"), rs.getInt("MLB_PLAYER_ID"), rs.getInt("YEAR"));
-				teamPlayersMap.put(teamPlayer.getTeamPlayerId(), teamPlayer);
-			}
-		}
-		catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return teamPlayersMap;
+		return dataMap;
 	}
 	
 	public static void setConnection() {
