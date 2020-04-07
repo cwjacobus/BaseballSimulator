@@ -23,17 +23,15 @@ import db.MLBTeam;
 
 public class DBImport {
 	
-	
 	static int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-	//static HashMap<Integer, TeamPlayer> teamPlayersMap = new HashMap<Integer, TeamPlayer>();
-	static HashMap<Integer, MLBPlayer> filteredHittersMap = new HashMap<Integer, MLBPlayer>();
-	static HashMap<?, ?> franchisesMap;
 
 	public static void main(String[] args) {
 		Integer year = null;
 		Integer teamId = 0;
 		boolean allTeams = false;
 		boolean allYears = false;
+		HashMap<?, ?> franchisesMap;
+		
 		if (args.length < 2) {
 			System.out.println("INVALID ARGS");
 			return;
@@ -58,17 +56,14 @@ public class DBImport {
 			else {
 				allTeams = true;
 			}
-			HashMap<Integer, MLBPlayer> hittersMap = importMlbPlayers(year, allTeams, teamId, true);
-			ArrayList<Object> battingStatsList = importBattingStats(hittersMap, year);
-			//hittersMap = filterPlayersMaps(battingStatsMap, hittersMap);
-			System.out.println("After Filter");
+			HashMap<Integer, MLBPlayer> hittersMap = importMlbPlayers(year, allTeams, teamId, true, franchisesMap);
+			HashMap<Integer, MLBPlayer> filteredHittersMap = new HashMap<Integer, MLBPlayer>();
+			ArrayList<Object> battingStatsList = importBattingStats(hittersMap, year, filteredHittersMap);
 			for (Map.Entry<Integer, MLBPlayer> entry : hittersMap.entrySet()) {
 				System.out.println(entry.getValue().getMlbPlayerId() + " " + entry.getValue().getFirstLastName() + " " + entry.getValue().getPrimaryPosition() +
 				    " " + entry.getValue().getArmThrows() + " " + entry.getValue().getBats() + " " + entry.getValue().getJerseyNumber());
 			}
 			DAO.createBatchDataFromMap(filteredHittersMap);
-			//DAO.createBatchDataFromMap(teamPlayersMap);
-			//DAO.createBatchDataFromMap(battingStatsMap);
 			DAO.createBatchDataFromList(battingStatsList);
 		}
 		else {
@@ -134,7 +129,7 @@ public class DBImport {
 		DAO.createBatchDataFromMap(allTeamsMap);
 	}
 	
-	private static HashMap<Integer, MLBPlayer> importMlbPlayers(Integer year, boolean allTeams, Integer teamId, boolean hitters) {
+	private static HashMap<Integer, MLBPlayer> importMlbPlayers(Integer year, boolean allTeams, Integer teamId, boolean hitters, HashMap<?, ?> franchisesMap) {
 		HashMap<Integer, MLBPlayer> allPlayersMap = new HashMap<Integer, MLBPlayer>();
 		for (Map.Entry<?, ?> entry : franchisesMap.entrySet()) {
 			teamId = allTeams ? (Integer)entry.getValue() : teamId;
@@ -163,7 +158,6 @@ public class DBImport {
 						MLBPlayer p = new MLBPlayer(playerId, playerJson.getString("name_last_first"), playerJson.getString("primary_position"), 
 								playerJson.getString("throws"), playerJson.getString("bats"), jerseyNumber);
 						allPlayersMap.put(playerId, p);
-						//teamPlayersMap.put(playerId, new TeamPlayer(null, teamId, playerId, year));
 					}
 				}
 				catch (JSONException e) {
@@ -187,7 +181,7 @@ public class DBImport {
 		return allPlayersMap;
 	}
 	
-	private static ArrayList<Object> importBattingStats(HashMap<Integer, MLBPlayer> hiitersMap, int year) {
+	private static ArrayList<Object> importBattingStats(HashMap<Integer, MLBPlayer> hiitersMap, int year, HashMap<Integer, MLBPlayer> filteredHittersMap) {
 		ArrayList<Object> battingStatsList = new ArrayList<Object>();
 		DAO.setConnection();
 		try {   

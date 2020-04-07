@@ -7,7 +7,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import baseball.BattingStats;
@@ -118,10 +117,15 @@ public class DAO {
 	}
 	
 	public static HashMap<Object, Object> getDataMap(String table) {
+		return getDataMap(table, null, null);
+	}
+	
+	public static HashMap<Object, Object> getDataMap(String table, Integer mlbTeamId, Integer year) {
 		HashMap<Object, Object> dataMap = new HashMap<Object, Object>();
 		try {
 			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery("SELECT * FROM " + table);
+			String sql = "SELECT * FROM " + table + ((mlbTeamId != null && year != null) ? " WHERE MLB_TEAM_ID = " +  mlbTeamId + " AND YEAR = " + year : "");
+			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				if (table.equals("MLB_FRANCHISE")) {
 					dataMap.put(rs.getString("SHORT_NAME"), rs.getInt("MLB_FRANCHISE_ID"));
@@ -129,13 +133,37 @@ public class DAO {
 				else if (table.equals("MLB_TEAM")) {
 					MLBTeam team = new MLBTeam(rs.getInt("TEAM_ID"), rs.getInt("MLB_FRANCHISE_ID"), rs.getString("FULL_NAME"), rs.getString("SHORT_NAME"), rs.getString("LEAGUE"));
 					dataMap.put(team.getTeamId(), team);
-				}	
+				}
+				else if (table.equals("MLB_BATTING_STATS")) {
+					MLBBattingStats bs = new MLBBattingStats(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"),  rs.getInt("YEAR"), new BattingStats(rs.getInt("AT_BATS"), rs.getInt("HITS"), rs.getInt("DOUBLES"), rs.getInt("TRIPLES"), 
+						rs.getInt("HOME_RUNS"), rs.getInt("WALKS"), rs.getInt("STRIKEOUTS"), rs.getInt("HIT_BY_PITCH"), rs.getInt("RUNS"), rs.getInt("RBIS"), rs.getInt("STOLEN_BASES"), rs.getInt("PLATE_APPEARANCES"), rs.getInt("CAUGHT_STEALING")));
+					dataMap.put(bs.getMlbPlayerId(), bs);
+				}
 			}
 		}
 		catch (SQLException e) {
 			e.printStackTrace();
 		}
 		return dataMap;
+	}
+	
+	public static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, String position) {
+		MLBPlayer player = new MLBPlayer();
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "SELECT * FROM mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id =  " + teamId + " and p.primary_position = '" +
+				position + "' and  bs.plate_appearances = (select max(plate_appearances) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and  mlb_team_id = " + teamId +
+				" and primary_position = '" + position + "')";
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				player.setFullName(rs.getString("FULL_NAME"));
+				player.setMlbPlayerId(rs.getInt("MLB_PLAYER_ID"));
+			}
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return player;
 	}
 	
 	public static void setConnection() {

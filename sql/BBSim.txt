@@ -34,7 +34,7 @@ TEAM_PLAYER_ID int(11) PRIMARY KEY AUTO_INCREMENT,
 MLB_TEAM_ID int(11),
 MLB_PLAYER_ID int(11),
 YEAR int(5),
-CONSTRAINT TP_CONST1 UNIQUE (MLB_TEAM_ID, MLB_PLAYER_ID)
+CONSTRAINT TP_CONST1 UNIQUE (MLB_TEAM_ID, MLB_PLAYER_ID, YEAR)
 );
 
 
@@ -75,3 +75,11 @@ f.mlb_franchise_id = ms.mlb_team_id order by ms.home_runs desc;
 
 // Get players with stats to team distrib
 select f.short_name, count(*) from mlb_batting_stats ms, mlb_franchise f where ms.mlb_team_id = f.mlb_franchise_id  group by ms.mlb_team_id order by f.short_name;
+
+// Get players with stats for multiple teams
+select p.full_name, count(*) from mlb_batting_stats mbs, mlb_player p where p.mlb_player_id=mbs.mlb_player_id group by mbs.mlb_player_id order by count(*) desc;
+
+// Get player with max plate appearances for a team and position
+SELECT p.full_name, p.mlb_player_id, bs.plate_appearances
+FROM mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id = 147 and p.primary_position = '1B'
+and bs.plate_appearances = (select max(plate_appearances) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and  mlb_team_id = 147 and primary_position = '1B');

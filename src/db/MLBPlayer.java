@@ -8,6 +8,10 @@ public class MLBPlayer {
 	private String bats;
 	private Integer jerseyNumber;
 	
+	public MLBPlayer() {
+		
+	}
+	
 	public MLBPlayer(Integer mlbPlayerId, String fullName, String primaryPosition, String armThrows, String bats,
 			Integer jerseyNumber) {
 		this.mlbPlayerId = mlbPlayerId;

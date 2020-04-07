@@ -9,12 +9,17 @@ import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import dao.DAO;
+import db.MLBBattingStats;
+import db.MLBPlayer;
 
 public class BaseballSimulator {
 	
@@ -26,10 +31,11 @@ public class BaseballSimulator {
 	static int top = 0;
 	static int[] runnersOnBase = {0, 0, 0};
 	static int[] battingOrder = {1, 1};
-	static HashMap<Integer, BattingStats> playerStatsMap = new HashMap<Integer, BattingStats>();
+	static HashMap<Integer, BattingStats> battingStatsMap = new HashMap<Integer, BattingStats>();
 	static int year = 2019;
 	static DecimalFormat df = new DecimalFormat(".000");
 	static List<String> randoLog = new ArrayList<String>();
+	static HashMap<?, ?> franchisesMap;
 	
 	static final int BASES_EMPTY = 0;
 	static final int MAN_ON_FIRST = 1;
@@ -63,15 +69,15 @@ public class BaseballSimulator {
 	static Map<Integer, String> positions  = new HashMap<Integer, String>() {
 		private static final long serialVersionUID = 1L;
 	{
-	    put(1, "PITCHER");
-	    put(2, "CATCHER");
-	    put(3, "FIRST BASE");
-	    put(4, "SECOND BASE");
-	    put(5, "THIRD BASE");
-	    put(6, "SHORTSTOP");
-	    put(7, "LEFT FIELD");
-	    put(8, "CENTER FIELD");
-	    put(9, "RIGHT FIELD");
+	    put(1, "P");
+	    put(2, "C");
+	    put(3, "1B");
+	    put(4, "2B");
+	    put(5, "3B");
+	    put(6, "SS");
+	    put(7, "LF");
+	    put(8, "CF");
+	    put(9, "RF");
 	}};
 	
 	static Map<Integer, String> outTypes  = new HashMap<Integer, String>() {
@@ -86,14 +92,21 @@ public class BaseballSimulator {
 	}};
 
 	public static void main(String[] args) {
-		if (args!= null && args.length > 0) {
-			year = Integer.parseInt(args[0]);
+		if (args == null || args.length != 3) {
+			System.out.println("Invalid args - expecting <year><vis><home> - ex. 2019 HOU NYY");
+			return;
 		}
+		DAO.setConnection();
+		franchisesMap = DAO.getDataMap("MLB_FRANCHISE");
+		year = Integer.parseInt(args[0]);
 		System.out.println("START GAME FOR " + year);
-		game.setLineup(setLineup());
-		String[] teamNames = {"Houston Astros", "New York Yankees"};
+		String[] teamNames = {args[1], args[2]};
 		game.setTeamNames(teamNames);
-		getPlayerStats();
+		if (!setLineup()) {
+			return;
+		}
+		//getBattingStatsFromAPI();
+		getBattingStatsFromDB();
 		while (inning <= INNINGS_PER_GAME || game.getScore(inning)[0] == game.getScore(inning)[1]) {
 			for (top = 0; top < 2; top++) {
 				System.out.println((top == 0 ? "\n***TOP " : "***BOTTOM ") + " INN: " + inning + " ***");
@@ -159,7 +172,7 @@ public class BaseballSimulator {
 		 
 		 /*for (int i = 0; i < randoLog.size(); i++) {
 			 System.out.println(randoLog.get(i));
-		 }*/
+		 }*/ 
 	}
 	
 	private static int getNotOutResult(BattingStats currentBatterGameStats) {
@@ -287,7 +300,7 @@ public class BaseballSimulator {
 	private static int updateBasesSituationSacFly(boolean deep) {
 		int outAdvancing = 0;
 		int bo = getBattingOrderForPlayer(runnersOnBase[2]);
-		BattingStats bs = playerStatsMap.get(game.getLineup()[top][bo - 1].getId());
+		BattingStats bs = battingStatsMap.get(game.getLineup()[top][bo - 1].getId());
 		int sacRando = getRandomNumberInRange(0, 5) + bs.getSpeedRating();
 		if (deep || (!deep && bs.getSpeedRating() > 2)) {  // If going to try to score on fly ball
 			System.out.println(game.getLineup()[top][bo - 1].getName() + " TAGGING UP ON A FLY BALL");
@@ -338,7 +351,7 @@ public class BaseballSimulator {
 		int outStealing = 0;
 		if (runnersOnBase[0] != 0 && runnersOnBase[1] == 0) {
 			int bo = getBattingOrderForPlayer(runnersOnBase[0]);
-			BattingStats bs = playerStatsMap.get(game.getLineup()[top][bo - 1].getId());
+			BattingStats bs = battingStatsMap.get(game.getLineup()[top][bo - 1].getId());
 			int stealRando = getRandomNumberInRange(0, 5) + bs.getSpeedRating();
 			if (stealRando > 5) {
 				double stealPctg = (double)bs.getStolenBases()/(bs.getStolenBases() + bs.getCaughtStealing());
@@ -379,16 +392,33 @@ public class BaseballSimulator {
 		return rando;
 	}
 	
-	private static Player[][] setLineup() {
+	private static boolean setLineup() {
 		Player[][] lineup = new Player[2][Game.NUM_OF_PLAYERS_IN_LINEUP];
-		
 		for (int t = 0 ; t < 2; t++) {
+			ArrayList<Integer> randomLineup = getRandomLineupByPosition();
 			for (int p = 0 ; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
 				lineup[t][p] = new Player();
+				Integer position = randomLineup.get(p);
+				System.out.println(positions.get(position));
+				if (!positions.get(position).equals("P")) {
+					MLBPlayer mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), year, positions.get(position));
+					if (mlbPlayer != null) {
+						lineup[t][p].setName(mlbPlayer.getFullName());
+						lineup[t][p].setId(mlbPlayer.getMlbPlayerId());
+					}
+					else {
+						System.out.println("No players at: " + positions.get(position) + " for " + game.getTeamNames()[t]);
+						return false;
+					}
+				}
+				else { // Temp placeholder for Pitcher
+					lineup[t][p].setName("Romine, Austin"); 
+					lineup[t][p].setId(519222);
+				}
 			}
 		}
 		
-		lineup[0][0].setName("Jose Altuve");
+		/*lineup[0][0].setName("Jose Altuve");
 		lineup[0][1].setName("Michael Brantley");
 		lineup[0][2].setName("Alex Bregman");
 		lineup[0][3].setName("George Springer");
@@ -406,14 +436,16 @@ public class BaseballSimulator {
 		lineup[1][5].setName("Gary Sanchez");
 		lineup[1][6].setName("Miguel Andujar");
 		lineup[1][7].setName("Luke Voit");
-		lineup[1][8].setName("Mike Tauchman");
+		lineup[1][8].setName("Mike Tauchman");*/
 		
-		return lineup;
+		game.setLineup(lineup);
+		return true;
 	}
 	
 	private static void outputBoxScore() {
 		for (int top = 0; top < 2; top++) {
-			String team = (top == 0) ? "\nVis:  " : "Home: ";
+			String team = (top == 0) ? "\n" + game.getTeamNames()[top] : game.getTeamNames()[top];
+			team += team.length() < 3 ? " " : "";
 			System.out.print(team + " ");
 			for (int i = 1; i < inning; i++) {
 				if (i == (inning - 1) && (game.getScore(i)[1] > game.getScore(i)[0] && top == 1) && !game.isWalkOff()) {
@@ -433,7 +465,7 @@ public class BaseballSimulator {
 			for (int p = 0; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
 				Player player = game.getLineup()[top][p];
 				BattingStats gameStats = player.getGameStats();
-				BattingStats playerSeasonStats = playerStatsMap.get(player.getId());
+				BattingStats playerSeasonStats = battingStatsMap.get(player.getId());
 				System.out.print(player.getName());
 				System.out.print("\t");
 				if (player.getName().length() < 16) {
@@ -561,8 +593,17 @@ public class BaseballSimulator {
 		return baseSituation;
 	}
 	
-	// Get player stats from API
-	private static void getPlayerStats() {
+	private static ArrayList<Integer> getRandomLineupByPosition() {
+		ArrayList<Integer> randomLineup = new ArrayList<Integer>();
+		for (int i = 1; i < 10; i++) {
+			randomLineup.add(new Integer(i));
+        }
+        Collections.shuffle(randomLineup);
+        return randomLineup;
+	}
+	
+	// Get batting stats from API
+	private static void getBattingStatsFromAPI() {
 		  //String getStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_hitting_tm.bam?league_list_id='mlb'&game_type='R'&season='2019'&player_id='592450'";	
 	      //String searchAPI = "http://lookup-service-prod.mlb.com/json/named.search_player_all.bam?sport_code='mlb'&active_sw='Y'&name_part='Aaron Judge'";
 	        try {
@@ -613,7 +654,7 @@ public class BaseballSimulator {
 			        		battingStats.setWalks(Integer.parseInt(row.getString("bb")));
 			        		battingStats.setStolenBases(Integer.parseInt(row.getString("sb")));
 			        		battingStats.setCaughtStealing(Integer.parseInt(row.getString("cs")));
-				        	playerStatsMap.put(game.getLineup()[top][p].getId(), battingStats);
+			        		battingStatsMap.put(game.getLineup()[top][p].getId(), battingStats);
 				        	System.out.println(" SR: " + battingStats.getSpeedRating());
 			        	}
 	    				catch (JSONException e) {
@@ -631,6 +672,20 @@ public class BaseballSimulator {
 	        catch (IOException e) { 
 	        	e.printStackTrace();
 	        }     		
+		}
+	
+		// Get batting stats from DB
+		private static void getBattingStatsFromDB() {
+			HashMap<Object, Object> visitorBattingStats = DAO.getDataMap("MLB_BATTING_STATS", (Integer)franchisesMap.get(game.getTeamNames()[0]), year);
+			HashMap<Object, Object> homeBattingStats = DAO.getDataMap("MLB_BATTING_STATS", (Integer)franchisesMap.get(game.getTeamNames()[1]), year);
+			for (Map.Entry<Object, Object> entry : visitorBattingStats.entrySet()) {
+				MLBBattingStats battingStats = (MLBBattingStats)entry.getValue();
+				battingStatsMap.put(battingStats.getMlbPlayerId(), battingStats.getBattingStats());
+			}
+			for (Map.Entry<Object, Object> entry : homeBattingStats.entrySet()) {
+				MLBBattingStats battingStats = (MLBBattingStats)entry.getValue();
+				battingStatsMap.put(battingStats.getMlbPlayerId(), battingStats.getBattingStats());
+			}
 		}
 
 }

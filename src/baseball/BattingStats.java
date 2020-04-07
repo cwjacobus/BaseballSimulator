@@ -18,7 +18,6 @@ public class BattingStats {
 	public BattingStats() {
 	}
 	
-
 	public BattingStats(int atBats, int hits, int doubles, int triples, int homeRuns, int walks, int strikeOuts,
 			int hitByPitch, int runs, int rbis, int stolenBases, int plateAppearances, int caughtStealing) {
 		this.atBats = atBats;
