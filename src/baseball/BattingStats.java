@@ -195,5 +195,16 @@ public class BattingStats {
 		}
 		return sr;
 	}
-
+	
+	public double getBattingAverage() {
+		return atBats == 0 ? 0.0 : (double)hits/atBats;
+	}
+	
+	public double getOnBasePercentage() {
+		return plateAppearances == 0 ? 0.0 : (double)(hits + walks + hitByPitch)/plateAppearances;
+	}
+	
+	public double getSluggingPercentage() {
+		return atBats == 0 ? 0.0 : (double)(getSingles() + (doubles*2) + (triples*3)+ (homeRuns*4))/atBats;
+	}
 }

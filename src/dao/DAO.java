@@ -151,6 +151,10 @@ public class DAO {
 		return getMlbPlayerWithMostPlateAppearances(teamId, year, position, null);
 	}
 	
+	public static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, ArrayList<Integer> excludingList) {
+		return getMlbPlayerWithMostPlateAppearances(teamId, year, null, excludingList);
+	}
+	
 	public static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, String position, ArrayList<Integer> excludingList) {
 		MLBPlayer player = new MLBPlayer();
 		try {
@@ -162,9 +166,16 @@ public class DAO {
 				}
 				excludingSql = excludingSql.substring(0, excludingSql.length() - 1) + ")";
 			}
-			String sql = "SELECT * FROM mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id =  " + teamId + " and p.primary_position = '" +
-				position + "' and bs.year = " + year + " and  bs.plate_appearances = (select max(plate_appearances) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and  bs.mlb_team_id = " + teamId +
-				" and p.primary_position = '" + position + "' and bs.year = " + year + excludingSql + ")";
+			// Add hits to sum for uniqueness
+			String sql = "SELECT * FROM mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id =  " + teamId;
+			if (position != null) {
+				sql += " and p.primary_position = '" + position + "'";
+			}
+			sql += " and bs.year = " + year + " and (bs.plate_appearances + bs.hits) = (select max(plate_appearances + hits) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and  bs.mlb_team_id = " +teamId;
+			if (position != null) {
+				sql += " and p.primary_position = '" + position + "'";
+			}
+			sql += " and bs.year = " + year + excludingSql + ")";
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				player.setFullName(rs.getString("FULL_NAME"));

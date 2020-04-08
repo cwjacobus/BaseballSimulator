@@ -5,15 +5,17 @@ public class Player {
 	private String name;
 	private int id;
 	private BattingStats gameStats;
+	private String position;
 	
 	public Player() {
 		this.gameStats = new BattingStats();
 	}
 
-	public Player(String name, int id) {
+	public Player(String name, int id, String position) {
 		this.name = name;
 		this.id = id;
 		this.gameStats = new BattingStats();
+		this.position = position;
 	}
 
 	public String getName() {
@@ -38,6 +40,14 @@ public class Player {
 
 	public void setGameStats(BattingStats gameStats) {
 		this.gameStats = gameStats;
+	}
+
+	public String getPosition() {
+		return position;
+	}
+
+	public void setPosition(String position) {
+		this.position = position;
 	}
 
 }
