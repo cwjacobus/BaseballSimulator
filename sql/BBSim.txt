@@ -79,7 +79,8 @@ select f.short_name, count(*) from mlb_batting_stats ms, mlb_franchise f where m
 // Get players with stats for multiple teams
 select p.full_name, count(*) from mlb_batting_stats mbs, mlb_player p where p.mlb_player_id=mbs.mlb_player_id group by mbs.mlb_player_id order by count(*) desc;
 
-// Get player with max plate appearances for a team and position
+// Get player with max plate appearances for a team and position (with excluding)
 SELECT p.full_name, p.mlb_player_id, bs.plate_appearances
-FROM mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id = 147 and p.primary_position = '1B'
-and bs.plate_appearances = (select max(plate_appearances) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and  mlb_team_id = 147 and primary_position = '1B');
+FROM mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id = 147 and p.primary_position = 'OF' and bs.year = 1927 and 
+bs.plate_appearances = (select max(plate_appearances) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id = 147 and 
+p.primary_position = 'OF' and bs.year = 1927 and bs.mlb_player_id not in (112533, 121578));

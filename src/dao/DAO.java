@@ -148,12 +148,23 @@ public class DAO {
 	}
 	
 	public static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, String position) {
+		return getMlbPlayerWithMostPlateAppearances(teamId, year, position, null);
+	}
+	
+	public static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, String position, ArrayList<Integer> excludingList) {
 		MLBPlayer player = new MLBPlayer();
 		try {
 			Statement stmt = conn.createStatement();
+			String excludingSql = excludingList != null && excludingList.size() > 0 ? " and bs.mlb_player_id not in (" : "";
+			if (excludingList != null && excludingList.size() > 0) {
+				for (Integer id : excludingList) {
+					excludingSql += id + ",";
+				}
+				excludingSql = excludingSql.substring(0, excludingSql.length() - 1) + ")";
+			}
 			String sql = "SELECT * FROM mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id =  " + teamId + " and p.primary_position = '" +
-				position + "' and  bs.plate_appearances = (select max(plate_appearances) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and  mlb_team_id = " + teamId +
-				" and primary_position = '" + position + "' and bs.year = " + year + ")";
+				position + "' and bs.year = " + year + " and  bs.plate_appearances = (select max(plate_appearances) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and  bs.mlb_team_id = " + teamId +
+				" and p.primary_position = '" + position + "' and bs.year = " + year + excludingSql + ")";
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				player.setFullName(rs.getString("FULL_NAME"));

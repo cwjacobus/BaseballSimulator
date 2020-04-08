@@ -112,7 +112,7 @@ public class BaseballSimulator {
 					BattingStats currentBatterGameStats = game.getLineup()[top][battingOrder[top] - 1].getGameStats();
 					BattingStats currentBatterSeasonStats = battingStatsMap.get(game.getLineup()[top][battingOrder[top] - 1].getId()) == null ? 
 						battingStatsMap.get(game.getLineup()[top][battingOrder[top] - 1].getId()) : new BattingStats();
-					outs += stealBase(outs, currentBatterSeasonStats);
+					outs += stealBase(outs);
 					if (outs == OUTS_PER_INNING) {
 						break;
 					}
@@ -341,14 +341,15 @@ public class BaseballSimulator {
 		return dp;
 	}
 	
-	private static int stealBase(int outs, BattingStats currentBatterSeasonStats) {
+	private static int stealBase(int outs) {
 		int outStealing = 0;
 		if (runnersOnBase[0] != 0 && runnersOnBase[1] == 0) {
 			int bo = getBattingOrderForPlayer(runnersOnBase[0]);
-			int stealRando = getRandomNumberInRange(0, 5) + currentBatterSeasonStats.getSpeedRating();
+			BattingStats bs = battingStatsMap.get(game.getLineup()[top][bo - 1].getId()) != null ? battingStatsMap.get(game.getLineup()[top][bo - 1].getId()) : new BattingStats();
+			int stealRando = getRandomNumberInRange(0, 5) + bs.getSpeedRating();
 			if (stealRando > 5) {
-				double stealPctg = (double)currentBatterSeasonStats.getStolenBases()/(currentBatterSeasonStats.getStolenBases() + currentBatterSeasonStats.getCaughtStealing());
-				System.out.print(game.getLineup()[top][bo - 1].getName() + " ATTEMPTING TO STEAL SECOND - SR: " + currentBatterSeasonStats.getSpeedRating() + " SP: " + df.format(stealPctg));
+				double stealPctg = (double)bs.getStolenBases()/(bs.getStolenBases() + bs.getCaughtStealing());
+				System.out.print(game.getLineup()[top][bo - 1].getName() + " ATTEMPTING TO STEAL SECOND - SR: " + bs.getSpeedRating() + " SP: " + df.format(stealPctg));
 				if (getRandomNumberInRange(1, 10) < stealPctg*10) { // safe
 					System.out.println("- SAFE!");
 					runnersOnBase[1] = runnersOnBase[0];
@@ -387,20 +388,37 @@ public class BaseballSimulator {
 	
 	private static boolean setLineup() {
 		Player[][] lineup = new Player[2][Game.NUM_OF_PLAYERS_IN_LINEUP];
+		MLBPlayer mlbPlayer;
+		ArrayList<Integer> outfielderIdList = new ArrayList<>();
 		for (int t = 0 ; t < 2; t++) {
 			ArrayList<Integer> randomLineup = getRandomLineupByPosition();
 			for (int p = 0 ; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
 				lineup[t][p] = new Player();
 				Integer position = randomLineup.get(p);
 				if (!positions.get(position).equals("P")) {
-					MLBPlayer mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), t == 0 ? visYear : homeYear, positions.get(position));
+					mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), t == 0 ? visYear : homeYear, positions.get(position));
 					if (mlbPlayer != null && mlbPlayer.getMlbPlayerId() != null) {
 						lineup[t][p].setName(mlbPlayer.getFullName());
 						lineup[t][p].setId(mlbPlayer.getMlbPlayerId());
 					}
 					else {
-						System.out.println("No players at: " + positions.get(position) + " for " + game.getTeamNames()[t]);
-						return false;
+						// No specific OF positions before 1987
+						if (positions.get(position).equals("LF") || positions.get(position).equals("CF") || positions.get(position).equals("RF")) {
+							mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), t == 0 ? visYear : homeYear, "OF", outfielderIdList);
+							if (mlbPlayer != null && mlbPlayer.getMlbPlayerId() != null) {
+								lineup[t][p].setName(mlbPlayer.getFullName());
+								lineup[t][p].setId(mlbPlayer.getMlbPlayerId());
+								outfielderIdList.add(mlbPlayer.getMlbPlayerId());
+							}
+							else {
+								System.out.println("No players at: OF for " + game.getTeamNames()[t]);
+								return false;
+							}
+						}
+						else {
+							System.out.println("No players at: " + positions.get(position) + " for " + game.getTeamNames()[t]);
+							return false;
+						}
 					}
 				}
 				else { // Temp placeholder for Pitcher
@@ -457,7 +475,7 @@ public class BaseballSimulator {
 			for (int p = 0; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
 				Player player = game.getLineup()[top][p];
 				BattingStats gameStats = player.getGameStats();
-				BattingStats playerSeasonStats = battingStatsMap.get(player.getId()) == null ? battingStatsMap.get(player.getId()) : new BattingStats();
+				BattingStats playerSeasonStats = battingStatsMap.get(player.getId()) != null ? battingStatsMap.get(player.getId()) : new BattingStats();
 				System.out.print(player.getName());
 				System.out.print("\t");
 				if (player.getName().length() < 16) {
