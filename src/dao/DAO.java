@@ -153,7 +153,7 @@ public class DAO {
 			Statement stmt = conn.createStatement();
 			String sql = "SELECT * FROM mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id =  " + teamId + " and p.primary_position = '" +
 				position + "' and  bs.plate_appearances = (select max(plate_appearances) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and  mlb_team_id = " + teamId +
-				" and primary_position = '" + position + "')";
+				" and primary_position = '" + position + "' and bs.year = " + year + ")";
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				player.setFullName(rs.getString("FULL_NAME"));
