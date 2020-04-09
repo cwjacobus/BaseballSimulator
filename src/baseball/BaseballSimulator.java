@@ -136,7 +136,7 @@ public class BaseballSimulator {
 							updateBasesSituationNoRunnersAdvance();
 						}
 						else { // HIT
-							int noOutResult = getNotOutResult(currentBatterGameStats);
+							int noOutResult = getNotOutResult(currentBatterGameStats, currentBatterSeasonStats);
 							if (noOutResult == 1 && (getRandomNumberInRange(0, 5) + currentBatterGameStats.getSpeedRating()) > 4) { // infield single ?
 								if (outs != 2) {  // less than 2 outs runners hold
 									updateBasesSituationNoRunnersAdvance();
@@ -182,28 +182,34 @@ public class BaseballSimulator {
 		 }*/ 
 	}
 	
-	private static int getNotOutResult(BattingStats currentBatterGameStats) {
+	private static int getNotOutResult(BattingStats playerGameStats, BattingStats playerSeasonStats) {
+		double errorEndPoint = 25;
+		double hrEndPoint = (playerSeasonStats != null && playerSeasonStats.getHits() != 0 ? (((double)playerSeasonStats.getHomeRuns()/playerSeasonStats.getHits()) * 1000) : 160) + errorEndPoint;
+		hrEndPoint = playerSeasonStats.getHomeRuns() == 0 ? 8 + errorEndPoint : hrEndPoint;       // Give some chance if player has 0 hrs
+		double triplesEndPoint = (playerSeasonStats != null && playerSeasonStats.getHits() != 0 ? (((double)playerSeasonStats.getTriples()/playerSeasonStats.getHits()) * 1000) : 18) + hrEndPoint;
+		triplesEndPoint = playerSeasonStats.getTriples() == 0 ? 8 + hrEndPoint : triplesEndPoint; // Give some chance if player has 0 triples
+		double doublesEndPoint = (playerSeasonStats != null && playerSeasonStats.getHits() != 0 ? (((double)playerSeasonStats.getDoubles()/playerSeasonStats.getHits()) * 1000) : 203) + triplesEndPoint;
 		int notOutResult = 1;
 		int notOutRando = getRandomNumberInRange(1, 1000);
-		if (notOutRando > 1 && notOutRando <= 25) {
+		if (notOutRando > 1 && notOutRando <= errorEndPoint) {
 			System.out.println("REACHED BY ERROR");
 			notOutResult = 1;
 			game.incrementErrors(top == 0 ? 1 : 0);
 		}
-		else if (notOutRando > 25 && notOutRando <= 160) {
+		else if (notOutRando > errorEndPoint && notOutRando <= hrEndPoint) {
 			System.out.println("HOME RUN");
 			notOutResult = 4;
-			currentBatterGameStats.incrementHomeRuns();
+			playerGameStats.incrementHomeRuns();
 		}
-		else if (notOutRando > 170 && notOutRando <= 200) {
+		else if (notOutRando > hrEndPoint && notOutRando <= triplesEndPoint) {
 			System.out.println("TRIPLE");
 			notOutResult = 3;
-			currentBatterGameStats.incrementTriples();
+			playerGameStats.incrementTriples();
 		}
-		else if (notOutRando > 210 && notOutRando < 500) {
+		else if (notOutRando > triplesEndPoint && notOutRando < doublesEndPoint) {
 			System.out.println("DOUBLE");
 			notOutResult = 2;
-			currentBatterGameStats.incrementDoubles();
+			playerGameStats.incrementDoubles();
 		}
 		else {
 			System.out.println("SINGLE");
