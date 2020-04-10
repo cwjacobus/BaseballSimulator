@@ -4,17 +4,20 @@ public class Player {
 	
 	private String name;
 	private int id;
-	private BattingStats gameStats;
+	private BattingStats battingStats;
+	private PitchingStats pitchingStats;
 	private String position;
 	
 	public Player() {
-		this.gameStats = new BattingStats();
+		this.battingStats = new BattingStats();
+		this.pitchingStats = new PitchingStats();
 	}
 
 	public Player(String name, int id, String position) {
 		this.name = name;
 		this.id = id;
-		this.gameStats = new BattingStats();
+		this.battingStats = new BattingStats();
+		this.pitchingStats = new PitchingStats();
 		this.position = position;
 	}
 
@@ -34,12 +37,20 @@ public class Player {
 		this.id = id;
 	}
 
-	public BattingStats getGameStats() {
-		return gameStats;
+	public BattingStats getBattingStats() {
+		return battingStats;
 	}
 
-	public void setGameStats(BattingStats gameStats) {
-		this.gameStats = gameStats;
+	public void setBattingStats(BattingStats battingStats) {
+		this.battingStats = battingStats;
+	}
+
+	public PitchingStats getPitchingStats() {
+		return pitchingStats;
+	}
+
+	public void setPitchingStats(PitchingStats pitchingStats) {
+		this.pitchingStats = pitchingStats;
 	}
 
 	public String getPosition() {

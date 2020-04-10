@@ -1,25 +1,20 @@
 package baseball;
 
+import java.util.ArrayList;
+
 public class Game {
 	public static final int NUM_OF_PLAYERS_IN_LINEUP = 9;
-	int currentBasesSituation = 0;
 	int[] hits = {0, 0};
 	int[] errors = {0, 0};
 	int[][] boxScore = new int[2][25];
 	boolean walkOff = false;
 	Player[][] lineup;
+	ArrayList<ArrayList<Player>> pitchers = new ArrayList<ArrayList<Player>>(2);
 	String[] teamNames = new String[2];
 
 	public Game() {
-		this.lineup = new Player[2][NUM_OF_PLAYERS_IN_LINEUP];
-	}
-
-	public int getCurrentBasesSituation() {
-		return currentBasesSituation;
-	}
-
-	public void setCurrentBasesSituation(int currentBasesSituation) {
-		this.currentBasesSituation = currentBasesSituation;
+		pitchers.add(new ArrayList<Player>());
+		pitchers.add(new ArrayList<Player>());
 	}
 
 	public int[] getScore(int inning) {
@@ -85,6 +80,18 @@ public class Game {
 
 	public void setLineup(Player[][] lineup) {
 		this.lineup = lineup;
+	}
+
+	public ArrayList<ArrayList<Player>> getPitchers() {
+		return pitchers;
+	}
+
+	public void setPitchers(ArrayList<ArrayList<Player>> pitchers) {
+		this.pitchers = pitchers;
+	}
+	
+	public void addPitcher(Player pitcher, int top) {
+		this.pitchers.get(top).add(pitcher);
 	}
 
 	public String[] getTeamNames() {
