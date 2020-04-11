@@ -150,6 +150,24 @@ public class PitchingStats {
 		this.wildPitches = wildPitches;
 	}
 	
+	public int getOuts() {
+		int outs = 0;
+		String iPString = Double.toString(inningsPitched);
+		if (iPString != null && iPString.length() > 0 && iPString.contains(".")) {
+			outs = (Integer.parseInt(iPString.split("\\.")[0]) * 3) + Integer.parseInt(iPString.split("\\.")[1]);
+		}
+		return outs;
+	}
+	
+	public double getStrikeoutRate () {
+		double soRate = 0.0;
+		int outs = getOuts();
+		if (outs > 0) {
+			soRate = (double)strikeouts/getOuts();
+		}
+		return soRate;
+	}
+	
 	/*
 	 {"sport_pitching_tm":{"copyRight":" Copyright 2020 MLB Advanced Media, L.P.  Use of any content on this page acknowledges agreement to the terms posted here http://gdx.mlb.com/components/copyright.txt  ",
 	 "queryResults":{"created":"2020-04-09T18:51:43","totalSize":"1",

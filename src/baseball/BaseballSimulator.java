@@ -11,6 +11,7 @@ import java.util.Map;
 
 import dao.DAO;
 import db.MLBBattingStats;
+import db.MLBPitchingStats;
 import db.MLBPlayer;
 
 public class BaseballSimulator {
@@ -24,8 +25,7 @@ public class BaseballSimulator {
 	static int top = 0;
 	static int[] runnersOnBase = {0, 0, 0};
 	static int[] battingOrder = {1, 1};
-	//static int[] currentPitchersIndex = {1, 1};
-	static int[] currentPitchers = {0, 0}; // by ID
+	static Player[] currentPitchers = {null, null};
 	static HashMap<Integer, BattingStats> battingStatsMap = new HashMap<Integer, BattingStats>();
 	static HashMap<Integer, PitchingStats> pitchingStatsMap = new HashMap<Integer, PitchingStats>();
 	static int[] years = {2019, 2019};
@@ -102,8 +102,10 @@ public class BaseballSimulator {
 		if (!setLineup()) {
 			return;
 		}
+		System.out.println("Starting pitchers : " + game.getTeamNames()[0] + ": " + currentPitchers[0].getFirstLastName() + " v " + game.getTeamNames()[1] + ": " + currentPitchers[1].getFirstLastName());
 		//getBattingStatsFromAPI();
 		getBattingStatsFromDB();
+		getPitchingStatsFromDB();
 		while (inning <= INNINGS_PER_GAME || game.getScore(inning)[0] == game.getScore(inning)[1]) {
 			for (top = 0; top < 2; top++) {
 				System.out.println((top == 0 ? "\n***TOP " : "***BOTTOM ") + " INN: " + inning + " ***");
@@ -116,6 +118,9 @@ public class BaseballSimulator {
 					BattingStats currentBatterGameStats = game.getLineup()[top][battingOrder[top] - 1].getBattingStats();
 					BattingStats currentBatterSeasonStats = battingStatsMap.get(game.getLineup()[top][battingOrder[top] - 1].getId()) != null ? 
 						battingStatsMap.get(game.getLineup()[top][battingOrder[top] - 1].getId()) : new BattingStats();
+					PitchingStats currentPitcherGameStats = currentPitchers[top==0?1:0].getPitchingStats();
+					PitchingStats currentPitcherSeasonStats = pitchingStatsMap.get(currentPitchers[top==0?1:0].getId()) != null ? 
+						pitchingStatsMap.get(currentPitchers[top==0?1:0].getId()) : new PitchingStats();
 					outs += stealBase(outs);
 					if (outs == OUTS_PER_INNING) {
 						break;
@@ -125,7 +130,7 @@ public class BaseballSimulator {
 					gameTiedStartOfAB = game.getScore(inning)[1] == game.getScore(inning)[0] ? true : false;
 					double onBaseEndPoint = currentBatterSeasonStats != null ? (1000 - (currentBatterSeasonStats.getOnBasePercentage() * 1000)) : 680;
 					if (rando <= onBaseEndPoint) { // OUT
-						outs += getOutResult(currentBatterGameStats, currentBatterSeasonStats, outs);
+						outs += getOutResult(currentBatterGameStats, currentBatterSeasonStats, currentPitcherGameStats, currentPitcherSeasonStats, outs);
 						currentBatterGameStats.incrementAtBats();
 					}
 					else {
@@ -225,20 +230,24 @@ public class BaseballSimulator {
 		return notOutResult;
 	}
 	
-	private static int getOutResult(BattingStats currentBatterGameStats, BattingStats currentBatterSeasonStats, int outs) {
+	private static int getOutResult(BattingStats batterGameStats, BattingStats batterSeasonStats, PitchingStats pitcherGameStats, PitchingStats pitcherSeasonStats, int outs) {
 		int outsRecorded = 1;
 		int notOutRando = getRandomNumberInRange(1, 100);
-		if (notOutRando > 1 && notOutRando <= 20) {
+		long soEndPoint = (pitcherSeasonStats != null && batterSeasonStats != null? 
+			Math.round((pitcherSeasonStats.getStrikeoutRate() * 100) + ((batterSeasonStats.getStrikeoutRate()*100) - 34)) : 34);
+		soEndPoint = soEndPoint > 75 ? 75 : soEndPoint; // set max soEndPoint
+		long outIncrement = Math.round((double)((100 - soEndPoint)/5));
+		if (notOutRando > 1 && notOutRando <= soEndPoint) {
 			System.out.println(outTypes.get(STRUCK_OUT)); // STRUCK OUT
-			currentBatterGameStats.incremenStrikeOuts();
+			batterGameStats.incremenStrikeOuts();
 		}
-		else if (notOutRando > 20 && notOutRando <= 50) {
+		else if (notOutRando > soEndPoint && notOutRando <= soEndPoint + outIncrement) {
 			System.out.println(outTypes.get(GROUNDED_OUT) + " TO " + positions.get(getRandomNumberInRange(1, 6))); //GROUNDED OUT
 			if (doublePlay(true, outs)) {
 				outsRecorded++;
 			}
 		}
-		else if (notOutRando > 50 && notOutRando <= 65) {
+		else if (notOutRando > soEndPoint + outIncrement && notOutRando <= soEndPoint + (outIncrement*2)) {
 			System.out.println(outTypes.get(FLEW_OUT) +  " TO " + positions.get(getRandomNumberInRange(7, 9))); // FLEW OUT
 			if (outs < 2 && runnersOnBase[2] != 0) {
 				if (updateBasesSituationSacFly(false) == 1) {
@@ -246,7 +255,7 @@ public class BaseballSimulator {
 				}
 			}
 		}
-		else if (notOutRando > 65 && notOutRando <= 80) {
+		else if (notOutRando > soEndPoint + (outIncrement*2) && notOutRando <= soEndPoint + (outIncrement*3)) {
 			System.out.println(outTypes.get(FLEW_OUT_DEEP) +  " TO " + positions.get(getRandomNumberInRange(7, 9))); // FLEW OUT DEEP
 			if (outs < 2 && runnersOnBase[2] != 0) {
 				if (updateBasesSituationSacFly(true) == 1) {
@@ -254,7 +263,7 @@ public class BaseballSimulator {
 				}
 			}
 		}
-		else if (notOutRando > 80 && notOutRando < 90) {
+		else if (notOutRando > soEndPoint + (outIncrement*3) && notOutRando < soEndPoint + (outIncrement*4)) {
 			System.out.println(outTypes.get(LINED_OUT) + " TO " + positions.get(getRandomNumberInRange(1, 9, 2))); // LINED OUT
 		}
 		else {
@@ -425,7 +434,7 @@ public class BaseballSimulator {
 			HashMap<Object, Object> pitchersMap = DAO.getPitchersMapByTeamAndYear((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t]);
 			rosters[t].setPitchers(pitchersMap);
 			MLBPlayer startingPitcher = DAO.getStartingPitcherByIndex((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t], getRandomNumberInRange(1, 5));
-			currentPitchers[t] = startingPitcher.getMlbPlayerId();
+			currentPitchers[t] = new Player(startingPitcher.getFullName(), startingPitcher.getMlbPlayerId(), "P");
 			game.addPitcher(new Player(startingPitcher.getFullName(), startingPitcher.getMlbPlayerId(), "P"), t);
 			ArrayList<Integer> randomLineup = getRandomLineupByPosition();
 			ArrayList<Integer> outfielderIdList = new ArrayList<>();
@@ -535,7 +544,7 @@ public class BaseballSimulator {
 			for (int p = 0; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
 				int numD = game.getLineup()[top][p].getBattingStats().getDoubles();
 				if (numD > 0) {
-					doublesString[top] += (game.getLineup()[top][p].getName() + (numD > 1 ? "(" + numD + ")" : "") + ", ");
+					doublesString[top] += (game.getLineup()[top][p].getFirstLastName() + (numD > 1 ? "(" + numD + ")" : "") + ", ");
 				}
 			}
 		}
@@ -554,7 +563,7 @@ public class BaseballSimulator {
 			for (int p = 0; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
 				int numT = game.getLineup()[top][p].getBattingStats().getTriples();
 				if (numT > 0) {
-					triplesString[top] += (game.getLineup()[top][p].getName() + (numT > 1 ? "(" + numT + ")" : "") + ", ");
+					triplesString[top] += (game.getLineup()[top][p].getFirstLastName() + (numT > 1 ? "(" + numT + ")" : "") + ", ");
 				}
 			}
 		}
@@ -573,7 +582,7 @@ public class BaseballSimulator {
 			for (int p = 0; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
 				int numH = game.getLineup()[top][p].getBattingStats().getHomeRuns();
 				if (numH > 0) {
-					homeRunsString[top] += (game.getLineup()[top][p].getName() + (numH > 1 ? "(" + numH + ")" : "") + ", ");
+					homeRunsString[top] += (game.getLineup()[top][p].getFirstLastName() + (numH > 1 ? "(" + numH + ")" : "") + ", ");
 				}
 			}
 		}
@@ -592,7 +601,7 @@ public class BaseballSimulator {
 			System.out.println(game.getTeamNames()[top]);
 			ArrayList<Player> pitchers = game.getPitchers().get(top);
 			for (Player p : pitchers) {
-				System.out.println(p.getName());
+				System.out.println(p.getFirstLastName());
 			}
 		}
 	}
@@ -726,6 +735,20 @@ public class BaseballSimulator {
 			for (Map.Entry<Object, Object> entry : homeBattingStats.entrySet()) {
 				MLBBattingStats battingStats = (MLBBattingStats)entry.getValue();
 				battingStatsMap.put(battingStats.getMlbPlayerId(), battingStats.getBattingStats());
+			}
+		}
+		
+		// Get batting stats from DB
+		private static void getPitchingStatsFromDB() {
+			HashMap<Object, Object> visitorPitchingStats = DAO.getDataMap("MLB_PITCHING_STATS", (Integer)franchisesMap.get(game.getTeamNames()[0]), years[0]);
+			HashMap<Object, Object> homePitchingStats = DAO.getDataMap("MLB_PITCHING_STATS", (Integer)franchisesMap.get(game.getTeamNames()[1]), years[1]);
+			for (Map.Entry<Object, Object> entry : visitorPitchingStats.entrySet()) {
+				MLBPitchingStats pitchingStats = (MLBPitchingStats)entry.getValue();
+				pitchingStatsMap.put(pitchingStats.getMlbPlayerId(), pitchingStats.getPitchingStats());
+			}
+			for (Map.Entry<Object, Object> entry : homePitchingStats.entrySet()) {
+				MLBPitchingStats pitchingStats = (MLBPitchingStats)entry.getValue();
+				pitchingStatsMap.put(pitchingStats.getMlbPlayerId(), pitchingStats.getPitchingStats());
 			}
 		}
 

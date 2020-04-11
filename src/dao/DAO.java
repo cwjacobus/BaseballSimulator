@@ -154,6 +154,11 @@ public class DAO {
 						rs.getInt("HOME_RUNS"), rs.getInt("WALKS"), rs.getInt("STRIKEOUTS"), rs.getInt("HIT_BY_PITCH"), rs.getInt("RUNS"), rs.getInt("RBIS"), rs.getInt("STOLEN_BASES"), rs.getInt("PLATE_APPEARANCES"), rs.getInt("CAUGHT_STEALING")));
 					dataMap.put(bs.getMlbPlayerId(), bs);
 				}
+				else if (table.equals("MLB_PITCHING_STATS")) {
+					MLBPitchingStats ps = new MLBPitchingStats(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"),  rs.getInt("YEAR"), new PitchingStats(rs.getDouble("INNINGS_PITCHED"), rs.getInt("RUNS_ALLOWED"), rs.getInt("EARNED_RUNS_ALLOWED"), 
+						rs.getInt("WALKS"), rs.getInt("STRIKEOUTS"),  rs.getInt("HOME_RUNS_ALLOWED"), rs.getInt("STOLEN_BASES_ALLOWED"), rs.getInt("HIT_BATTERS"), rs.getInt("HITS_ALLOWED"), rs.getInt("HOLDS"), rs.getInt("SAVES"), rs.getInt("GAMES_STARTED"), rs.getInt("BALKS"), rs.getInt("WILD_PITCHES")));
+					dataMap.put(ps.getMlbPlayerId(), ps);
+				}
 				else if (table.equals("MLB_PLAYER")) {
 					MLBPlayer p = new MLBPlayer(rs.getInt("MLB_PLAYER_ID"), rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
 					dataMap.put(p.getMlbPlayerId(), p);
@@ -163,7 +168,7 @@ public class DAO {
 		catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return dataMap;
+		return dataMap; 
 	}
 	
 	public static HashMap<Object, Object> getPitchersMapByTeamAndYear(Integer mlbTeamId, Integer year) {

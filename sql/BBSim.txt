@@ -107,3 +107,10 @@ SELECT p.full_name, p.mlb_player_id, bs.plate_appearances
 FROM mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id = 147 and p.primary_position = 'OF' and bs.year = 1927 and 
 bs.plate_appearances = (select max(plate_appearances) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id = 147 and 
 p.primary_position = 'OF' and bs.year = 1927 and bs.mlb_player_id not in (112533, 121578));
+
+// Get pitchers strikeout rate for a year
+select p.full_name, t.short_name, year, p.mlb_player_id, strikeouts, innings_pitched, strikeouts/(innings_pitched*3) from mlb_pitching_stats bs, mlb_player p, mlb_franchise t where 
+bs.mlb_player_id = p.mlb_player_id and bs.mlb_team_id = t.mlb_franchise_id and year = 2019 order by strikeouts/(innings_pitched*3) desc;
+
+// Get average pitcher strikeout rate for a year
+select avg(strikeouts/(innings_pitched*3)) from mlb_pitching_stats where year=2019;

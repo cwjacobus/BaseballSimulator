@@ -207,4 +207,13 @@ public class BattingStats {
 	public double getSluggingPercentage() {
 		return atBats == 0 ? 0.0 : (double)(getSingles() + (doubles*2) + (triples*3)+ (homeRuns*4))/atBats;
 	}
+	
+	public double getStrikeoutRate () {
+		double soRate = 0.0;
+		int outs = plateAppearances - (hits + walks + hitByPitch);
+		if (outs > 0) {
+			soRate = (double)strikeOuts/outs;
+		}
+		return soRate;
+	}
 }

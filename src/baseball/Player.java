@@ -60,5 +60,14 @@ public class Player {
 	public void setPosition(String position) {
 		this.position = position;
 	}
+	
+	public String getFirstLastName() {
+		String firstLastName = "";
+		if (name != null && name.length() > 0 && name.indexOf(",") != -1) {
+			String[] flnArray = name.split(",");
+			firstLastName = flnArray[1].trim() + " " + flnArray[0];
+		}
+		return firstLastName;
+	}
 
 }
