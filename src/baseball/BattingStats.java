@@ -216,4 +216,12 @@ public class BattingStats {
 		}
 		return soRate;
 	}
+	
+	public double getWalkRate () {
+		double bbRate = 0.0;
+		if ((walks + hits + hitByPitch) > 0) {
+			bbRate = (double)walks/(walks + hits + hitByPitch);
+		}
+		return bbRate;
+	}
 }

@@ -49,6 +49,8 @@ public class BaseballSimulator {
 	static final int LINED_OUT = 4;
 	static final int POPPED_OUT = 5;
 	
+	static final String[] nationalLeagueTeams = {"ARI","CHC","LAD","WSH","NYM","PIT","SD","SF","STL","PHI","ATL","MIA","MIL","COL","CIN"};
+	
 	static Map<Integer, String> baseSituations  = new HashMap<Integer, String>() {
 		private static final long serialVersionUID = 1L;
 	{
@@ -106,6 +108,7 @@ public class BaseballSimulator {
 		//getBattingStatsFromAPI();
 		getBattingStatsFromDB();
 		getPitchingStatsFromDB();
+		// TBD GET Pitcher Batting Stats from API for Non-DH games (AL after 1970)
 		while (inning <= INNINGS_PER_GAME || game.getScore(inning)[0] == game.getScore(inning)[1]) {
 			for (top = 0; top < 2; top++) {
 				System.out.println((top == 0 ? "\n***TOP " : "***BOTTOM ") + " INN: " + inning + " ***");
@@ -128,14 +131,16 @@ public class BaseballSimulator {
 					int rando = getRandomNumberInRange(1, 1000);
 					
 					gameTiedStartOfAB = game.getScore(inning)[1] == game.getScore(inning)[0] ? true : false;
-					double onBaseEndPoint = currentBatterSeasonStats != null ? (1000 - (currentBatterSeasonStats.getOnBasePercentage() * 1000)) : 680;
+					long onBaseEndPoint = 1000 - Math.round(currentBatterSeasonStats.getOnBasePercentage()*1000);
 					if (rando <= onBaseEndPoint) { // OUT
 						outs += getOutResult(currentBatterGameStats, currentBatterSeasonStats, currentPitcherGameStats, currentPitcherSeasonStats, outs);
 						currentBatterGameStats.incrementAtBats();
 					}
 					else {
-						if (rando > onBaseEndPoint && rando <= 775) {
-							if (rando >= 760) {
+						long bbEndPoint = 1000 - Math.round((currentBatterSeasonStats.getWalkRate()*1000) + ((currentPitcherSeasonStats.getWalkRate()*1000) - 250));
+						bbEndPoint = bbEndPoint > 850 ? 850 : bbEndPoint; // set max bbEndPoint
+						if (rando > onBaseEndPoint && rando <= bbEndPoint) {
+							if (rando >= (bbEndPoint - 20)) {  // Hardcoded HBP rate
 								System.out.println("HIT BY PITCH");
 							}
 							else {
@@ -194,13 +199,13 @@ public class BaseballSimulator {
 	private static int getNotOutResult(BattingStats playerGameStats, BattingStats playerSeasonStats) {
 		long errorEndPoint = 25;
 		long hrEndPoint = (playerSeasonStats != null && playerSeasonStats.getHits() != 0 ? 
-			Math.round((((double)playerSeasonStats.getHomeRuns()/playerSeasonStats.getHits()) * 1000)) : 160) + errorEndPoint;
+			Math.round((((double)playerSeasonStats.getHomeRuns()/playerSeasonStats.getHits())*1000)) : 160) + errorEndPoint;
 		hrEndPoint = playerSeasonStats.getHomeRuns() == 0 ? 8 + errorEndPoint : hrEndPoint;       // Give some chance if player has 0 hrs
 		long triplesEndPoint = (playerSeasonStats != null && playerSeasonStats.getHits() != 0 ? 
-			Math.round((((double)playerSeasonStats.getTriples()/playerSeasonStats.getHits()) * 1000)) : 18) + hrEndPoint;
+			Math.round((((double)playerSeasonStats.getTriples()/playerSeasonStats.getHits())*1000)) : 18) + hrEndPoint;
 		triplesEndPoint = playerSeasonStats.getTriples() == 0 ? 8 + hrEndPoint : triplesEndPoint; // Give some chance if player has 0 triples
 		long doublesEndPoint = (playerSeasonStats != null && playerSeasonStats.getHits() != 0 ? 
-			Math.round((((double)playerSeasonStats.getDoubles()/playerSeasonStats.getHits()) * 1000)) : 203) + triplesEndPoint;
+			Math.round((((double)playerSeasonStats.getDoubles()/playerSeasonStats.getHits())*1000)) : 203) + triplesEndPoint;
 		int notOutResult = 1;
 		int notOutRando = getRandomNumberInRange(1, 1000);
 		if (notOutRando > 1 && notOutRando <= errorEndPoint) {
@@ -234,7 +239,7 @@ public class BaseballSimulator {
 		int outsRecorded = 1;
 		int notOutRando = getRandomNumberInRange(1, 100);
 		long soEndPoint = (pitcherSeasonStats != null && batterSeasonStats != null? 
-			Math.round((pitcherSeasonStats.getStrikeoutRate() * 100) + ((batterSeasonStats.getStrikeoutRate()*100) - 34)) : 34);
+			Math.round((pitcherSeasonStats.getStrikeoutRate()*100) + ((batterSeasonStats.getStrikeoutRate()*100) - 34)) : 34);
 		soEndPoint = soEndPoint > 75 ? 75 : soEndPoint; // set max soEndPoint
 		long outIncrement = Math.round((double)((100 - soEndPoint)/5));
 		if (notOutRando > 1 && notOutRando <= soEndPoint) {
@@ -407,7 +412,7 @@ public class BaseballSimulator {
 		if (min >= max) {
 			throw new IllegalArgumentException("max must be greater than min");
 		}
-		int rando = (int)(Math.random() * ((max - min) + 1)) + min;
+		int rando = (int)(Math.random()*((max - min) + 1)) + min;
 		randoLog.add(rando + " " + min + " to " + max);
 		return rando;
 	}
@@ -416,7 +421,7 @@ public class BaseballSimulator {
 		if (min >= max) {
 			throw new IllegalArgumentException("max must be greater than min");
 		}
-		int rando = (int)(Math.random() * ((max - min) + 1)) + min;
+		int rando = (int)(Math.random()*((max - min) + 1)) + min;
 		if (rando == excluding) {
 			rando = getRandomNumberInRange(min, max, excluding);
 		}
@@ -443,14 +448,10 @@ public class BaseballSimulator {
 			ArrayList<Integer> outfielderIdList = new ArrayList<>();
 			ArrayList<Integer> lineupPlayerIdList = new ArrayList<>();
 			for (int p = 0 ; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
-				//lineup[t][p] = new Player();
 				Integer position = randomLineup.get(p);
 				if (!positions.get(position).equals("P")) {
 					mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t], positions.get(position));
 					if (mlbPlayer != null && mlbPlayer.getMlbPlayerId() != null) {
-						//lineup[t][p].setName(mlbPlayer.getFullName());
-						//lineup[t][p].setPosition(positions.get(position));
-						//lineup[t][p].setId(mlbPlayer.getMlbPlayerId());
 						lineup[t][p] = new Player(mlbPlayer.getFullName(), mlbPlayer.getMlbPlayerId(), positions.get(position));
 						lineupPlayerIdList.add(mlbPlayer.getMlbPlayerId());
 					}
@@ -459,9 +460,6 @@ public class BaseballSimulator {
 						if (positions.get(position).equals("LF") || positions.get(position).equals("CF") || positions.get(position).equals("RF")) {
 							mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t], "OF", outfielderIdList);
 							if (mlbPlayer != null && mlbPlayer.getMlbPlayerId() != null) {
-								//lineup[t][p].setName(mlbPlayer.getFullName());
-								//lineup[t][p].setPosition(positions.get(position));
-								//lineup[t][p].setId(mlbPlayer.getMlbPlayerId());
 								lineup[t][p] = new Player(mlbPlayer.getFullName(), mlbPlayer.getMlbPlayerId(), positions.get(position));
 								outfielderIdList.add(mlbPlayer.getMlbPlayerId());
 								lineupPlayerIdList.add(mlbPlayer.getMlbPlayerId());
@@ -477,16 +475,20 @@ public class BaseballSimulator {
 						}
 					}
 				}
-				else { // Temp placeholder for Pitcher/DH
+				else { 
 					pitcherDHLineupPosition = p;
 				}
 			}
 			// Set DH/P
-			mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t], lineupPlayerIdList);
-			//lineup[t][pitcherDHLineupPosition].setName(mlbPlayer.getFullName()); 
-			//lineup[t][pitcherDHLineupPosition].setId(mlbPlayer.getMlbPlayerId());
-			//lineup[t][pitcherDHLineupPosition].setPosition("DH");
-			lineup[t][pitcherDHLineupPosition] = new Player(mlbPlayer.getFullName(), mlbPlayer.getMlbPlayerId(), "DH");
+			// Use P v DH
+			if (Arrays.asList(nationalLeagueTeams).contains(game.getTeamNames()[1]) && years[1] >= 1973) {
+				lineup[t][pitcherDHLineupPosition] = new Player(currentPitchers[t].getName(), currentPitchers[t].getId(), "P");	
+				battingStatsMap.put(currentPitchers[t].getId(), new BattingStats(75, 10, 2, 0, 1, 2, 44, 0, 4, 3, 0, 100, 0)); // Default pitcher batting stats
+			}
+			else { // DH
+				mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t], lineupPlayerIdList);
+				lineup[t][pitcherDHLineupPosition] = new Player(mlbPlayer.getFullName(), mlbPlayer.getMlbPlayerId(), "DH");
+			}
 		}
 		game.setLineup(lineup);
 		return true;
@@ -532,9 +534,9 @@ public class BaseballSimulator {
 				String roundOBPString = ".000";
 				String roundSlgString = ".000";
 				if (playerSeasonStats != null) {
-					roundAvgString = df.format((double) Math.round(playerSeasonStats.getBattingAverage() * 1000) / 1000);
-					roundOBPString = df.format((double) Math.round(playerSeasonStats.getOnBasePercentage() * 1000) / 1000);
-					roundSlgString = df.format((double) Math.round(playerSeasonStats.getSluggingPercentage() * 1000) / 1000);
+					roundAvgString = df.format((double) Math.round(playerSeasonStats.getBattingAverage()*1000)/1000);
+					roundOBPString = df.format((double) Math.round(playerSeasonStats.getOnBasePercentage()*1000)/1000);
+					roundSlgString = df.format((double) Math.round(playerSeasonStats.getSluggingPercentage()*1000)/1000);
 				}
 				System.out.print((roundAvgString.charAt(0) != '1' ? roundAvgString : "1.00") + " ");
 				System.out.print((roundOBPString.charAt(0) != '1' ? roundOBPString : "1.00") + " ");

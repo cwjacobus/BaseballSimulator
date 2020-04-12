@@ -168,6 +168,14 @@ public class PitchingStats {
 		return soRate;
 	}
 	
+	public double getWalkRate () {
+		double bbRate = 0.0;
+		if ((walks + hitsAllowed + hitBatters) > 0) {
+			bbRate = (double)walks/(walks + hitsAllowed + hitBatters);
+		}
+		return bbRate;
+	}
+	
 	/*
 	 {"sport_pitching_tm":{"copyRight":" Copyright 2020 MLB Advanced Media, L.P.  Use of any content on this page acknowledges agreement to the terms posted here http://gdx.mlb.com/components/copyright.txt  ",
 	 "queryResults":{"created":"2020-04-09T18:51:43","totalSize":"1",
