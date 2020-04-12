@@ -127,19 +127,27 @@ public class DAO {
 	}
 	
 	public static HashMap<Object, Object> getDataMap(String table) {
-		return getDataMap(table, null, null, false);
+		return getDataMap(table, null, null, null);
 	}
 	
 	public static HashMap<Object, Object> getDataMap(String table, Integer mlbTeamId, Integer year) {
-		return getDataMap(table, mlbTeamId, year, false);
+		return getDataMap(table, mlbTeamId, year, null);
 	}
 	
-	public static HashMap<Object, Object> getDataMap(String table, Integer mlbTeamId, Integer year, boolean pitchers) {
+	public static HashMap<Object, Object> getDataMap(String table, Integer mlbTeamId, Integer year, Boolean pitchers) {
 		HashMap<Object, Object> dataMap = new HashMap<Object, Object>();
 		try {
 			Statement stmt = conn.createStatement();
-			String sql = !pitchers ? "SELECT * FROM " + table + ((mlbTeamId != null && year != null) ? " WHERE MLB_TEAM_ID = " +  mlbTeamId + " AND YEAR = " + year : "") :
-				"SELECT P.* from MLB_PITCHING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR=" + year + " AND MLB_TEAM_ID = " + mlbTeamId;
+			String sql = "";
+			if (pitchers == null) {
+				 sql = "SELECT * FROM " + table + ((mlbTeamId != null && year != null) ? " WHERE MLB_TEAM_ID = " +  mlbTeamId + " AND YEAR = " + year : "");
+			}
+			else if (pitchers.booleanValue() == true) {
+				sql = "SELECT P.* from MLB_PITCHING_STATS PS, MLB_PLAYER P WHERE PS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR =" + year + " AND MLB_TEAM_ID = " + mlbTeamId;
+			}
+			else {
+				sql = "SELECT P.* from MLB_BATTING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR =" + year + " AND MLB_TEAM_ID = " + mlbTeamId;
+			}
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				if (table.equals("MLB_FRANCHISE")) {
@@ -169,6 +177,10 @@ public class DAO {
 			e.printStackTrace();
 		}
 		return dataMap; 
+	}
+	
+	public static HashMap<Object, Object> getBattersMapByTeamAndYear(Integer mlbTeamId, Integer year) {
+		return getDataMap("MLB_PLAYER", mlbTeamId, year, false);
 	}
 	
 	public static HashMap<Object, Object> getPitchersMapByTeamAndYear(Integer mlbTeamId, Integer year) {

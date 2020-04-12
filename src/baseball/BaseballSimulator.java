@@ -272,7 +272,6 @@ public class BaseballSimulator {
 		return outsRecorded;
 	}
 	
-	
 	private static void updateBasesSituationRunnersAdvance(int event) {
 	  /*int basesSituation = (currentBasesSituation << event) + (int)Math.pow(2, (event - 1));
 		if (basesSituation > 7) {
@@ -430,24 +429,29 @@ public class BaseballSimulator {
 		MLBPlayer mlbPlayer;
 		int pitcherDHLineupPosition = 1;
 		for (int t = 0 ; t < 2; t++) {
+			// Create rosters of all players for that team and year
 			rosters[t] = new Roster();
 			HashMap<Object, Object> pitchersMap = DAO.getPitchersMapByTeamAndYear((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t]);
+			HashMap<Object, Object> battersMap = DAO.getBattersMapByTeamAndYear((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t]);
 			rosters[t].setPitchers(pitchersMap);
-			MLBPlayer startingPitcher = DAO.getStartingPitcherByIndex((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t], getRandomNumberInRange(1, 5));
+			rosters[t].setBatters(battersMap);
+			// Get random starter 1-5
+			MLBPlayer startingPitcher = DAO.getStartingPitcherByIndex((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t], getRandomNumberInRange(1, 5));  
 			currentPitchers[t] = new Player(startingPitcher.getFullName(), startingPitcher.getMlbPlayerId(), "P");
 			game.addPitcher(new Player(startingPitcher.getFullName(), startingPitcher.getMlbPlayerId(), "P"), t);
 			ArrayList<Integer> randomLineup = getRandomLineupByPosition();
 			ArrayList<Integer> outfielderIdList = new ArrayList<>();
 			ArrayList<Integer> lineupPlayerIdList = new ArrayList<>();
 			for (int p = 0 ; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
-				lineup[t][p] = new Player();
+				//lineup[t][p] = new Player();
 				Integer position = randomLineup.get(p);
 				if (!positions.get(position).equals("P")) {
 					mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t], positions.get(position));
 					if (mlbPlayer != null && mlbPlayer.getMlbPlayerId() != null) {
-						lineup[t][p].setName(mlbPlayer.getFullName());
-						lineup[t][p].setPosition(positions.get(position));
-						lineup[t][p].setId(mlbPlayer.getMlbPlayerId());
+						//lineup[t][p].setName(mlbPlayer.getFullName());
+						//lineup[t][p].setPosition(positions.get(position));
+						//lineup[t][p].setId(mlbPlayer.getMlbPlayerId());
+						lineup[t][p] = new Player(mlbPlayer.getFullName(), mlbPlayer.getMlbPlayerId(), positions.get(position));
 						lineupPlayerIdList.add(mlbPlayer.getMlbPlayerId());
 					}
 					else {
@@ -455,9 +459,10 @@ public class BaseballSimulator {
 						if (positions.get(position).equals("LF") || positions.get(position).equals("CF") || positions.get(position).equals("RF")) {
 							mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t], "OF", outfielderIdList);
 							if (mlbPlayer != null && mlbPlayer.getMlbPlayerId() != null) {
-								lineup[t][p].setName(mlbPlayer.getFullName());
-								lineup[t][p].setPosition(positions.get(position));
-								lineup[t][p].setId(mlbPlayer.getMlbPlayerId());
+								//lineup[t][p].setName(mlbPlayer.getFullName());
+								//lineup[t][p].setPosition(positions.get(position));
+								//lineup[t][p].setId(mlbPlayer.getMlbPlayerId());
+								lineup[t][p] = new Player(mlbPlayer.getFullName(), mlbPlayer.getMlbPlayerId(), positions.get(position));
 								outfielderIdList.add(mlbPlayer.getMlbPlayerId());
 								lineupPlayerIdList.add(mlbPlayer.getMlbPlayerId());
 							}
@@ -478,11 +483,10 @@ public class BaseballSimulator {
 			}
 			// Set DH/P
 			mlbPlayer = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(game.getTeamNames()[t]), years[t], lineupPlayerIdList);
-			lineup[t][pitcherDHLineupPosition].setName(mlbPlayer.getFullName()); 
-			lineup[t][pitcherDHLineupPosition].setId(mlbPlayer.getMlbPlayerId());
-			lineup[t][pitcherDHLineupPosition].setPosition("DH");
-			
-			//currentPitchers[t] = getRandomNumberInRange(1, 5);
+			//lineup[t][pitcherDHLineupPosition].setName(mlbPlayer.getFullName()); 
+			//lineup[t][pitcherDHLineupPosition].setId(mlbPlayer.getMlbPlayerId());
+			//lineup[t][pitcherDHLineupPosition].setPosition("DH");
+			lineup[t][pitcherDHLineupPosition] = new Player(mlbPlayer.getFullName(), mlbPlayer.getMlbPlayerId(), "DH");
 		}
 		game.setLineup(lineup);
 		return true;
