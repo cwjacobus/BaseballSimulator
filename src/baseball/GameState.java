@@ -1,6 +1,7 @@
 package baseball;
 
 public class GameState {
+	int outs = 0;
 	Integer inning = 1;
 	int top = 0;
 	int[] runnersOnBase = {0, 0, 0};
@@ -10,6 +11,14 @@ public class GameState {
 	public GameState() {
 		//pitchers.add(new ArrayList<Player>());
 		//pitchers.add(new ArrayList<Player>());
+	}
+
+	public int getOuts() {
+		return outs;
+	}
+
+	public void setOuts(int outs) {
+		this.outs = outs;
 	}
 
 	public Integer getInning() {
