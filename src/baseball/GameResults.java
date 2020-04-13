@@ -2,7 +2,7 @@ package baseball;
 
 import java.util.ArrayList;
 
-public class Game {
+public class GameResults {
 	public static final int NUM_OF_PLAYERS_IN_LINEUP = 9;
 	int[] hits = {0, 0};
 	int[] errors = {0, 0};
@@ -11,8 +11,9 @@ public class Game {
 	Player[][] lineup;
 	ArrayList<ArrayList<Player>> pitchers = new ArrayList<ArrayList<Player>>(2);
 	String[] teamNames = new String[2];
-
-	public Game() {
+	int[] years = {2019, 2019};
+	
+	public GameResults() {
 		pitchers.add(new ArrayList<Player>());
 		pitchers.add(new ArrayList<Player>());
 	}
@@ -100,6 +101,22 @@ public class Game {
 
 	public void setTeamNames(String[] teamNames) {
 		this.teamNames = teamNames;
+	}
+
+	public int[] getYears() {
+		return years;
+	}
+
+	public void setYears(int[] years) {
+		this.years = years;
+	}
+	
+	public void setVisYear(int visYear) {
+		this.years[0] = visYear;
+	}
+	
+	public void setHomeYear(int homeYear) {
+		this.years[1] = homeYear;
 	}
 
 }
