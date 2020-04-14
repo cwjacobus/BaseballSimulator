@@ -1,6 +1,7 @@
 package baseball;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class GameResults {
 	public static final int NUM_OF_PLAYERS_IN_LINEUP = 9;
@@ -9,13 +10,13 @@ public class GameResults {
 	int[][] boxScore = new int[2][25];
 	boolean walkOff = false;
 	Player[][] lineup;
-	ArrayList<ArrayList<Player>> pitchers = new ArrayList<ArrayList<Player>>(2);
+	ArrayList<HashMap<Integer, Player>> pitchers = new ArrayList<HashMap<Integer, Player>>(2);
 	String[] teamNames = new String[2];
 	int[] years = {2019, 2019};
 	
 	public GameResults() {
-		pitchers.add(new ArrayList<Player>());
-		pitchers.add(new ArrayList<Player>());
+		pitchers.add(new HashMap<Integer, Player>());
+		pitchers.add(new HashMap<Integer, Player>());
 	}
 
 	public int[] getScore(int inning) {
@@ -83,16 +84,16 @@ public class GameResults {
 		this.lineup = lineup;
 	}
 
-	public ArrayList<ArrayList<Player>> getPitchers() {
+	public ArrayList<HashMap<Integer, Player>> getPitchers() {
 		return pitchers;
 	}
 
-	public void setPitchers(ArrayList<ArrayList<Player>> pitchers) {
+	public void setPitchers(ArrayList<HashMap<Integer, Player>> pitchers) {
 		this.pitchers = pitchers;
 	}
 	
 	public void addPitcher(Player pitcher, int top) {
-		this.pitchers.get(top).add(pitcher);
+		this.pitchers.get(top).put(pitcher.getId(), pitcher);
 	}
 
 	public String[] getTeamNames() {

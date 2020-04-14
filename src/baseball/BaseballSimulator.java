@@ -20,8 +20,8 @@ public class BaseballSimulator {
 	public static final int OUTS_PER_INNING = 3;
 	public static final int INNINGS_PER_GAME = 9;
 	
-	static boolean auto = true;
-	static int autoBefore = 1000;
+	static boolean simulationMode = true;
+	static int autoBeforeInning = 1000;
 	static GameResults gameResults = new GameResults();
 	static GameState gameState = new GameState();
 	static Roster[] rosters  = new Roster[2];
@@ -90,7 +90,7 @@ public class BaseballSimulator {
 
 	public static void main(String[] args) {
 		if (args == null || args.length < 4) {
-			System.out.println("Invalid args - expecting <year><vis><year><home> - ex. 2019 HOU 2019 NYY [AUTOOFF|PLAY<#>]]");
+			System.out.println("Invalid args - expecting <visYear><vis><homeYear><home><MODE> - ex. 2019 HOU 2019 NYY [SIM|GAME|AUTO<#>]]");
 			return;
 		}
 		DAO.setConnection();
@@ -98,14 +98,25 @@ public class BaseballSimulator {
 		gameResults.setVisYear(Integer.parseInt(args[0]));
 		gameResults.setHomeYear(Integer.parseInt(args[2]));
 		String[] teamNames = {args[1], args[3]};
+		// TBD Check for valid team names
 		gameResults.setTeamNames(teamNames);
 		if (args.length > 4 && args[4] != null) {
-			if (args[4].equalsIgnoreCase("AUTOOFF")) {
-				auto = false;
-				autoBefore = 0;
+			if (args[4].equalsIgnoreCase("GAME")) {
+				autoBeforeInning = 0;
+				simulationMode = false;
 			}
-			else if (args[4].indexOf("PLAY") != -1) {
-				autoBefore = Integer.parseInt(args[4].substring(args[4].length()-1));
+			if (args[4].equalsIgnoreCase("SIM")) {
+				autoBeforeInning = 1000;
+				simulationMode = true;
+			}
+			else if (args[4].indexOf("AUTO") != -1) {
+				try {
+					autoBeforeInning = Integer.parseInt(args[4].substring(args[4].length()-1));
+				}
+				catch (Exception e) {
+					autoBeforeInning = 1000;
+				}
+				simulationMode = true;
 			}
 		}
 		if (!setLineup()) {
@@ -124,6 +135,9 @@ public class BaseballSimulator {
 				System.out.println((top == 0 ? "\n***TOP " : "***BOTTOM ") + " INN: " + inning + " ***");
 				if (top == 0) {
 					System.out.println("SCORE - " + gameResults.getTeamNames()[0] + ": " + gameResults.getScore(gameState.getInning())[0]  + " " + gameResults.getTeamNames()[1] + ": " + gameResults.getScore(gameState.getInning())[1]);
+					System.out.print("TEMP FOR IP ");
+					System.out.print(gameResults.getPitchers().get(0).get(gameState.getCurrentPitchers()[0].getId()).getPitchingStats().getInningsPitched() + " ");
+					System.out.println(gameResults.getPitchers().get(1).get(gameState.getCurrentPitchers()[1].getId()).getPitchingStats().getInningsPitched());
 				}
 				//int outs  = 0;
 				boolean gameTiedStartOfAB;
@@ -132,25 +146,28 @@ public class BaseballSimulator {
 					System.out.println(gameResults.getLineup()[top][gameState.getBattingOrder()[top] - 1].getName() + " UP OUTS: " + gameState.getOuts() + " " 
 						+ baseSituations.get(getCurrentBasesSituation()) + " " + gameState.getRunnersOnBase()[0] + " " + gameState.getRunnersOnBase()[1] + " " + gameState.getRunnersOnBase()[2]);
 					
-					//if (!auto) {
-					if (autoBefore <= inning) {
-						myObj = new Scanner(System.in);
-						System.out.print("PITCH: ");
-					    String command = myObj.nextLine();
-					    if (!processCommand(command)) {
-					    	continue;
-					    }
-					}
 					BattingStats currentBatterGameStats = gameResults.getLineup()[top][gameState.getBattingOrder()[top] - 1].getBattingStats();
 					BattingStats currentBatterSeasonStats = battingStatsMap.get(gameResults.getLineup()[top][gameState.getBattingOrder()[top] - 1].getId()) != null ? 
 						battingStatsMap.get(gameResults.getLineup()[top][gameState.getBattingOrder()[top] - 1].getId()) : new BattingStats();
-					PitchingStats currentPitcherGameStats = gameState.getCurrentPitchers()[top==0?1:0].getPitchingStats();
+					PitchingStats currentPitcherGameStats = gameResults.getPitchers().get(top==0?1:0).get(gameState.getCurrentPitchers()[top==0?1:0].getId()).getPitchingStats();
 					PitchingStats currentPitcherSeasonStats = pitchingStatsMap.get(gameState.getCurrentPitchers()[top==0?1:0].getId()) != null ? 
 						pitchingStatsMap.get(gameState.getCurrentPitchers()[top==0?1:0].getId()) : new PitchingStats();
-					//if (auto) {  // Steal 2?
-					if (autoBefore > inning) { // Steal 2?
+						
+					if (!simulationMode || autoBeforeInning <= inning) {
+						myObj = new Scanner(System.in);
+						System.out.print("PITCH: ");
+					    String command = myObj.nextLine();
+					    if (!processCommand(command, currentPitcherGameStats)) {
+					    	continue;
+					    }
+					}
+					if (simulationMode || autoBeforeInning > inning) { // Steal 2?
 						if (isRunnerStealing(2)) {
-							gameState.setOuts(gameState.getOuts() + stealBase(2));
+							int sbOuts = stealBase(2);
+							if (sbOuts > 0) {
+								currentPitcherGameStats.incrementInningsPitched(1);
+								gameState.setOuts(gameState.getOuts() + sbOuts);
+							}
 						}
 					}
 					if (gameState.getOuts() == OUTS_PER_INNING) {
@@ -164,6 +181,7 @@ public class BaseballSimulator {
 						int outResult = getOutResult(currentBatterGameStats, currentBatterSeasonStats, currentPitcherGameStats, currentPitcherSeasonStats, gameState.getOuts());
 						gameState.setOuts(gameState.getOuts() + outResult);
 						currentBatterGameStats.incrementAtBats();
+						currentPitcherGameStats.incrementInningsPitched(outResult);
 					}
 					else {
 						long bbEndPoint = 1000 - Math.round((currentBatterSeasonStats.getWalkRate()*1000) + ((currentPitcherSeasonStats.getWalkRate()*1000) - 250));
@@ -175,11 +193,12 @@ public class BaseballSimulator {
 							else {
 								System.out.println("WALKED");
 								currentBatterGameStats.incrementWalks();
+								currentPitcherGameStats.incrementWalks();
 							}
 							updateBasesSituationNoRunnersAdvance();
 						}
 						else { // HIT
-							int noOutResult = getNotOutResult(currentBatterGameStats, currentBatterSeasonStats);
+							int noOutResult = getNotOutResult(currentBatterGameStats, currentBatterSeasonStats, currentPitcherGameStats);
 							if (noOutResult == 1 && (getRandomNumberInRange(0, 5) + currentBatterGameStats.getSpeedRating()) > 4) { // infield single ?
 								if (gameState.getOuts() != 2) {  // less than 2 outs runners hold
 									updateBasesSituationNoRunnersAdvance();
@@ -195,6 +214,7 @@ public class BaseballSimulator {
 							gameResults.incrementHits(top);
 							currentBatterGameStats.incrementHits();
 							currentBatterGameStats.incrementAtBats();
+							currentPitcherGameStats.incrementHitsAllowed();
 						}
 						gameResults.getLineup()[top][gameState.getBattingOrder()[top] - 1].setBattingStats(currentBatterGameStats);
 						if (inning >= 9 && gameResults.getScore(inning)[1] > gameResults.getScore(inning)[0] && gameTiedStartOfAB) {
@@ -225,16 +245,16 @@ public class BaseballSimulator {
 		 }*/ 
 	}
 	
-	private static int getNotOutResult(BattingStats playerGameStats, BattingStats playerSeasonStats) {
+	private static int getNotOutResult(BattingStats batterGameStats, BattingStats batterSeasonStats, PitchingStats pitcherGameStats) {
 		long errorEndPoint = 25;
-		long hrEndPoint = (playerSeasonStats != null && playerSeasonStats.getHits() != 0 ? 
-			Math.round((((double)playerSeasonStats.getHomeRuns()/playerSeasonStats.getHits())*1000)) : 160) + errorEndPoint;
-		hrEndPoint = playerSeasonStats.getHomeRuns() == 0 ? 8 + errorEndPoint : hrEndPoint;       // Give some chance if player has 0 hrs
-		long triplesEndPoint = (playerSeasonStats != null && playerSeasonStats.getHits() != 0 ? 
-			Math.round((((double)playerSeasonStats.getTriples()/playerSeasonStats.getHits())*1000)) : 18) + hrEndPoint;
-		triplesEndPoint = playerSeasonStats.getTriples() == 0 ? 8 + hrEndPoint : triplesEndPoint; // Give some chance if player has 0 triples
-		long doublesEndPoint = (playerSeasonStats != null && playerSeasonStats.getHits() != 0 ? 
-			Math.round((((double)playerSeasonStats.getDoubles()/playerSeasonStats.getHits())*1000)) : 203) + triplesEndPoint;
+		long hrEndPoint = (batterSeasonStats != null && batterSeasonStats.getHits() != 0 ? 
+			Math.round((((double)batterSeasonStats.getHomeRuns()/batterSeasonStats.getHits())*1000)) : 160) + errorEndPoint;
+		hrEndPoint = batterSeasonStats.getHomeRuns() == 0 ? 8 + errorEndPoint : hrEndPoint;       // Give some chance if batter has 0 hrs
+		long triplesEndPoint = (batterSeasonStats != null && batterSeasonStats.getHits() != 0 ? 
+			Math.round((((double)batterSeasonStats.getTriples()/batterSeasonStats.getHits())*1000)) : 18) + hrEndPoint;
+		triplesEndPoint = batterSeasonStats.getTriples() == 0 ? 8 + hrEndPoint : triplesEndPoint; // Give some chance if batter has 0 triples
+		long doublesEndPoint = (batterSeasonStats != null && batterSeasonStats.getHits() != 0 ? 
+			Math.round((((double)batterSeasonStats.getDoubles()/batterSeasonStats.getHits())*1000)) : 203) + triplesEndPoint;
 		int notOutResult = 1;
 		int notOutRando = getRandomNumberInRange(1, 1000);
 		if (notOutRando > 1 && notOutRando <= errorEndPoint) {
@@ -245,17 +265,18 @@ public class BaseballSimulator {
 		else if (notOutRando > errorEndPoint && notOutRando <= hrEndPoint) {
 			System.out.println("HOME RUN");
 			notOutResult = 4;
-			playerGameStats.incrementHomeRuns();
+			batterGameStats.incrementHomeRuns();
+			pitcherGameStats.incrementHomeRunsAllowed();
 		}
 		else if (notOutRando > hrEndPoint && notOutRando <= triplesEndPoint) {
 			System.out.println("TRIPLE");
 			notOutResult = 3;
-			playerGameStats.incrementTriples();
+			batterGameStats.incrementTriples();
 		}
 		else if (notOutRando > triplesEndPoint && notOutRando < doublesEndPoint) {
 			System.out.println("DOUBLE");
 			notOutResult = 2;
-			playerGameStats.incrementDoubles();
+			batterGameStats.incrementDoubles();
 		}
 		else {
 			System.out.println("SINGLE");
@@ -271,9 +292,10 @@ public class BaseballSimulator {
 			Math.round((pitcherSeasonStats.getStrikeoutRate()*100) + ((batterSeasonStats.getStrikeoutRate()*100) - 34)) : 34);
 		soEndPoint = soEndPoint > 75 ? 75 : soEndPoint; // set max soEndPoint
 		long outIncrement = Math.round((double)((100 - soEndPoint)/5));
-		if (notOutRando > 1 && notOutRando <= soEndPoint) {
-			System.out.println(outTypes.get(STRUCK_OUT)); // STRUCK OUT
+		if (notOutRando > 1 && notOutRando <= soEndPoint) { // STRUCK OUT
+			System.out.println(outTypes.get(STRUCK_OUT)); 
 			batterGameStats.incremenStrikeOuts();
+			pitcherGameStats.incrementStrikeouts();
 		}
 		else if (notOutRando > soEndPoint && notOutRando <= soEndPoint + outIncrement) {
 			System.out.println(outTypes.get(GROUNDED_OUT) + " TO " + positions.get(getRandomNumberInRange(1, 6))); //GROUNDED OUT
@@ -647,12 +669,26 @@ public class BaseballSimulator {
 				System.out.println(homeRunsString[top].substring(0, homeRunsString[top].length()-2));
 			}
 		}
-		System.out.println("\n" + "PITCHING");
+		System.out.println();
 		for (int top = 0; top < 2; top++) {
 			System.out.println(gameResults.getTeamNames()[top]);
-			ArrayList<Player> pitchers = gameResults.getPitchers().get(top);
-			for (Player p : pitchers) {
-				System.out.println(p.getFirstLastName());
+			System.out.println("PITCHERS\t\t\t" + "IP    H   R   ER  BB  K   HR  ERA");
+			HashMap<Integer, Player> pitchers = gameResults.getPitchers().get(top);
+			for (Map.Entry<Integer, Player> entry : pitchers.entrySet()) {
+				PitchingStats ps = entry.getValue().getPitchingStats();
+				System.out.print(entry.getValue().getFirstLastName());
+				System.out.print("\t\t");
+				if (entry.getValue().getFirstLastName().length() < 16) {
+					System.out.print("\t");
+				}
+				System.out.print(ps.getInningsPitched() + (ps.getInningsPitched() > 9.2 ? "  " : "   "));
+				System.out.print(ps.getHitsAllowed() + (ps.getHitsAllowed() > 9 ? "  " : "   "));
+				System.out.print(ps.getRunsAllowed() + (ps.getRunsAllowed() > 9 ? "  " : "   "));
+				System.out.print(ps.getEarnedRunsAllowed() + (ps.getEarnedRunsAllowed() > 9 ? "  " : "   "));
+				System.out.print(ps.getWalks() + (ps.getWalks() > 9 ? "  " : "   "));
+				System.out.print(ps.getStrikeouts() + (ps.getStrikeouts() > 9 ? "  " : "   "));
+				System.out.print(ps.getHomeRunsAllowed() + (ps.getHomeRunsAllowed() > 9 ? "  " : "   "));
+				System.out.println(".000");
 			}
 		}
 	}
@@ -704,7 +740,7 @@ public class BaseballSimulator {
 	}
 	
 	// For play mode
-	private static boolean processCommand(String command) {
+	private static boolean processCommand(String command, PitchingStats currentPitcherGameStats) {
 		if (command == null || command.length() == 0) {
 			return true;
 		}
@@ -721,18 +757,30 @@ public class BaseballSimulator {
 					System.out.print("INVALID BASE TO STEAL!\n");
 			}
 			else {
-				gameState.setOuts(gameState.getOuts() + stealBase(baseToSteal));
+				int sbOuts = stealBase(baseToSteal);
+				if (sbOuts > 0) {
+					currentPitcherGameStats.incrementInningsPitched(1);
+					gameState.setOuts(gameState.getOuts() + sbOuts);
+				}
 			}
 			return false;
 		}
+		else if (command.indexOf("AUTO") != -1) {
+			try {
+				autoBeforeInning = Integer.parseInt(command.substring(command.length()-1));
+			}
+			catch (Exception e) {
+			}
+			simulationMode = true;
+		}
 		else {
 			switch (command) {
-				case "AUTOON":
-					auto = true;
-					autoBefore = 1000;
+				case "SIM":
+					simulationMode = true;
+					autoBeforeInning = 1000;
 					break;
 				case "?":
-					System.out.print("COMMANDS - AUTOON STEAL<base>\n");
+					System.out.print("COMMANDS - SIM, AUTO<#>, STEAL<#>\n");
 					return false;
 			}
 		}

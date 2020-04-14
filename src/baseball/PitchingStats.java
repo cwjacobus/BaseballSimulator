@@ -45,6 +45,21 @@ public class PitchingStats {
 	public void setInningsPitched(double inningsPitched) {
 		this.inningsPitched = inningsPitched;
 	}
+	
+	public void incrementInningsPitched(int incrementBy) {
+		for (int i = 1; i <= incrementBy; i++) {
+			String iPString = Double.toString(inningsPitched);
+			if (iPString != null && iPString.length() > 0 && iPString.contains(".")) {
+				String ipStringArray[] = iPString.split("\\.");
+				if (ipStringArray[1].equals("0") || ipStringArray[1].equals("1")) {
+					inningsPitched = Double.parseDouble(ipStringArray[0] + "." + (Integer.parseInt(ipStringArray[1]) + 1));
+				}
+				else {
+					inningsPitched = Double.parseDouble((Integer.parseInt(ipStringArray[0]) + 1) + ".0");
+				}
+			}
+		}
+	}
 
 	public int getRunsAllowed() {
 		return runsAllowed;
@@ -52,6 +67,10 @@ public class PitchingStats {
 
 	public void setRunsAllowed(int runsAllowed) {
 		this.runsAllowed = runsAllowed;
+	}
+	
+	public void incrementRunsAllowed() {
+		this.runsAllowed++;
 	}
 
 	public int getEarnedRunsAllowed() {
@@ -61,6 +80,9 @@ public class PitchingStats {
 	public void setEarnedRunsAllowed(int earnedRunsAllowed) {
 		this.earnedRunsAllowed = earnedRunsAllowed;
 	}
+	public void incrementEarnedRunsAllowed() {
+		this.earnedRunsAllowed++;
+	}
 
 	public int getWalks() {
 		return walks;
@@ -68,6 +90,10 @@ public class PitchingStats {
 
 	public void setWalks(int walks) {
 		this.walks = walks;
+	}
+	
+	public void incrementWalks() {
+		this.walks++;
 	}
 
 	public int getStrikeouts() {
@@ -77,6 +103,10 @@ public class PitchingStats {
 	public void setStrikeouts(int strikeouts) {
 		this.strikeouts = strikeouts;
 	}
+	
+	public void incrementStrikeouts() {
+		this.strikeouts++;
+	}
 
 	public int getHomeRunsAllowed() {
 		return homeRunsAllowed;
@@ -84,6 +114,10 @@ public class PitchingStats {
 
 	public void setHomeRunsAllowed(int homeRunsAllowed) {
 		this.homeRunsAllowed = homeRunsAllowed;
+	}
+	
+	public void incrementHomeRunsAllowed() {
+		this.homeRunsAllowed++;
 	}
 
 	public int getStolenBasesAllowed() {
@@ -108,6 +142,10 @@ public class PitchingStats {
 
 	public void setHitsAllowed(int hitsAllowed) {
 		this.hitsAllowed = hitsAllowed;
+	}
+	
+	public void incrementHitsAllowed() {
+		this.hitsAllowed++;
 	}
 
 	public int getHolds() {

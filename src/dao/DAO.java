@@ -203,7 +203,7 @@ public class DAO {
 		catch (SQLException e) {
 			e.printStackTrace();
 		}
-		index = ((index - 1) > pitcherList.size()) ? 1 : index;
+		index = ((index - 1) >= pitcherList.size()) ? 1 : index;
 		return pitcherList.get(index-1);
 	}
 	
