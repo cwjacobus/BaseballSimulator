@@ -98,7 +98,12 @@ public class BaseballSimulator {
 		gameResults.setVisYear(Integer.parseInt(args[0]));
 		gameResults.setHomeYear(Integer.parseInt(args[2]));
 		String[] teamNames = {args[1], args[3]};
-		// TBD Check for valid team names
+		for (int t = 0; t < 2; t++) {
+			if (franchisesMap.get(teamNames[t]) == null) {
+				System.out.println("Invalid team name: " + teamNames[t]);
+				return;
+			}
+		}
 		gameResults.setTeamNames(teamNames);
 		if (args.length > 4 && args[4] != null) {
 			if (args[4].equalsIgnoreCase("GAME")) {
@@ -135,9 +140,6 @@ public class BaseballSimulator {
 				System.out.println((top == 0 ? "\n***TOP " : "***BOTTOM ") + " INN: " + inning + " ***");
 				if (top == 0) {
 					System.out.println("SCORE - " + gameResults.getTeamNames()[0] + ": " + gameResults.getScore(gameState.getInning())[0]  + " " + gameResults.getTeamNames()[1] + ": " + gameResults.getScore(gameState.getInning())[1]);
-					System.out.print("TEMP FOR IP ");
-					System.out.print(gameResults.getPitchers().get(0).get(gameState.getCurrentPitchers()[0].getId()).getPitchingStats().getInningsPitched() + " ");
-					System.out.println(gameResults.getPitchers().get(1).get(gameState.getCurrentPitchers()[1].getId()).getPitchingStats().getInningsPitched());
 				}
 				//int outs  = 0;
 				boolean gameTiedStartOfAB;
@@ -739,11 +741,27 @@ public class BaseballSimulator {
         return randomLineup;
 	}
 	
+	private static boolean inLineup(Player[] lineup, int id) {
+		boolean inLineup = false;
+		for (Player p : lineup) {
+			if (p.getId() == id) {
+				return true;
+			}
+		}
+		return inLineup;
+	}
+	
 	// For play mode
 	private static boolean processCommand(String command, PitchingStats currentPitcherGameStats) {
-		if (command == null || command.length() == 0) {
+		if (command == null || command.length() == 0) { // NOOP (if CR entered)
 			return true;
 		}
+		command = command.toUpperCase();
+		int top = gameState.getTop();
+		HashMap<Integer, Player> gamePitchers = gameResults.getPitchers().get(top==0?1:0);
+		HashMap<Object, Object> rosterPitchers = rosters[top==0?1:0].getPitchers();
+		Player[] gameBatters = gameResults.getLineup()[top];
+		HashMap<Object, Object> rosterBatters = rosters[top].getBatters();
 		if (command.indexOf("STEAL") != -1) {
 			int baseToSteal = 0;
 			try {
@@ -772,6 +790,30 @@ public class BaseballSimulator {
 			catch (Exception e) {
 			}
 			simulationMode = true;
+			return true;
+		}
+		else if (command.indexOf("SUBP") != -1) {
+			String[] commandArray = command.split(" ");
+			if (commandArray.length < 2) {
+				System.out.print("INVALID COMMAND!\n");
+				return false;
+			}
+			 
+			int newPitcherId = Integer.parseInt(commandArray[1]);
+			MLBPlayer newPitcher = (MLBPlayer)rosterPitchers.get(newPitcherId);
+			if (newPitcher == null) {
+				System.out.print("No pitcher found for " + newPitcherId + "!\n");
+				return false;
+			}
+			if (gamePitchers.get(newPitcherId) != null) {
+				System.out.print("Pitcher has already pitched in this game " + newPitcherId + "!\n");
+				return false;
+			}
+			Player newPitcherPlayer = new Player(newPitcher.getFullName(), newPitcher.getMlbPlayerId(), "P");
+			gameResults.addPitcher(newPitcherPlayer, top==0?1:0);
+			gameState.setCurrentPitcher(newPitcherPlayer, top==0?1:0);
+			System.out.println("Pitcher changed to: " + newPitcher.getFirstLastName() + "\n");
+			return false;
 		}
 		else {
 			switch (command) {
@@ -779,8 +821,28 @@ public class BaseballSimulator {
 					simulationMode = true;
 					autoBeforeInning = 1000;
 					break;
+				case "BATTERS":
+					System.out.println("\nEligible Pinch hitters:");
+					for (Map.Entry<Object, Object> entry : rosterBatters.entrySet()) {
+						MLBPlayer batter = (MLBPlayer)entry.getValue();
+						if (!inLineup(gameBatters, batter.getMlbPlayerId())) {
+							System.out.println(batter.getFirstLastName() + " " + batter.getMlbPlayerId());
+						}
+					}
+					System.out.println();
+					return false;
+				case "PITCHERS":
+					System.out.println("\nEligible Pitchers:");
+					for (Map.Entry<Object, Object> entry : rosterPitchers.entrySet()) {
+						MLBPlayer pitcher = (MLBPlayer)entry.getValue();
+						if (gamePitchers.get(pitcher.getMlbPlayerId()) == null) {
+							System.out.println(pitcher.getFirstLastName() + " " + pitcher.getMlbPlayerId());
+						}
+					}
+					System.out.println();
+					return false;
 				case "?":
-					System.out.print("COMMANDS - SIM, AUTO<#>, STEAL<#>\n");
+					System.out.print("COMMANDS - SIM, AUTO<inning#>, STEAL<#>, PITCHERS,  SUBP <id#>, BATTERS, SUBB <id#>,\n\n");
 					return false;
 			}
 		}
@@ -873,7 +935,7 @@ public class BaseballSimulator {
 			}
 		}
 		
-		// Get batting stats from DB
+		// Get pitching stats from DB
 		private static void getPitchingStatsFromDB() {
 			HashMap<Object, Object> visitorPitchingStats = DAO.getDataMap("MLB_PITCHING_STATS", (Integer)franchisesMap.get(gameResults.getTeamNames()[0]), gameResults.getYears()[0]);
 			HashMap<Object, Object> homePitchingStats = DAO.getDataMap("MLB_PITCHING_STATS", (Integer)franchisesMap.get(gameResults.getTeamNames()[1]), gameResults.getYears()[1]);

@@ -65,6 +65,9 @@ public class GameState {
 		this.currentPitchers = currentPitchers;
 	}
 
+	public void setCurrentPitcher(Player currentPitcher, int top) {
+		this.currentPitchers[top] = currentPitcher;
+	}
 
 
 }
