@@ -21,6 +21,7 @@ public class BaseballSimulator {
 	public static final int INNINGS_PER_GAME = 9;
 	
 	static boolean auto = true;
+	static int autoBefore = 1000;
 	static GameResults gameResults = new GameResults();
 	static GameState gameState = new GameState();
 	static Roster[] rosters  = new Roster[2];
@@ -89,7 +90,7 @@ public class BaseballSimulator {
 
 	public static void main(String[] args) {
 		if (args == null || args.length < 4) {
-			System.out.println("Invalid args - expecting <year><vis><year><home> - ex. 2019 HOU 2019 NYY");
+			System.out.println("Invalid args - expecting <year><vis><year><home> - ex. 2019 HOU 2019 NYY [AUTOOFF|PLAY<#>]]");
 			return;
 		}
 		DAO.setConnection();
@@ -98,8 +99,14 @@ public class BaseballSimulator {
 		gameResults.setHomeYear(Integer.parseInt(args[2]));
 		String[] teamNames = {args[1], args[3]};
 		gameResults.setTeamNames(teamNames);
-		if (args.length > 4 && args[4] != null && args[4].equalsIgnoreCase("AUTOOFF")) {
-			auto = false;
+		if (args.length > 4 && args[4] != null) {
+			if (args[4].equalsIgnoreCase("AUTOOFF")) {
+				auto = false;
+				autoBefore = 0;
+			}
+			else if (args[4].indexOf("PLAY") != -1) {
+				autoBefore = Integer.parseInt(args[4].substring(args[4].length()-1));
+			}
 		}
 		if (!setLineup()) {
 			return;
@@ -115,6 +122,9 @@ public class BaseballSimulator {
 				gameState.setTop(top);
 				gameState.setOuts(0);
 				System.out.println((top == 0 ? "\n***TOP " : "***BOTTOM ") + " INN: " + inning + " ***");
+				if (top == 0) {
+					System.out.println("SCORE - " + gameResults.getTeamNames()[0] + ": " + gameResults.getScore(gameState.getInning())[0]  + " " + gameResults.getTeamNames()[1] + ": " + gameResults.getScore(gameState.getInning())[1]);
+				}
 				//int outs  = 0;
 				boolean gameTiedStartOfAB;
 				Arrays.fill(gameState.getRunnersOnBase(), 0);
@@ -122,7 +132,8 @@ public class BaseballSimulator {
 					System.out.println(gameResults.getLineup()[top][gameState.getBattingOrder()[top] - 1].getName() + " UP OUTS: " + gameState.getOuts() + " " 
 						+ baseSituations.get(getCurrentBasesSituation()) + " " + gameState.getRunnersOnBase()[0] + " " + gameState.getRunnersOnBase()[1] + " " + gameState.getRunnersOnBase()[2]);
 					
-					if (!auto) {
+					//if (!auto) {
+					if (autoBefore <= inning) {
 						myObj = new Scanner(System.in);
 						System.out.print("PITCH: ");
 					    String command = myObj.nextLine();
@@ -136,7 +147,8 @@ public class BaseballSimulator {
 					PitchingStats currentPitcherGameStats = gameState.getCurrentPitchers()[top==0?1:0].getPitchingStats();
 					PitchingStats currentPitcherSeasonStats = pitchingStatsMap.get(gameState.getCurrentPitchers()[top==0?1:0].getId()) != null ? 
 						pitchingStatsMap.get(gameState.getCurrentPitchers()[top==0?1:0].getId()) : new PitchingStats();
-					if (auto) {  // Steal 2?
+					//if (auto) {  // Steal 2?
+					if (autoBefore > inning) { // Steal 2?
 						if (isRunnerStealing(2)) {
 							gameState.setOuts(gameState.getOuts() + stealBase(2));
 						}
@@ -423,11 +435,11 @@ public class BaseballSimulator {
 		int nextBaseIndex = baseToSteal == 4 ? 2 : (runnerStealingIndex + 1);
 		int bo = getBattingOrderForPlayer(gameState.getRunnersOnBase()[runnerStealingIndex]);
 		BattingStats bs = battingStatsMap.get(gameResults.getLineup()[gameState.getTop()][bo - 1].getId());
-		double stealPctg = (double)bs.getStolenBases()/(bs.getStolenBases() + bs.getCaughtStealing());
+		double stealPctg = ((bs.getStolenBases() + bs.getCaughtStealing()) != 0) ? 
+			(double)bs.getStolenBases()/(bs.getStolenBases() + bs.getCaughtStealing()) : 0.2;  // Give a chance if no SB
 		System.out.print(gameResults.getLineup()[gameState.getTop()][bo - 1].getName() + 
-			" ATTEMPTING TO STEAL " + baseToSteal + " - SR: " + 
-			bs.getSpeedRating() + " SP: " + df.format(stealPctg));
-		if (getRandomNumberInRange(1, 10) < stealPctg*10) { // safe
+			" ATTEMPTING TO STEAL " + baseToSteal + " - SR: " + bs.getSpeedRating() + " SP: " + df.format(stealPctg));
+		if (getRandomNumberInRange(1, 10) < Math.round(stealPctg*10)) { // safe
 			System.out.println("- SAFE!");
 			gameState.getRunnersOnBase()[nextBaseIndex] = gameState.getRunnersOnBase()[runnerStealingIndex];
 		}
@@ -697,9 +709,16 @@ public class BaseballSimulator {
 			return true;
 		}
 		if (command.indexOf("STEAL") != -1) {
-			int baseToSteal = Integer.parseInt(command.substring(command.length()-1));
-			if (baseToSteal < 2 || baseToSteal > 4) {
-				System.out.print("INVALID BASE TO STEAL!\n");
+			int baseToSteal = 0;
+			try {
+				baseToSteal = Integer.parseInt(command.substring(command.length()-1));
+			}
+			catch (Exception e) {
+			}
+			if ((baseToSteal < 2 || baseToSteal > 4 ) ||
+			   ((baseToSteal == 2 || baseToSteal == 3) && (gameState.getRunnersOnBase()[baseToSteal-2] == 0 || gameState.getRunnersOnBase()[baseToSteal-1] != 0)) ||
+			    (baseToSteal == 4 && gameState.getRunnersOnBase()[baseToSteal-2] == 0)) {
+					System.out.print("INVALID BASE TO STEAL!\n");
 			}
 			else {
 				gameState.setOuts(gameState.getOuts() + stealBase(baseToSteal));
@@ -710,6 +729,7 @@ public class BaseballSimulator {
 			switch (command) {
 				case "AUTOON":
 					auto = true;
+					autoBefore = 1000;
 					break;
 				case "?":
 					System.out.print("COMMANDS - AUTOON STEAL<base>\n");
