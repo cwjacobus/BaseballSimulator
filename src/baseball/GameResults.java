@@ -7,7 +7,7 @@ public class GameResults {
 	public static final int NUM_OF_PLAYERS_IN_LINEUP = 9;
 	int[] hits = {0, 0};
 	int[] errors = {0, 0};
-	int[][] boxScore = new int[2][25];
+	int[][] runsScored = new int[2][25];
 	boolean walkOff = false;
 	Player[][] lineup;
 	ArrayList<HashMap<Integer, Player>> pitchers = new ArrayList<HashMap<Integer, Player>>(2);
@@ -22,8 +22,8 @@ public class GameResults {
 	public int[] getScore(int inning) {
 		int[] score = {0, 0};
 		for (int i = 0; i < inning; i++) {
-			score[0] += getBoxScore(0, i);
-			score[1] += getBoxScore(1, i);
+			score[0] += getRunsScored(0, i);
+			score[1] += getRunsScored(1, i);
 		}
 		return score;
 	}
@@ -52,16 +52,16 @@ public class GameResults {
 		this.errors[top]++;
 	}
 
-	public int getBoxScore(int top, int inning) {
-		return boxScore[top][inning];
+	public int getRunsScored(int top, int inning) {
+		return runsScored[top][inning];
 	}
 
-	public void setBoxScore(int top, int inning, int score) {
-		this.boxScore[top][inning - 1] += score;
+	public void setRunsScored(int top, int inning, int score) {
+		this.runsScored[top][inning - 1] += score;
 	}
 	
-	public void incrementBoxScore(int top, int inning) {
-		this.boxScore[top][inning - 1]++;
+	public void incrementRunsScored(int top, int inning) {
+		this.runsScored[top][inning - 1]++;
 	}
 
 	public boolean isWalkOff() {

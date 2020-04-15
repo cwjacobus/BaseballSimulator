@@ -359,7 +359,7 @@ public class BaseballSimulator {
 			}
 		}
 		if (runsScored > 0) {
-			gameResults.setBoxScore(gameState.getTop(), gameState.getInning(), runsScored);
+			gameResults.setRunsScored(gameState.getTop(), gameState.getInning(), runsScored);
 			System.out.println(runsScored + " RUNS SCORED - VIS: " + gameResults.getScore(gameState.getInning())[0]  + " HOME: " + gameResults.getScore(gameState.getInning())[1]);
 		}
 	}
@@ -370,7 +370,7 @@ public class BaseballSimulator {
 		if (getCurrentBasesSituation() == BASES_LOADED || getCurrentBasesSituation() == MAN_ON_FIRST_AND_SECOND) { // 123 or 12
 			// if 123 runner 3 scores
 			if (getCurrentBasesSituation() == BASES_LOADED) {
-				gameResults.incrementBoxScore(gameState.getTop(), gameState.getInning()); // run scores
+				gameResults.incrementRunsScored(gameState.getTop(), gameState.getInning()); // run scores
 				int bo = getBattingOrderForPlayer(gameState.getRunnersOnBase()[2]);
 				gameResults.getLineup()[gameState.getTop()][bo - 1].getBattingStats().incrementRuns();
 				System.out.println("1 RUN SCORED - VIS: " + gameResults.getScore(gameState.getInning())[0]  + " HOME: " + gameResults.getScore(gameState.getInning())[1]);
@@ -392,7 +392,7 @@ public class BaseballSimulator {
 		if (deep || (!deep && bs.getSpeedRating() > 2)) {  // If going to try to score on fly ball
 			System.out.println(gameResults.getLineup()[gameState.getTop()][bo - 1].getName() + " TAGGING UP ON A FLY BALL");
 			if (deep ||(sacRando > 5)) { // safe
-				gameResults.incrementBoxScore(gameState.getTop(), gameState.getInning()); // run scores
+				gameResults.incrementRunsScored(gameState.getTop(), gameState.getInning()); // run scores
 				gameResults.getLineup()[gameState.getTop()][bo - 1].getBattingStats().incrementRuns();
 				System.out.println("SAC FLY - 1 RUN SCORED - VIS: " + gameResults.getScore(gameState.getInning())[0]  + " HOME: " + gameResults.getScore(gameState.getInning())[1]);
 			}
@@ -413,7 +413,7 @@ public class BaseballSimulator {
 		gameState.getRunnersOnBase()[1] = 0;
 		gameState.getRunnersOnBase()[0] = 0;
 		if (runScores) {
-			gameResults.incrementBoxScore(gameState.getTop(), gameState.getInning()); // run scores
+			gameResults.incrementRunsScored(gameState.getTop(), gameState.getInning()); // run scores
 			System.out.println("RUN SCORES - VIS: " + gameResults.getScore(gameState.getInning())[0]  + " HOME: " + gameResults.getScore(gameState.getInning())[1]);
 			int bo = getBattingOrderForPlayer(gameState.getRunnersOnBase()[2]);
 			gameResults.getLineup()[gameState.getTop()][bo - 1].getBattingStats().incrementRuns();
@@ -573,7 +573,7 @@ public class BaseballSimulator {
 					System.out.print("X "); // Bottom of inning was not necessary
 				}
 				else {
-					System.out.print(gameResults.getBoxScore(top, i-1) + (gameResults.getBoxScore(top == 0 ? 1: 0, i-1) < 10 ? " " : "  "));
+					System.out.print(gameResults.getRunsScored(top, i-1) + (gameResults.getRunsScored(top == 0 ? 1: 0, i-1) < 10 ? " " : "  "));
 				}
 			}
 			System.out.println(" " + gameResults.getScore(gameState.getInning())[top] + (gameResults.getScore(gameState.getInning())[top] < 10 ? " " : "") + " " + gameResults.getHits()[top] + 
