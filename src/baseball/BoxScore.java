@@ -1,7 +1,7 @@
 package baseball;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 public class BoxScore {
 	public static final int NUM_OF_PLAYERS_IN_LINEUP = 9;
@@ -10,7 +10,7 @@ public class BoxScore {
 	int[] runsScored = new int[50];
 	boolean walkOff = false;
 	ArrayList<ArrayList<Player>> batters = new ArrayList<ArrayList<Player>>();
-	HashMap<Integer, Player> pitchers = new HashMap<Integer, Player>();
+	LinkedHashMap<Integer, Player> pitchers = new LinkedHashMap<Integer, Player>();
 	String teamName;
 	int year = 2019;
 	
@@ -80,11 +80,11 @@ public class BoxScore {
 		this.batters = batters;
 	}
 
-	public HashMap<Integer, Player> getPitchers() {
+	public LinkedHashMap<Integer, Player> getPitchers() {
 		return pitchers;
 	}
 
-	public void setPitchers(HashMap<Integer, Player> pitchers) {
+	public void setPitchers(LinkedHashMap<Integer, Player> pitchers) {
 		this.pitchers = pitchers;
 	}
 

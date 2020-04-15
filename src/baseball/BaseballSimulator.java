@@ -603,8 +603,8 @@ public class BaseballSimulator {
 		for (int top = 0; top < 2; top++) {
 			ArrayList<ArrayList<Player>> batters = boxScores[top].getBatters();
 			System.out.println();
-			System.out.println(boxScores[top].getTeamName());
-			System.out.println("HITTERS\t\t\t\t" + "AB  R   H   RBI BB  K    AVG  OBP  SLG");
+			System.out.print(boxScores[top].getTeamName() + " ");
+			System.out.println("Hitting\t\t\t" + "AB  R   H  RBI  BB  K    AVG  OBP  SLG");
 			for (ArrayList<Player> playerList : batters) {
 				for (Player batter : playerList) {
 					BattingStats gameStats = batter.getBattingStats();
@@ -691,8 +691,9 @@ public class BaseballSimulator {
 		}
 		System.out.println();
 		for (int top = 0; top < 2; top++) {
-			System.out.println(boxScores[top].getTeamName());
-			System.out.println("PITCHERS\t\t\t" + "IP    H   R   ER  BB  K   HR   ERA");
+			System.out.println();
+			System.out.print(boxScores[top].getTeamName() + " ");
+			System.out.println("Pitching\t\t\t" + "IP    H   R   ER  BB  K   HR   ERA");
 			HashMap<Integer, Player> pitchers = boxScores[top].getPitchers();
 			for (Map.Entry<Integer, Player> entry : pitchers.entrySet()) {
 				PitchingStats ps = entry.getValue().getPitchingStats();
