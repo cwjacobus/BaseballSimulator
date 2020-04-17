@@ -128,9 +128,9 @@ public class BaseballSimulator {
 				boolean gameTiedStartOfAB;
 				Arrays.fill(gameState.getRunnersOnBase(), 0);
 				while (gameState.getOuts() < OUTS_PER_INNING) {
-					Player currentBatter = batters.get(gameState.getBattingOrder()[top] - 1).get(batters.get(gameState.getBattingOrder()[top] - 1).size()-1);
+					Player currentBatter = batters.get(gameState.getBattingOrder()[top] - 1).get(batters.get(gameState.getBattingOrder()[top] - 1).size() - 1);
 					System.out.println(currentBatter.getName() + " UP OUTS: " + gameState.getOuts() + " "  + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()) + 
-						" " + gameState.getRunnersOnBase()[0] + " " + gameState.getRunnersOnBase()[1] + " " + gameState.getRunnersOnBase()[2]);
+						" (" + getPlayerNameFromId(gameState.getRunnersOnBase()[0]) + ":" + getPlayerNameFromId(gameState.getRunnersOnBase()[1]) + ":" + getPlayerNameFromId(gameState.getRunnersOnBase()[2]) + ")");
 					
 					BattingStats currentBatterGameStats = currentBatter.getBattingStats();
 					BattingStats currentBatterSeasonStats = battingStatsMap.get(currentBatter.getId());
@@ -146,7 +146,7 @@ public class BaseballSimulator {
 					    	continue;
 					    }
 					}
-					if (simulationMode || autoBeforeInning > inning) { // Steal 2?
+					if (simulationMode && autoBeforeInning > inning) { // Steal 2?
 						if (isRunnerStealing(2)) {
 							int sbOuts = stealBase(2);
 							if (sbOuts > 0) {
@@ -168,14 +168,13 @@ public class BaseballSimulator {
 					gameTiedStartOfAB = boxScores[1].getScore(inning) == boxScores[0].getScore(inning);
 					long onBaseEndPoint = 1000 - Math.round(currentBatterSeasonStats.getOnBasePercentage()*1000);
 					if (rando <= onBaseEndPoint) { // OUT
-						int outResult = getOutResult(currentBatterGameStats, currentBatterSeasonStats, currentPitcherGameStats, currentPitcherSeasonStats, gameState.getOuts());
+						int outResult = getOutResult(currentBatter, currentBatterSeasonStats, currentPitcherGameStats, currentPitcherSeasonStats);
 						gameState.setOuts(gameState.getOuts() + outResult);
 						currentBatterGameStats.incrementAtBats();
 						currentPitcherGameStats.incrementInningsPitched(outResult);
 					}
 					else {
-						long bbEndPoint = 1000 - Math.round((currentBatterSeasonStats.getWalkRate()*1000) + ((currentPitcherSeasonStats.getWalkRate()*1000) - 250));
-						bbEndPoint = bbEndPoint > 850 ? 850 : bbEndPoint; // set max bbEndPoint
+						long bbEndPoint = 1000 - (Math.round(((currentBatterSeasonStats.getWalkRate() + currentPitcherSeasonStats.getWalkRate())/2)*1000));
 						if (rando > onBaseEndPoint && rando <= bbEndPoint) {
 							if (rando >= (bbEndPoint - 20)) {  // Hardcoded HBP rate
 								System.out.println("HIT BY PITCH");
@@ -276,28 +275,29 @@ public class BaseballSimulator {
 		return notOutResult;
 	}
 	
-	private static int getOutResult(BattingStats batterGameStats, BattingStats batterSeasonStats, PitchingStats pitcherGameStats, PitchingStats pitcherSeasonStats, int outs) {
+	private static int getOutResult(Player currentBatter, BattingStats batterSeasonStats, PitchingStats pitcherGameStats, PitchingStats pitcherSeasonStats) {
 		int outsRecorded = 1;
 		int notOutRando = getRandomNumberInRange(1, 100);
-		/*long soEndPoint = (pitcherSeasonStats != null && batterSeasonStats != null? 
-			Math.round((pitcherSeasonStats.getStrikeoutRate()*100) + ((batterSeasonStats.getStrikeoutRate()*100) - 34)) : 34);*/
 		long soEndPoint = Math.round(((pitcherSeasonStats.getStrikeoutRate()+batterSeasonStats.getStrikeoutRate())/2)*100);
-		//soEndPoint = soEndPoint > 75 ? 75 : soEndPoint; // set max soEndPoint
 		long outIncrement = Math.round((double)((100 - soEndPoint)/5));
 		if (notOutRando > 1 && notOutRando <= soEndPoint) { // STRUCK OUT
 			System.out.println(outTypes.get(STRUCK_OUT)); 
-			batterGameStats.incremenStrikeOuts();
+			currentBatter.getBattingStats().incremenStrikeOuts();
 			pitcherGameStats.incrementStrikeouts();
 		}
 		else if (notOutRando > soEndPoint && notOutRando <= soEndPoint + outIncrement) {
-			System.out.println(outTypes.get(GROUNDED_OUT) + " TO " + positions.get(getRandomNumberInRange(1, 6))); //GROUNDED OUT
-			if (doublePlay(true, outs)) {
+			String groundBallRecipientPosition = positions.get(getRandomNumberInRange(1, 6));
+			System.out.println(outTypes.get(GROUNDED_OUT) + " TO " + groundBallRecipientPosition); //GROUNDED OUT
+			if (doublePlay(true)) {
 				outsRecorded++;
+			}
+			else {
+				fieldersChoice(groundBallRecipientPosition, currentBatter);
 			}
 		}
 		else if (notOutRando > soEndPoint + outIncrement && notOutRando <= soEndPoint + (outIncrement*2)) {
 			System.out.println(outTypes.get(FLEW_OUT) +  " TO " + positions.get(getRandomNumberInRange(7, 9))); // FLEW OUT
-			if (outs < 2 && gameState.isBaseOccupied(3)) {
+			if (gameState.getOuts() < 2 && gameState.isBaseOccupied(3)) {
 				if (updateBasesSituationSacFly(false) == 1) {
 					outsRecorded++;
 				}
@@ -305,7 +305,7 @@ public class BaseballSimulator {
 		}
 		else if (notOutRando > soEndPoint + (outIncrement*2) && notOutRando <= soEndPoint + (outIncrement*3)) {
 			System.out.println(outTypes.get(FLEW_OUT_DEEP) +  " TO " + positions.get(getRandomNumberInRange(7, 9))); // FLEW OUT DEEP
-			if (outs < 2 && gameState.isBaseOccupied(3)) {
+			if (gameState.getOuts() < 2 && gameState.isBaseOccupied(3)) {
 				if (updateBasesSituationSacFly(true) == 1) {
 					outsRecorded++;
 				}
@@ -325,7 +325,7 @@ public class BaseballSimulator {
 		
 		if (gameState.isBuntAttempt()) {
 			System.out.println(currentBatter.getFirstLastName() + " attempted a bunt");
-			//bunt();
+			updateBasesSituationSacBunt(currentBatter);
 			gameState.setBuntAttempt(false);
 			actionProcessed = true;
 		}
@@ -395,14 +395,15 @@ public class BaseballSimulator {
 	}
 	
 	private static void updateBasesSituationSacBunt(Player currentBatter) { 
-		BoxScore boxScore = boxScores[gameState.getTop()];
-		if (gameState.getCurrentBasesSituation() == GameState.BASES_LOADED || gameState.getCurrentBasesSituation() == GameState.MAN_ON_FIRST_AND_SECOND) { // 123 or 12
+		//BoxScore boxScore = boxScores[gameState.getTop()];
+		if (gameState.isBaseOccupied(2)) { // Runner on second or first and second
 			gameState.getRunnersOnBase()[2] = gameState.getRunnersOnBase()[1]; // runner 2->3
+			gameState.getRunnersOnBase()[1] = 0;
 		}
-		if (gameState.isBaseOccupied(1)) { // Runner on first
+		else if (gameState.isBaseOccupied(1)) { // Runner on first or first and third
 			gameState.getRunnersOnBase()[1] = gameState.getRunnersOnBase()[0]; // runner 1->2
-		}
-		gameState.getRunnersOnBase()[0] = currentBatter.getId();	
+			gameState.getRunnersOnBase()[0] = 0;
+		}	
 	}
 	
 	private static int updateBasesSituationSacFly(boolean deep) {
@@ -444,11 +445,25 @@ public class BaseballSimulator {
 			runnerOnThird.getBattingStats().incrementRuns();
 		}
 	}
+	private static void updateBasesSituationFieldersChoice(Player currentBatter) {
+		if (gameState.getCurrentBasesSituation() == GameState.BASES_LOADED) {
+			gameState.getRunnersOnBase()[2] = gameState.getRunnersOnBase()[1];
+			gameState.getRunnersOnBase()[1] = gameState.getRunnersOnBase()[0];
+		}
+		else if (gameState.isBaseOccupied(2)) {
+			gameState.getRunnersOnBase()[2] = gameState.getRunnersOnBase()[1];
+			gameState.getRunnersOnBase()[1] = 0;
+		}
+		else {
+			gameState.getRunnersOnBase()[1] = 0;
+		}
+		gameState.getRunnersOnBase()[0] = currentBatter.getId();
+	}
 	
-	private static boolean doublePlay(boolean ground, int outs) {
+	private static boolean doublePlay(boolean ground) {
 		boolean dp = false;
 		BoxScore boxScore = boxScores[gameState.getTop()];
-		if (!gameState.isBaseOccupied(1) || outs == 2 || !ground) { // Must a ground out, less than 2 outs and runner on 1st
+		if (!gameState.isBaseOccupied(1) || gameState.getOuts() == 2 || !ground) { // Must a ground out, less than 2 outs and runner on 1st
 			return false;
 		}
 		int bo = getBattingOrderForPlayer(gameState.getRunnersOnBase()[0]);
@@ -462,6 +477,17 @@ public class BaseballSimulator {
 			System.out.println("DOUBLE PLAY");
 		}
 		return dp;
+	}
+	
+	private static void fieldersChoice(String groundBallRecipientPosition, Player currentBatter) {
+		if (gameState.getCurrentBasesSituation() == GameState.BASES_EMPTY || gameState.getCurrentBasesSituation() == GameState.MAN_ON_THIRD || 
+			gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND_AND_THIRD || gameState.getOuts() == 2 || gameState.isHitAndRun()) {
+				return;
+		}
+		else {
+			System.out.println("FIELDER'S CHOICE");
+			updateBasesSituationFieldersChoice(currentBatter);
+		}
 	}
 	
 	private static boolean isRunnerStealing(int baseToSteal) {
@@ -739,6 +765,18 @@ public class BaseballSimulator {
 			order++;
 		}
 		return 0;
+	}
+	static Player getPlayerFromId(int id) {
+		if (id == 0) {
+			return null;
+		}
+		int bo = getBattingOrderForPlayer(id);
+		return boxScores[gameState.getTop()].getBatters().get(bo - 1).get(boxScores[gameState.getTop()].getBatters().get(bo - 1).size() - 1);
+	}
+	
+	static String getPlayerNameFromId(int id) {
+		Player player = getPlayerFromId(id);
+		return player != null ? player.getFirstLastName() : "<>";
 	}
 	
 	private static ArrayList<Integer> getRandomLineupByPosition() {
