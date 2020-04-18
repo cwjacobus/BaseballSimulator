@@ -46,6 +46,10 @@ public class GameState {
 	public void setOuts(int outs) {
 		this.outs = outs;
 	}
+	
+	public void incrementOuts() {
+		this.outs++;
+	}
 
 	public Integer getInning() {
 		return inning;
