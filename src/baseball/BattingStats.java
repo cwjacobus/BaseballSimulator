@@ -197,31 +197,27 @@ public class BattingStats {
 	}
 	
 	public double getBattingAverage() {
-		return atBats == 0 ? 0.0 : (double)hits/atBats;
+		return atBats > 0 ? (double)hits/atBats : 0.0;
 	}
 	
 	public double getOnBasePercentage() {
-		return plateAppearances == 0 ? 0.0 : (double)(hits + walks + hitByPitch)/plateAppearances;
+		return plateAppearances > 0 ? (double)(hits + walks + hitByPitch)/plateAppearances : 0.0;
 	}
 	
 	public double getSluggingPercentage() {
-		return atBats == 0 ? 0.0 : (double)(getSingles() + (doubles*2) + (triples*3)+ (homeRuns*4))/atBats;
+		return atBats > 0 ? (double)(getSingles() + (doubles*2) + (triples*3)+ (homeRuns*4))/atBats: 0.0;
 	}
 	
 	public double getStrikeoutRate () {
-		double soRate = 0.0;
 		int outs = plateAppearances - (hits + walks + hitByPitch);
-		if (outs > 0) {
-			soRate = (double)strikeOuts/outs;
-		}
-		return soRate;
+		return outs > 0 ? (double)strikeOuts/outs : 0.0;
 	}
 	
 	public double getWalkRate () {
-		double bbRate = 0.0;
-		if ((walks + hits + hitByPitch) > 0) {
-			bbRate = (double)walks/(walks + hits + hitByPitch);
-		}
-		return bbRate;
+		return (walks + hits + hitByPitch) > 0 ? (double)walks/(walks + hits + hitByPitch) : 0.0;
+	}
+	
+	public double getHomeRunRate () {
+		return homeRuns > 0 ? (double)homeRuns/hits : 0.0;
 	}
 }

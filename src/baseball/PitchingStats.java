@@ -15,13 +15,15 @@ public class PitchingStats {
 	private int gamesStarted;
 	private int balks;
 	private int wildPitches;
+	private int sacrificeFlies;
+	private int battersFaced;
 	
 	public PitchingStats() {
 	}
 	
 	public PitchingStats(double inningsPitched, int earnedRunsAllowed, int runsAllowed, int walks, int strikeouts, int homeRunsAllowed,
 			int stolenBasesAllowed, int hitBatters, int hitsAllowed, int holds, int saves, int gamesStarted, int balks,
-			int wildPitches) {
+			int wildPitches, int sacrificeFlies, int battersFaced) {
 		this.inningsPitched = inningsPitched;
 		this.earnedRunsAllowed = earnedRunsAllowed;
 		this.runsAllowed = runsAllowed;
@@ -36,6 +38,8 @@ public class PitchingStats {
 		this.gamesStarted = gamesStarted;
 		this.balks = balks;
 		this.wildPitches = wildPitches;
+		this.sacrificeFlies = sacrificeFlies;
+		this.battersFaced = battersFaced;
 	}
 
 	public double getInningsPitched() {
@@ -188,6 +192,22 @@ public class PitchingStats {
 		this.wildPitches = wildPitches;
 	}
 	
+	public int getSacrificeFlies() {
+		return sacrificeFlies;
+	}
+
+	public void setSacrificeFlies(int sacrificeFlies) {
+		this.sacrificeFlies = sacrificeFlies;
+	}
+
+	public int getBattersFaced() {
+		return battersFaced;
+	}
+
+	public void setBattersFaced(int battersFaced) {
+		this.battersFaced = battersFaced;
+	}
+
 	public int getOuts() {
 		int outs = 0;
 		String iPString = Double.toString(inningsPitched);
@@ -198,20 +218,19 @@ public class PitchingStats {
 	}
 	
 	public double getStrikeoutRate () {
-		double soRate = 0.0;
-		int outs = getOuts();
-		if (outs > 0) {
-			soRate = (double)strikeouts/getOuts();
-		}
-		return soRate;
+		return getOuts() > 0 ? (double)strikeouts/getOuts() : 0.0;
 	}
 	
 	public double getWalkRate () {
-		double bbRate = 0.0;
-		if ((walks + hitsAllowed + hitBatters) > 0) {
-			bbRate = (double)walks/(walks + hitsAllowed + hitBatters);
-		}
-		return bbRate;
+		return (walks + hitsAllowed + hitBatters) > 0 ? (double)walks/(walks + hitsAllowed + hitBatters) : 0.0;
+	}
+	
+	public double getHomeRunsAllowedRate () {
+		return homeRunsAllowed > 0 ? (double)homeRunsAllowed/hitsAllowed : 0.0;
+	}
+	
+	public double getOnBasePercentage () {
+		return battersFaced > 0 ? (double)(hitsAllowed + walks + hitBatters + sacrificeFlies)/battersFaced : 0.0;
 	}
 	
 	/*

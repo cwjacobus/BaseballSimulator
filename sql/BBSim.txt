@@ -80,6 +80,8 @@ SAVES int(11),
 GAMES_STARTED int(11),
 BALKS int(11),
 WILD_PITCHES int(11),
+SAC_FLIES int(11),
+BATTERS_FACED int(11),
 CONSTRAINT PS_CONST1 UNIQUE (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR)
 );
 
@@ -114,3 +116,6 @@ bs.mlb_player_id = p.mlb_player_id and bs.mlb_team_id = t.mlb_franchise_id and y
 
 // Get average pitcher strikeout rate for a year
 select avg(strikeouts/(innings_pitched*3)) from mlb_pitching_stats where year=2019;
+
+// Pitcher OBP
+select avg((hits_allowed+walks+hit_batters)/(batters_faced)) from mlb_pitching_stats where year = 2019;

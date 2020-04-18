@@ -40,10 +40,10 @@ public class DAO {
 				else if (mlbData instanceof MLBPitchingStats) {
 					MLBPitchingStats mps = (MLBPitchingStats)mlbData;
 					PitchingStats ps = mps.getPitchingStats();
-					insertSQL = "INSERT IGNORE INTO MLB_PITCHING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, INNINGS_PITCHED, WALKS, STRIKEOUTS, RUNS_ALLOWED, EARNED_RUNS_ALLOWED, HOME_RUNS_ALLOWED, STOLEN_BASES_ALLOWED, HIT_BATTERS, HITS_ALLOWED, HOLDS, SAVES, GAMES_STARTED, BALKS, WILD_PITCHES) VALUES (" +
+					insertSQL = "INSERT IGNORE INTO MLB_PITCHING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, INNINGS_PITCHED, WALKS, STRIKEOUTS, RUNS_ALLOWED, EARNED_RUNS_ALLOWED, HOME_RUNS_ALLOWED, STOLEN_BASES_ALLOWED, HIT_BATTERS, HITS_ALLOWED, HOLDS, SAVES, GAMES_STARTED, BALKS, WILD_PITCHES, SAC_FLIES, BATTERS_FACED) VALUES (" +
 						mps.getMlbPlayerId() + ", " + mps.getMlbTeamId() + ", " + mps.getYear() + ", " + ps.getInningsPitched() + ", " + ps.getWalks() + ", " + ps.getStrikeouts() + ", " + ps.getRunsAllowed() + ", " + ps.getEarnedRunsAllowed() +
 						", " + ps.getHomeRunsAllowed() + ", " + ps.getStolenBasesAllowed() + ", " + ps.getHitBatters() + ", " + ps.getHitsAllowed() + ", " + ps.getHolds() + ", " + ps.getSaves() +
-						", " + ps.getGamesStarted() + ", " + ps.getBalks() + ", " + ps.getWildPitches() + ");";
+						", " + ps.getGamesStarted() + ", " + ps.getBalks() + ", " + ps.getWildPitches() + ", " + ps.getSacrificeFlies() + ", " + ps.getBattersFaced() + ");";
 				}
 				stmt.addBatch(insertSQL);
 				mlbDataCount++;
@@ -164,7 +164,8 @@ public class DAO {
 				}
 				else if (table.equals("MLB_PITCHING_STATS")) {
 					MLBPitchingStats ps = new MLBPitchingStats(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"),  rs.getInt("YEAR"), new PitchingStats(rs.getDouble("INNINGS_PITCHED"), rs.getInt("RUNS_ALLOWED"), rs.getInt("EARNED_RUNS_ALLOWED"), 
-						rs.getInt("WALKS"), rs.getInt("STRIKEOUTS"),  rs.getInt("HOME_RUNS_ALLOWED"), rs.getInt("STOLEN_BASES_ALLOWED"), rs.getInt("HIT_BATTERS"), rs.getInt("HITS_ALLOWED"), rs.getInt("HOLDS"), rs.getInt("SAVES"), rs.getInt("GAMES_STARTED"), rs.getInt("BALKS"), rs.getInt("WILD_PITCHES")));
+						rs.getInt("WALKS"), rs.getInt("STRIKEOUTS"),  rs.getInt("HOME_RUNS_ALLOWED"), rs.getInt("STOLEN_BASES_ALLOWED"), rs.getInt("HIT_BATTERS"), rs.getInt("HITS_ALLOWED"), rs.getInt("HOLDS"), rs.getInt("SAVES"), rs.getInt("GAMES_STARTED"), 
+						rs.getInt("BALKS"), rs.getInt("WILD_PITCHES"), rs.getInt("SAC_FLIES"), rs.getInt("BATTERS_FACED")));
 					dataMap.put(ps.getMlbPlayerId(), ps);
 				}
 				else if (table.equals("MLB_PLAYER")) {

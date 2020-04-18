@@ -167,7 +167,7 @@ public class BaseballSimulator {
 					}
 					
 					gameTiedStartOfAB = boxScores[1].getScore(inning) == boxScores[0].getScore(inning);
-					long onBaseEndPoint = 1000 - Math.round(currentBatterSeasonStats.getOnBasePercentage()*1000);
+					long onBaseEndPoint = 1000 - Math.round(((currentBatterSeasonStats.getOnBasePercentage() + currentPitcherSeasonStats.getOnBasePercentage())/2)*1000);
 					if (rando <= onBaseEndPoint) { // OUT
 						int outResult = getOutResult(currentBatter, currentBatterSeasonStats, currentPitcherGameStats, currentPitcherSeasonStats);
 						gameState.setOuts(gameState.getOuts() + outResult);
@@ -188,7 +188,7 @@ public class BaseballSimulator {
 							updateBasesSituationNoRunnersAdvance(currentBatter);
 						}
 						else { // HIT
-							int noOutResult = getNotOutResult(currentBatterGameStats, currentBatterSeasonStats, currentPitcherGameStats);
+							int noOutResult = getNotOutResult(currentBatterGameStats, currentBatterSeasonStats, currentPitcherGameStats, currentPitcherSeasonStats);
 							if (noOutResult == 1 && (getRandomNumberInRange(0, 5) + currentBatterGameStats.getSpeedRating()) > 4) { // infield single ?
 								if (gameState.getOuts() != 2) {  // less than 2 outs runners hold
 									updateBasesSituationNoRunnersAdvance(currentBatter);
@@ -236,16 +236,12 @@ public class BaseballSimulator {
 		 }*/ 
 	}
 	
-	private static int getNotOutResult(BattingStats batterGameStats, BattingStats batterSeasonStats, PitchingStats pitcherGameStats) {
+	private static int getNotOutResult(BattingStats batterGameStats, BattingStats batterSeasonStats, PitchingStats pitcherGameStats, PitchingStats pitcherSeasonStats) {
 		long errorEndPoint = 25;
-		long hrEndPoint = (batterSeasonStats != null && batterSeasonStats.getHits() != 0 ? 
-			Math.round((((double)batterSeasonStats.getHomeRuns()/batterSeasonStats.getHits())*1000)) : 160) + errorEndPoint;
-		hrEndPoint = batterSeasonStats.getHomeRuns() == 0 ? 8 + errorEndPoint : hrEndPoint;       // Give some chance if batter has 0 hrs
-		long triplesEndPoint = (batterSeasonStats != null && batterSeasonStats.getHits() != 0 ? 
-			Math.round((((double)batterSeasonStats.getTriples()/batterSeasonStats.getHits())*1000)) : 18) + hrEndPoint;
+		long hrEndPoint = Math.round(((batterSeasonStats.getHomeRunRate() + pitcherSeasonStats.getHomeRunsAllowedRate())/2)*1000) + errorEndPoint;
+		long triplesEndPoint = Math.round((((double)batterSeasonStats.getTriples()/batterSeasonStats.getHits())*1000)) + hrEndPoint;
 		triplesEndPoint = batterSeasonStats.getTriples() == 0 ? 8 + hrEndPoint : triplesEndPoint; // Give some chance if batter has 0 triples
-		long doublesEndPoint = (batterSeasonStats != null && batterSeasonStats.getHits() != 0 ? 
-			Math.round((((double)batterSeasonStats.getDoubles()/batterSeasonStats.getHits())*1000)) : 203) + triplesEndPoint;
+		long doublesEndPoint = Math.round((((double)batterSeasonStats.getDoubles()/batterSeasonStats.getHits())*1000)) + triplesEndPoint;
 		int notOutResult = 1;
 		int notOutRando = getRandomNumberInRange(1, 1000);
 		if (notOutRando > 1 && notOutRando <= errorEndPoint) {
