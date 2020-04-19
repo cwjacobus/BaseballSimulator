@@ -13,8 +13,6 @@ import java.util.Map;
 import java.util.Scanner;
 
 import dao.DAO;
-import db.MLBBattingStats;
-import db.MLBPitchingStats;
 import db.MLBPlayer;
 
 public class BaseballSimulator {
@@ -28,8 +26,6 @@ public class BaseballSimulator {
 	static GameState gameState = new GameState();
 	static BoxScore[] boxScores = new BoxScore[2];
 	static Roster[] rosters  = new Roster[2];
-	//static ArrayList<HashMap<Integer, BattingStats>> battingStatsMapsList = new ArrayList<HashMap<Integer, BattingStats>>();
-	//static ArrayList<HashMap<Integer, PitchingStats>> pitchingStatsMapsList = new ArrayList<HashMap<Integer, PitchingStats>>();
 	static DecimalFormat df = new DecimalFormat(".000");
 	static List<String> randoLog = new ArrayList<String>();
 	static HashMap<?, ?> franchisesMap;
@@ -128,7 +124,6 @@ public class BaseballSimulator {
 					System.out.println("SCORE - " + boxScores[0].getTeamName() + ": " + boxScores[0].getScore(gameState.getInning())  + " " + 
 						boxScores[1].getTeamName() + ": " + boxScores[1].getScore(gameState.getInning()));
 				}
-				//int outs  = 0;
 				boolean gameTiedStartOfAB;
 				Arrays.fill(gameState.getRunnersOnBase(), 0);
 				while (gameState.getOuts() < OUTS_PER_INNING) {
@@ -163,13 +158,11 @@ public class BaseballSimulator {
 						break;
 					}
 					int rando = getRandomNumberInRange(1, 1000);
-					
 					if (processOtherAction(currentBatter)) {
 						//gameState.getBattingOrder()[top] = gameState.getBattingOrder()[top] == 9 ? 1 : gameState.getBattingOrder()[top] + 1;
 						gameState.incrementBattingOrder(top);
 						continue;
 					}
-					
 					gameTiedStartOfAB = boxScores[1].getScore(inning) == boxScores[0].getScore(inning);
 					long onBaseEndPoint = 1000 - Math.round(((currentBatterSeasonStats.getOnBasePercentage() + currentPitcherSeasonStats.getOnBasePercentage())/2)*1000);
 					if (rando <= onBaseEndPoint) { // OUT
@@ -585,16 +578,28 @@ public class BaseballSimulator {
             public int compare(Map.Entry<Integer, MLBPlayer> o1,  
                                Map.Entry<Integer, MLBPlayer> o2) { 
             	if (type.equals("SB")) {
-            		if (o1.getValue().getBattingStats().getBattingStats().getStolenBases() == o2.getValue().getBattingStats().getBattingStats().getStolenBases()) {
+            		/*if (o1.getValue().getBattingStats().getBattingStats().getStolenBases() == o2.getValue().getBattingStats().getBattingStats().getStolenBases()) {
             			return 0;
-            		}
-            		return (o1.getValue().getBattingStats().getBattingStats().getStolenBases() > o2.getValue().getBattingStats().getBattingStats().getStolenBases() ? -1 : 1); 
+            		}*/
+            		return (o1.getValue().getBattingStats().getBattingStats().getStolenBases() >= o2.getValue().getBattingStats().getBattingStats().getStolenBases() ? -1 : 1); 
             	}
             	else if (type.equals("H")){
             		if (o1.getValue().getBattingStats().getBattingStats().getHits() == o2.getValue().getBattingStats().getBattingStats().getHits()) {
             			return 0;
             		}
             		return (o1.getValue().getBattingStats().getBattingStats().getHits() > o2.getValue().getBattingStats().getBattingStats().getHits() ? -1 : 1);
+            	}
+            	else if (type.equals("HR")){
+            		if (o1.getValue().getBattingStats().getBattingStats().getHomeRuns() == o2.getValue().getBattingStats().getBattingStats().getHomeRuns()) {
+            			return 0;
+            		}
+            		return (o1.getValue().getBattingStats().getBattingStats().getHomeRuns() > o2.getValue().getBattingStats().getBattingStats().getHomeRuns() ? -1 : 1);
+            	}
+            	else if (type.equals("RBI")){
+            		if (o1.getValue().getBattingStats().getBattingStats().getRbis() == o2.getValue().getBattingStats().getBattingStats().getRbis()) {
+            			return 0;
+            		}
+            		return (o1.getValue().getBattingStats().getBattingStats().getRbis() > o2.getValue().getBattingStats().getBattingStats().getRbis() ? -1 : 1);
             	}
             	else {
             		return 0;
@@ -609,37 +614,74 @@ public class BaseballSimulator {
         return temp; 
     }
 	
-	private static ArrayList<Integer> setOptimalLineup() {
-		ArrayList<Integer> optimalLineup = new ArrayList<Integer>();
-		ArrayList<Integer> playersInLineup = new ArrayList<Integer>();
+	private static boolean setOptimalLineup() {
+		//ArrayList<Integer> optimalLineup = new ArrayList<Integer>();
+		ArrayList<Integer> playersInLineupList = new ArrayList<Integer>();
 		HashMap<Integer, MLBPlayer> battingStatsSortedByStatMap;
+		HashMap<Integer, MLBPlayer> playersinLineup = new HashMap<Integer, MLBPlayer>();
 		List<Map.Entry<Integer, MLBPlayer>> list;
+		ArrayList<String> positionsUsed;
+		boolean dontUseDH = Arrays.asList(nationalLeagueTeams).contains(boxScores[1].getTeamName()) || boxScores[1].getYear() < 1973;
 		String statType = "";
-		for (int i = 1 ; i <= NUM_OF_PLAYERS_IN_LINEUP; i++) {
-			if (i == 1) {
-				statType = "SB";
-			}
-			else {
-				statType = "H";
-			}
-			battingStatsSortedByStatMap = sortHashMapByValue(rosters[gameState.getTop()].getBatters(), statType);
-			list = new LinkedList<Map.Entry<Integer, MLBPlayer>>(battingStatsSortedByStatMap.entrySet());
-			int index = 0;
-			while (true) {
-				MLBPlayer player = (MLBPlayer)rosters[gameState.getTop()].getBatters().get(list.get(index).getKey());
-				if (player != null && !playersInLineup.contains(list.get(index).getKey())) {
-					System.out.println(player.getFirstLastName() + " " + player.getPrimaryPosition() + " " + list.get(index).getValue().getBattingStats().getBattingStats().getStolenBases());
-					playersInLineup.add(list.get(index).getKey());
-					break;
+		int ofCount;
+		MLBPlayer player;
+		for (int t = 0; t < 2; t++) {
+			positionsUsed = new ArrayList<String>();
+			ofCount = 0;
+			for (int i = 1 ; i <= NUM_OF_PLAYERS_IN_LINEUP - 1; i++) {  // 1 - 8
+				if (i == 1) { 
+					statType = "SB";
 				}
-				else if (player == null) {
-					System.out.println("Player is null");
-					break;
+				else if (i == 3) {
+					statType = "RBI";
 				}
-				index++;
+				else if (i == 4) {
+					statType = "HR";
+				}
+				else {
+					statType = "H";
+				}
+				battingStatsSortedByStatMap = sortHashMapByValue(rosters[t].getBatters(), statType);
+				list = new LinkedList<Map.Entry<Integer, MLBPlayer>>(battingStatsSortedByStatMap.entrySet());
+				int index = 0;
+				while (true) {
+					if (index == rosters[t].getBatters().size()) {
+						System.out.println("Not enough players at every position!");
+						return false;
+					}
+					player = rosters[t].getBatters().get(list.get(index).getKey());
+					boolean positionNeeded = (!positionsUsed.contains(player.getPrimaryPosition()) && !player.getPrimaryPosition().equals("OF")) || (player.getPrimaryPosition().equals("OF") && ofCount < 3);
+					if (player != null && !playersInLineupList.contains(list.get(index).getKey()) && positionNeeded) {  // Not already in lineup, save P for end
+							System.out.println(player.getFirstLastName() + " " + player.getPrimaryPosition() + " SB: " + player.getBattingStats().getBattingStats().getStolenBases() + " H: " +
+								player.getBattingStats().getBattingStats().getHits() + " HR: " + player.getBattingStats().getBattingStats().getHomeRuns() + " RBI: " + player.getBattingStats().getBattingStats().getRbis());
+							playersInLineupList.add(list.get(index).getKey());
+							playersinLineup.put(player.getMlbPlayerId(), player);
+							positionsUsed.add(player.getPrimaryPosition());
+							if (player.getPrimaryPosition().equals("OF")) {
+								ofCount++;
+							}
+							break;
+					}
+					index++;
+				}
 			}
+			if (dontUseDH) {  // P is batting, add ninth
+				player = rosters[t].getPitchers().get(gameState.getCurrentPitchers()[t].getId());
+				System.out.println(player.getFirstLastName() + " " + player.getPrimaryPosition() + " SB: " + player.getBattingStats().getBattingStats().getStolenBases() + " H: " +
+						player.getBattingStats().getBattingStats().getHits() + " HR: " + player.getBattingStats().getBattingStats().getHomeRuns() + " RBI: " + player.getBattingStats().getBattingStats().getRbis());
+				playersinLineup.put(player.getMlbPlayerId(), player);
+			}
+			else { // DH always bats 
+				player = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(boxScores[t].getTeamName()), boxScores[t].getYear(), playersInLineupList);
+				BattingStats playerBattingStats = getBattersSeasonBattingStats(rosters[t], player.getMlbPlayerId());
+				player.setPrimaryPosition("DH");
+				System.out.println(player.getFirstLastName() + " " + player.getPrimaryPosition() + " SB: " + playerBattingStats.getStolenBases() + " H: " + playerBattingStats.getHits() + " HR: " + 
+					playerBattingStats.getHomeRuns() + " RBI: " + playerBattingStats.getRbis());
+				playersinLineup.put(player.getMlbPlayerId(), player);
+			}
+			System.out.println();
 		}
-		return optimalLineup;
+		return true;
 	}
 	
 	private static boolean setLineup() {

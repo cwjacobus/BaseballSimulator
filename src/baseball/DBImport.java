@@ -326,12 +326,13 @@ public class DBImport {
 		try {
 			int sb = pitchingStatsJson.getString("sb").length() == 0 ? 0 : Integer.parseInt(pitchingStatsJson.getString("sb"));
 			int hld = pitchingStatsJson.getString("hld").length() == 0 ? 0 : Integer.parseInt(pitchingStatsJson.getString("hld"));
+			int sf = pitchingStatsJson.getString("sf").length() == 0 ? 0 : Integer.parseInt(pitchingStatsJson.getString("sf"));
 			mps = new MLBPitchingStats(mlbPlayerId, Integer.parseInt(pitchingStatsJson.getString("team_id")), year,
 				new PitchingStats(Double.parseDouble(pitchingStatsJson.getString("ip")), Integer.parseInt(pitchingStatsJson.getString("er")), Integer.parseInt(pitchingStatsJson.getString("r")), 
 					Integer.parseInt(pitchingStatsJson.getString("bb")), Integer.parseInt(pitchingStatsJson.getString("so")), Integer.parseInt(pitchingStatsJson.getString("hr")), 
 					sb, Integer.parseInt(pitchingStatsJson.getString("hb")), Integer.parseInt(pitchingStatsJson.getString("h")), hld, Integer.parseInt(pitchingStatsJson.getString("sv")), 
 					Integer.parseInt(pitchingStatsJson.getString("gs")), Integer.parseInt(pitchingStatsJson.getString("bk")), Integer.parseInt(pitchingStatsJson.getString("wp")),
-					Integer.parseInt(pitchingStatsJson.getString("sf")), Integer.parseInt(pitchingStatsJson.getString("tbf"))));
+					sf, Integer.parseInt(pitchingStatsJson.getString("tbf"))));
 		}
 		catch (JSONException e) {
 			e.printStackTrace();

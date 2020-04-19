@@ -260,6 +260,7 @@ public class DAO {
 			while (rs.next()) {
 				player.setFullName(rs.getString("FULL_NAME"));
 				player.setMlbPlayerId(rs.getInt("MLB_PLAYER_ID"));
+				player.setPrimaryPosition(rs.getString("PRIMARY_POSITION"));
 			}
 		}
 		catch (SQLException e) {
