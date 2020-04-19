@@ -86,6 +86,10 @@ public class GameState {
 	public void setBattingOrder(int[] battingOrder) {
 		this.battingOrder = battingOrder;
 	}
+	
+	public void incrementBattingOrder(int top) {
+		this.battingOrder[top] = battingOrder[top] == 9 ? 1 : battingOrder[top] + 1;
+	}
 
 	public Player[] getCurrentPitchers() {
 		return currentPitchers;

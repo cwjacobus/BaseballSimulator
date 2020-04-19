@@ -8,6 +8,10 @@ public class MLBPitchingStats {
 	private Integer mlbTeamId;
 	private Integer year;
 	private PitchingStats pitchingStats;
+	
+	public MLBPitchingStats () {
+		this.pitchingStats = new PitchingStats();
+	}
 
 	public MLBPitchingStats(Integer mlbPlayerId, Integer mlbTeamId, Integer year, PitchingStats pitchingStats) {
 		this.mlbPlayerId = mlbPlayerId;

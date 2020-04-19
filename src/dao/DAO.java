@@ -142,11 +142,11 @@ public class DAO {
 			if (pitchers == null) {
 				 sql = "SELECT * FROM " + table + ((mlbTeamId != null && year != null) ? " WHERE MLB_TEAM_ID = " +  mlbTeamId + " AND YEAR = " + year : "");
 			}
-			else if (pitchers.booleanValue() == true) {
-				sql = "SELECT P.* from MLB_PITCHING_STATS PS, MLB_PLAYER P WHERE PS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR =" + year + " AND MLB_TEAM_ID = " + mlbTeamId;
+			else if (pitchers.booleanValue()) {
+				sql = "SELECT P.*, PS.* from MLB_PITCHING_STATS PS, MLB_PLAYER P WHERE PS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR =" + year + " AND MLB_TEAM_ID = " + mlbTeamId;
 			}
 			else {
-				sql = "SELECT P.* from MLB_BATTING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR =" + year + " AND MLB_TEAM_ID = " + mlbTeamId;
+				sql = "SELECT P.*, BS.* from MLB_BATTING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR =" + year + " AND MLB_TEAM_ID = " + mlbTeamId;
 			}
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
@@ -157,7 +157,7 @@ public class DAO {
 					MLBTeam team = new MLBTeam(rs.getInt("TEAM_ID"), rs.getInt("MLB_FRANCHISE_ID"), rs.getString("FULL_NAME"), rs.getString("SHORT_NAME"), rs.getString("LEAGUE"));
 					dataMap.put(team.getTeamId(), team);
 				}
-				else if (table.equals("MLB_BATTING_STATS")) {
+				/*else if (table.equals("MLB_BATTING_STATS")) {
 					MLBBattingStats bs = new MLBBattingStats(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"),  rs.getInt("YEAR"), new BattingStats(rs.getInt("AT_BATS"), rs.getInt("HITS"), rs.getInt("DOUBLES"), rs.getInt("TRIPLES"), 
 						rs.getInt("HOME_RUNS"), rs.getInt("WALKS"), rs.getInt("STRIKEOUTS"), rs.getInt("HIT_BY_PITCH"), rs.getInt("RUNS"), rs.getInt("RBIS"), rs.getInt("STOLEN_BASES"), rs.getInt("PLATE_APPEARANCES"), rs.getInt("CAUGHT_STEALING")));
 					dataMap.put(bs.getMlbPlayerId(), bs);
@@ -167,9 +167,18 @@ public class DAO {
 						rs.getInt("WALKS"), rs.getInt("STRIKEOUTS"),  rs.getInt("HOME_RUNS_ALLOWED"), rs.getInt("STOLEN_BASES_ALLOWED"), rs.getInt("HIT_BATTERS"), rs.getInt("HITS_ALLOWED"), rs.getInt("HOLDS"), rs.getInt("SAVES"), rs.getInt("GAMES_STARTED"), 
 						rs.getInt("BALKS"), rs.getInt("WILD_PITCHES"), rs.getInt("SAC_FLIES"), rs.getInt("BATTERS_FACED")));
 					dataMap.put(ps.getMlbPlayerId(), ps);
-				}
+				}*/
 				else if (table.equals("MLB_PLAYER")) {
 					MLBPlayer p = new MLBPlayer(rs.getInt("MLB_PLAYER_ID"), rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
+					if (pitchers != null && !pitchers.booleanValue()) {
+						p.setBattingStats(new MLBBattingStats(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"),  rs.getInt("YEAR"), new BattingStats(rs.getInt("AT_BATS"), rs.getInt("HITS"), rs.getInt("DOUBLES"), rs.getInt("TRIPLES"), 
+							rs.getInt("HOME_RUNS"), rs.getInt("WALKS"), rs.getInt("STRIKEOUTS"), rs.getInt("HIT_BY_PITCH"), rs.getInt("RUNS"), rs.getInt("RBIS"), rs.getInt("STOLEN_BASES"), rs.getInt("PLATE_APPEARANCES"), rs.getInt("CAUGHT_STEALING"))));
+					}
+					else {
+						p.setPitchingStats(new MLBPitchingStats(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"),  rs.getInt("YEAR"), new PitchingStats(rs.getDouble("INNINGS_PITCHED"), rs.getInt("RUNS_ALLOWED"), rs.getInt("EARNED_RUNS_ALLOWED"), 
+							rs.getInt("WALKS"), rs.getInt("STRIKEOUTS"),  rs.getInt("HOME_RUNS_ALLOWED"), rs.getInt("STOLEN_BASES_ALLOWED"), rs.getInt("HIT_BATTERS"), rs.getInt("HITS_ALLOWED"), rs.getInt("HOLDS"), rs.getInt("SAVES"), rs.getInt("GAMES_STARTED"), 
+							rs.getInt("BALKS"), rs.getInt("WILD_PITCHES"), rs.getInt("SAC_FLIES"), rs.getInt("BATTERS_FACED"))));
+					}
 					dataMap.put(p.getMlbPlayerId(), p);
 				}
 			}
@@ -180,12 +189,22 @@ public class DAO {
 		return dataMap; 
 	}
 	
-	public static HashMap<Object, Object> getBattersMapByTeamAndYear(Integer mlbTeamId, Integer year) {
-		return getDataMap("MLB_PLAYER", mlbTeamId, year, false);
+	public static HashMap<Integer, MLBPlayer> getBattersMapByTeamAndYear(Integer mlbTeamId, Integer year) {
+		HashMap<Integer, MLBPlayer> battersMap = new HashMap<Integer, MLBPlayer>();
+		HashMap<Object, Object> objectMap = getDataMap("MLB_PLAYER", mlbTeamId, year, false);
+		for (Map.Entry<Object, Object> entry : objectMap.entrySet()) {
+			battersMap.put((Integer)entry.getKey(), (MLBPlayer)entry.getValue());
+		}
+		return battersMap;
 	}
 	
-	public static HashMap<Object, Object> getPitchersMapByTeamAndYear(Integer mlbTeamId, Integer year) {
-		return getDataMap("MLB_PLAYER", mlbTeamId, year, true);
+	public static HashMap<Integer, MLBPlayer> getPitchersMapByTeamAndYear(Integer mlbTeamId, Integer year) {
+		HashMap<Integer, MLBPlayer> pitchersMap = new HashMap<Integer, MLBPlayer>();
+		HashMap<Object, Object> objectMap = getDataMap("MLB_PLAYER", mlbTeamId, year, true);
+		for (Map.Entry<Object, Object> entry : objectMap.entrySet()) {
+			pitchersMap.put((Integer)entry.getKey(), (MLBPlayer)entry.getValue());
+		}
+		return pitchersMap;
 	}
 	
 	public static MLBPlayer getStartingPitcherByIndex(Integer mlbTeamId, Integer year, int index) {
