@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+//import org.json.JSONObject;
+
 import dao.DAO;
 import db.MLBPlayer;
 
@@ -105,7 +107,7 @@ public class BaseballSimulator {
 			}
 		}
 		/*getBattingStatsFromAPI();
-		if (!setLineup()) {
+		if (!setRandomLineup()) {
 			return;
 		}*/
 		if (!setOptimalLineup()) {
@@ -230,6 +232,9 @@ public class BaseballSimulator {
 		}
 		// Output Box Score
 		 outputBoxScore();
+		 
+		 /*JSONObject bsJSON = new JSONObject(boxScores[0]);
+		 System.out.println(bsJSON);
 		 
 		 /*for (int i = 0; i < randoLog.size(); i++) {
 			 System.out.println(randoLog.get(i));
@@ -692,7 +697,7 @@ public class BaseballSimulator {
 		return true;
 	}
 	
-	private static boolean setLineup() {
+	/*private static boolean setRandomLineup() {
 		ArrayList<ArrayList<Player>> batters;
 		BoxScore boxScore;
 		MLBPlayer mlbPlayer;
@@ -750,7 +755,7 @@ public class BaseballSimulator {
 			}
 		}
 		return true;
-	}
+	}*/
 	
 	private static void outputBoxScore() {
 		BoxScore boxScore;
@@ -781,9 +786,10 @@ public class BaseballSimulator {
 					BattingStats playerSeasonStats = getBattersSeasonBattingStats(rosters[top], batter.getId());
 					String playerOutput = batter.getName() + " " + batter.getPosition();
 					System.out.print(playerOutput);
-					System.out.print("\t\t");
-					if (playerOutput.length() < 16) {
-						System.out.print("\t");
+					for (int tab = 32; tab >= 8; tab-=8) {
+						if (playerOutput.length() < tab) {
+							System.out.print("\t");
+						}
 					}
 					System.out.print(gameStats.getAtBats() + (gameStats.getAtBats() > 9 ? "  " : "   "));
 					System.out.print(gameStats.getRuns() + (gameStats.getRuns() > 9 ? "  " : "   "));
@@ -925,6 +931,7 @@ public class BaseballSimulator {
 		return roster.getPitchers().get(id).getPitchingStats().getPitchingStats();
 	}
 	
+	/*
 	private static ArrayList<Integer> getRandomLineupByPosition() {
 		ArrayList<Integer> randomLineup = new ArrayList<Integer>();
 		for (int i = 1; i < 10; i++) {
@@ -932,7 +939,7 @@ public class BaseballSimulator {
         }
         Collections.shuffle(randomLineup);
         return randomLineup;
-	}
+	} */
 	
 	// For play mode
 	private static boolean processCommand(String command, PitchingStats currentPitcherGameStats, Player currentBatter) {
