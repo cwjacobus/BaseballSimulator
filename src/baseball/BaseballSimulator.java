@@ -778,7 +778,7 @@ public class BaseballSimulator {
 			for (ArrayList<Player> playerList : batters) {
 				for (Player batter : playerList) {
 					BattingStats gameStats = batter.getBattingStats();
-					BattingStats playerSeasonStats = getBattersSeasonBattingStats(rosters[gameState.getTop()], batter.getId());
+					BattingStats playerSeasonStats = getBattersSeasonBattingStats(rosters[top], batter.getId());
 					String playerOutput = batter.getName() + " " + batter.getPosition();
 					System.out.print(playerOutput);
 					System.out.print("\t\t");
