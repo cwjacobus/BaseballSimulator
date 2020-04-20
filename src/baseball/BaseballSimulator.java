@@ -104,11 +104,13 @@ public class BaseballSimulator {
 				simulationMode = true;
 			}
 		}
-		//getBattingStatsFromAPI();
+		/*getBattingStatsFromAPI();
 		if (!setLineup()) {
 			return;
+		}*/
+		if (!setOptimalLineup()) {
+			return;
 		}
-		setOptimalLineup();
 		System.out.println("Starting pitchers : " + boxScores[0].getTeamName() + ": " + gameState.getCurrentPitchers()[0].getFirstLastName() + " v " + boxScores[1].getTeamName() + ": " + gameState.getCurrentPitchers()[1].getFirstLastName());
 		while (gameState.getInning() <= INNINGS_PER_GAME || boxScores[0].getScore(gameState.getInning()) == boxScores[1].getScore(gameState.getInning())) {
 			int inning = gameState.getInning();
@@ -615,10 +617,10 @@ public class BaseballSimulator {
     }
 	
 	private static boolean setOptimalLineup() {
-		//ArrayList<Integer> optimalLineup = new ArrayList<Integer>();
+		ArrayList<ArrayList<Player>> batters;
+		BoxScore boxScore;
 		ArrayList<Integer> playersInLineupList = new ArrayList<Integer>();
 		HashMap<Integer, MLBPlayer> battingStatsSortedByStatMap;
-		HashMap<Integer, MLBPlayer> playersinLineup = new HashMap<Integer, MLBPlayer>();
 		List<Map.Entry<Integer, MLBPlayer>> list;
 		ArrayList<String> positionsUsed;
 		boolean dontUseDH = Arrays.asList(nationalLeagueTeams).contains(boxScores[1].getTeamName()) || boxScores[1].getYear() < 1973;
@@ -628,6 +630,12 @@ public class BaseballSimulator {
 		for (int t = 0; t < 2; t++) {
 			positionsUsed = new ArrayList<String>();
 			ofCount = 0;
+			boxScore = boxScores[t];
+			batters = boxScore.getBatters();
+			// Get random starter 1-5
+			MLBPlayer startingPitcher = DAO.getStartingPitcherByIndex((Integer)franchisesMap.get(boxScore.getTeamName()), boxScore.getYear(), getRandomNumberInRange(1, 5));  
+			gameState.getCurrentPitchers()[t] = new Player(startingPitcher.getFullName(), startingPitcher.getMlbPlayerId(), "P");
+			boxScore.getPitchers().put(startingPitcher.getMlbPlayerId(), new Player(startingPitcher.getFullName(), startingPitcher.getMlbPlayerId(), "P"));
 			for (int i = 1 ; i <= NUM_OF_PLAYERS_IN_LINEUP - 1; i++) {  // 1 - 8
 				if (i == 1) { 
 					statType = "SB";
@@ -655,7 +663,7 @@ public class BaseballSimulator {
 							System.out.println(player.getFirstLastName() + " " + player.getPrimaryPosition() + " SB: " + player.getBattingStats().getBattingStats().getStolenBases() + " H: " +
 								player.getBattingStats().getBattingStats().getHits() + " HR: " + player.getBattingStats().getBattingStats().getHomeRuns() + " RBI: " + player.getBattingStats().getBattingStats().getRbis());
 							playersInLineupList.add(list.get(index).getKey());
-							playersinLineup.put(player.getMlbPlayerId(), player);
+							batters.get(i-1).add(new Player(player.getFullName(), player.getMlbPlayerId(), player.getPrimaryPosition()));
 							positionsUsed.add(player.getPrimaryPosition());
 							if (player.getPrimaryPosition().equals("OF")) {
 								ofCount++;
@@ -669,15 +677,15 @@ public class BaseballSimulator {
 				player = rosters[t].getPitchers().get(gameState.getCurrentPitchers()[t].getId());
 				System.out.println(player.getFirstLastName() + " " + player.getPrimaryPosition() + " SB: " + player.getBattingStats().getBattingStats().getStolenBases() + " H: " +
 						player.getBattingStats().getBattingStats().getHits() + " HR: " + player.getBattingStats().getBattingStats().getHomeRuns() + " RBI: " + player.getBattingStats().getBattingStats().getRbis());
-				playersinLineup.put(player.getMlbPlayerId(), player);
+				batters.get(8).add(new Player(player.getFullName(), player.getMlbPlayerId(), player.getPrimaryPosition()));
 			}
-			else { // DH always bats 
+			else { // DH always bats ninth 
 				player = DAO.getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(boxScores[t].getTeamName()), boxScores[t].getYear(), playersInLineupList);
 				BattingStats playerBattingStats = getBattersSeasonBattingStats(rosters[t], player.getMlbPlayerId());
 				player.setPrimaryPosition("DH");
 				System.out.println(player.getFirstLastName() + " " + player.getPrimaryPosition() + " SB: " + playerBattingStats.getStolenBases() + " H: " + playerBattingStats.getHits() + " HR: " + 
 					playerBattingStats.getHomeRuns() + " RBI: " + playerBattingStats.getRbis());
-				playersinLineup.put(player.getMlbPlayerId(), player);
+				batters.get(8).add(new Player(player.getFullName(), player.getMlbPlayerId(), player.getPrimaryPosition()));
 			}
 			System.out.println();
 		}
