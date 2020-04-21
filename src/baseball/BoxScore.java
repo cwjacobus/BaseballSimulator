@@ -55,6 +55,10 @@ public class BoxScore {
 	public int getRunsScored(int inning) {
 		return runsScored[inning - 1];
 	}
+	
+	public int getFinalScore() {
+		return getScore(runsScored.length - 1);
+	}
 
 	public void setRunsScored(int inning, int runsScored) {
 		this.runsScored[inning - 1] += runsScored;
