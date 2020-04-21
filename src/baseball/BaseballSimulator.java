@@ -123,15 +123,27 @@ public class BaseballSimulator {
 		}
 		
 		if (seriesLength > 1) {
-			//int[] totalsWins = {0, 0};
-			//int[] totalsRuns = {0, 0};
+			HashMap<String, Integer> totalWins = new HashMap<String, Integer>();
+			HashMap<String, Integer> totalRuns = new HashMap<String, Integer>();
+			totalWins.put(boxScores[0].getTeamName(), 0);
+			totalWins.put(boxScores[1].getTeamName(), 0);
+			totalRuns.put(boxScores[0].getTeamName(), 0);
+			totalRuns.put(boxScores[1].getTeamName(), 0);
 			System.out.println("\n");
 			for (BoxScore[] bsArray : seriesBoxScores) {
 				int winner = bsArray[0].getFinalScore() > bsArray[1].getFinalScore() ? 0 : 1;
 				System.out.println(bsArray[winner].getTeamName() + " " + bsArray[winner].getFinalScore() + "  " +  bsArray[winner==1?0:1].getTeamName() + " " + bsArray[winner==1?0:1].getFinalScore());
+				totalWins.put(bsArray[winner].getTeamName(), totalWins.get(bsArray[winner].getTeamName()) + 1);
+				totalRuns.put(bsArray[0].getTeamName(), totalRuns.get(bsArray[0].getTeamName()) + bsArray[0].getFinalScore());
+				totalRuns.put(bsArray[1].getTeamName(), totalRuns.get(bsArray[1].getTeamName()) + bsArray[1].getFinalScore());
 			}
 			System.out.println("\nTotals:");
-			System.out.println("\n");
+			int homeWinner = totalWins.get(boxScores[1].getTeamName()) > totalWins.get(boxScores[0].getTeamName()) ?1 : 0;
+			System.out.println(boxScores[homeWinner].getTeamName() + ": " + totalWins.get(boxScores[homeWinner].getTeamName()) + " " + boxScores[homeWinner==1?0:1].getTeamName() + ": " + 
+				totalWins.get(boxScores[homeWinner==1?0:1].getTeamName()));
+			System.out.println("Average Score:");
+			System.out.println(boxScores[homeWinner].getTeamName() + ": " + df.format((double)totalRuns.get(boxScores[homeWinner].getTeamName())/seriesLength) + " " + boxScores[homeWinner==1?0:1].getTeamName() + 
+				": " + df.format((double)totalRuns.get(boxScores[homeWinner==1?0:1].getTeamName())/seriesLength));
 		}
 	}
 	
