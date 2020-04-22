@@ -93,7 +93,11 @@ public class GameState {
 	}
 	
 	public Integer getBaseRunnerId(int base) {
-		return baseRunners[base].getRunnerId();
+		return baseRunners[base - 1].runnerId;
+	}
+	
+	public Integer getBaseRunnerPitcherResponsibleId(int base) {
+		return baseRunners[base - 1].responsiblePitcherId;
 	}
 
 	public void setBaseRunners(BaseRunner[] baseRunners) {
