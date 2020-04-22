@@ -64,10 +64,6 @@ public class BoxScore {
 		this.runsScored[inning - 1] += runsScored;
 	}
 	
-	public void incrementRunsScored(int inning) {
-		this.runsScored[inning - 1]++;
-	}
-
 	public boolean isWalkOff() {
 		return walkOff;
 	}

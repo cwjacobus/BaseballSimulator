@@ -8,6 +8,7 @@ public class GameState {
 	Integer inning = 1;
 	int top = 0;
 	int[] runnersOnBase = {0, 0, 0};
+	BaseRunner[] baseRunners = new BaseRunner[3];
 	int[] battingOrder = {1, 1};
 	Player[] currentPitchers = {null, null};
 	boolean intentionalWalk = false;
@@ -74,9 +75,37 @@ public class GameState {
 	public int[] getRunnersOnBase() {
 		return runnersOnBase;
 	}
+	
+	public int getRunnerOnBase(int base) {
+		return runnersOnBase[base - 1];
+	}
 
 	public void setRunnersOnBase(int[] runnersOnBase) {
 		this.runnersOnBase = runnersOnBase;
+	}
+
+	public BaseRunner[] getBaseRunners() {
+		return baseRunners;
+	}
+	
+	public BaseRunner getBaseRunner(int base) {
+		return baseRunners[base - 1];
+	}
+	
+	public Integer getBaseRunnerId(int base) {
+		return baseRunners[base].getRunnerId();
+	}
+
+	public void setBaseRunners(BaseRunner[] baseRunners) {
+		this.baseRunners = baseRunners;
+	}
+	
+	public void setBaseRunner(int base, BaseRunner baseRunner) {
+		this.baseRunners[base - 1] = baseRunner;
+	}
+	
+	public void setBaseRunnerId(int base, int baseRunnerId) {
+		this.baseRunners[base - 1].setRunnerId(baseRunnerId);;
 	}
 
 	public int[] getBattingOrder() {
