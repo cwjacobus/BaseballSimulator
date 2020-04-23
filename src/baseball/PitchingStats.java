@@ -233,6 +233,10 @@ public class PitchingStats {
 		return battersFaced > 0 ? (double)(hitsAllowed + walks + hitBatters + sacrificeFlies)/battersFaced : 0.0;
 	}
 	
+	public double getEarnedRunAverage () {
+		return getOuts() > 0 ? (double)(earnedRunsAllowed*9)/(getOuts()/3.0) : 0.0;
+	}
+	
 	/*
 	 {"sport_pitching_tm":{"copyRight":" Copyright 2020 MLB Advanced Media, L.P.  Use of any content on this page acknowledges agreement to the terms posted here http://gdx.mlb.com/components/copyright.txt  ",
 	 "queryResults":{"created":"2020-04-09T18:51:43","totalSize":"1",
