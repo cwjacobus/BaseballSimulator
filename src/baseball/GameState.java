@@ -7,7 +7,6 @@ public class GameState {
 	int outs = 0;
 	Integer inning = 1;
 	int top = 0;
-	int[] runnersOnBase = {0, 0, 0};
 	BaseRunner[] baseRunners = new BaseRunner[3];
 	int[] battingOrder = {1, 1};
 	Player[] currentPitchers = {null, null};
@@ -70,18 +69,6 @@ public class GameState {
 
 	public void setTop(int top) {
 		this.top = top;
-	}
-
-	public int[] getRunnersOnBase() {
-		return runnersOnBase;
-	}
-	
-	public int getRunnerOnBase(int base) {
-		return runnersOnBase[base - 1];
-	}
-
-	public void setRunnersOnBase(int[] runnersOnBase) {
-		this.runnersOnBase = runnersOnBase;
 	}
 
 	public BaseRunner[] getBaseRunners() {
@@ -162,25 +149,25 @@ public class GameState {
 	
 	public int getCurrentBasesSituation() {
 		int baseSituation = BASES_EMPTY;
-		if (runnersOnBase[0] != 0 && runnersOnBase[1] == 0 && runnersOnBase[2] == 0) {
+		if (getBaseRunnerId(1) != 0 && getBaseRunnerId(2) == 0 && getBaseRunnerId(3) == 0) {
 			baseSituation = MAN_ON_FIRST;
 		}
-		else if (runnersOnBase[0] == 0 && runnersOnBase[1] != 0 && runnersOnBase[2] == 0) {
+		else if (getBaseRunnerId(1) == 0 && getBaseRunnerId(2) != 0 && getBaseRunnerId(3) == 0) {
 			baseSituation = MAN_ON_SECOND;
 		}
-		else if (runnersOnBase[0] == 0 && runnersOnBase[1] == 0 && runnersOnBase[2] != 0) {
+		else if (getBaseRunnerId(1) == 0 && getBaseRunnerId(2) == 0 && getBaseRunnerId(3) != 0) {
 			baseSituation = MAN_ON_THIRD;
 		}
-		else if (runnersOnBase[0] != 0 && runnersOnBase[1] != 0 && runnersOnBase[2] == 0) {
+		else if (getBaseRunnerId(1) != 0 && getBaseRunnerId(2) != 0 && getBaseRunnerId(3) == 0) {
 			baseSituation = MAN_ON_FIRST_AND_SECOND;
 		}
-		else if (runnersOnBase[0] == 0 && runnersOnBase[1] != 0 && runnersOnBase[2] != 0) {
+		else if (getBaseRunnerId(1) == 0 && getBaseRunnerId(2) != 0 && getBaseRunnerId(3) != 0) {
 			baseSituation = MAN_ON_SECOND_AND_THIRD;
 		}
-		else if (runnersOnBase[0] != 0 && runnersOnBase[1] == 0 && runnersOnBase[2] != 0) {
+		else if (getBaseRunnerId(1) != 0 && getBaseRunnerId(2) == 0 && getBaseRunnerId(3) != 0) {
 			baseSituation = MAN_ON_FIRST_AND_THIRD;
 		}
-		else if (runnersOnBase[0] != 0 && runnersOnBase[1] != 0 && runnersOnBase[2] != 0) {
+		else if (getBaseRunnerId(1) != 0 && getBaseRunnerId(2) != 0 && getBaseRunnerId(3) != 0) {
 			baseSituation = BASES_LOADED;
 		}
 		return baseSituation;
@@ -195,6 +182,6 @@ public class GameState {
 	}
 
 	public boolean isBaseOccupied(int base) {
-		return runnersOnBase[base - 1] == 0 ? false : true;
+		return getBaseRunnerId(base) == 0 ? false : true;
 	}
 }
