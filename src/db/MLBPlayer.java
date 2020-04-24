@@ -7,8 +7,8 @@ public class MLBPlayer {
 	private String armThrows;
 	private String bats;
 	private Integer jerseyNumber;
-	private MLBBattingStats battingStats;
-	private MLBPitchingStats pitchingStats;
+	private MLBBattingStats mlbBattingStats;
+	private MLBPitchingStats mlbPitchingStats;
 	
 	public MLBPlayer() {
 	}
@@ -21,8 +21,8 @@ public class MLBPlayer {
 		this.armThrows = armThrows;
 		this.bats = bats;
 		this.jerseyNumber = jerseyNumber;
-		this.battingStats = new MLBBattingStats();
-		this.pitchingStats = new MLBPitchingStats();
+		this.mlbBattingStats = new MLBBattingStats();
+		this.mlbPitchingStats = new MLBPitchingStats();
 	}
 
 	public Integer getMlbPlayerId() {
@@ -72,21 +72,21 @@ public class MLBPlayer {
 	public void setJerseyNumber(Integer jerseyNumber) {
 		this.jerseyNumber = jerseyNumber;
 	}
-	
-	public MLBBattingStats getBattingStats() {
-		return battingStats;
+
+	public MLBBattingStats getMlbBattingStats() {
+		return mlbBattingStats;
 	}
 
-	public void setBattingStats(MLBBattingStats battingStats) {
-		this.battingStats = battingStats;
+	public void setMlbBattingStats(MLBBattingStats mlbBattingStats) {
+		this.mlbBattingStats = mlbBattingStats;
 	}
 
-	public MLBPitchingStats getPitchingStats() {
-		return pitchingStats;
+	public MLBPitchingStats getMlbPitchingStats() {
+		return mlbPitchingStats;
 	}
 
-	public void setPitchingStats(MLBPitchingStats pitchingStats) {
-		this.pitchingStats = pitchingStats;
+	public void setMlbPitchingStats(MLBPitchingStats mlbPitchingStats) {
+		this.mlbPitchingStats = mlbPitchingStats;
 	}
 
 	public String getFirstLastName() {

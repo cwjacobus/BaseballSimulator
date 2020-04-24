@@ -691,25 +691,25 @@ public class BaseballSimulator {
             public int compare(Map.Entry<Integer, MLBPlayer> o1,  
                                Map.Entry<Integer, MLBPlayer> o2) { 
             	if (type.equals("SB")) {
-            		return (o1.getValue().getBattingStats().getBattingStats().getStolenBases() >= o2.getValue().getBattingStats().getBattingStats().getStolenBases() ? -1 : 1); 
+            		return (o1.getValue().getMlbBattingStats().getBattingStats().getStolenBases() >= o2.getValue().getMlbBattingStats().getBattingStats().getStolenBases() ? -1 : 1); 
             	}
             	else if (type.equals("H")){
-            		if (o1.getValue().getBattingStats().getBattingStats().getHits() == o2.getValue().getBattingStats().getBattingStats().getHits()) {
+            		if (o1.getValue().getMlbBattingStats().getBattingStats().getHits() == o2.getValue().getMlbBattingStats().getBattingStats().getHits()) {
             			return 0;
             		}
-            		return (o1.getValue().getBattingStats().getBattingStats().getHits() > o2.getValue().getBattingStats().getBattingStats().getHits() ? -1 : 1);
+            		return (o1.getValue().getMlbBattingStats().getBattingStats().getHits() > o2.getValue().getMlbBattingStats().getBattingStats().getHits() ? -1 : 1);
             	}
             	else if (type.equals("HR")){
-            		if (o1.getValue().getBattingStats().getBattingStats().getHomeRuns() == o2.getValue().getBattingStats().getBattingStats().getHomeRuns()) {
+            		if (o1.getValue().getMlbBattingStats().getBattingStats().getHomeRuns() == o2.getValue().getMlbBattingStats().getBattingStats().getHomeRuns()) {
             			return 0;
             		}
-            		return (o1.getValue().getBattingStats().getBattingStats().getHomeRuns() > o2.getValue().getBattingStats().getBattingStats().getHomeRuns() ? -1 : 1);
+            		return (o1.getValue().getMlbBattingStats().getBattingStats().getHomeRuns() > o2.getValue().getMlbBattingStats().getBattingStats().getHomeRuns() ? -1 : 1);
             	}
             	else if (type.equals("RBI")){
-            		if (o1.getValue().getBattingStats().getBattingStats().getRbis() == o2.getValue().getBattingStats().getBattingStats().getRbis()) {
+            		if (o1.getValue().getMlbBattingStats().getBattingStats().getRbis() == o2.getValue().getMlbBattingStats().getBattingStats().getRbis()) {
             			return 0;
             		}
-            		return (o1.getValue().getBattingStats().getBattingStats().getRbis() > o2.getValue().getBattingStats().getBattingStats().getRbis() ? -1 : 1);
+            		return (o1.getValue().getMlbBattingStats().getBattingStats().getRbis() > o2.getValue().getMlbBattingStats().getBattingStats().getRbis() ? -1 : 1);
             	}
             	else {
             		return 0;
@@ -766,9 +766,9 @@ public class BaseballSimulator {
 					boolean positionNeeded = (!positionsUsed.contains(player.getPrimaryPosition()) && !player.getPrimaryPosition().equals("OF")) || 
 						(player.getPrimaryPosition().equals("OF") && ofCount < 3);
 					if (player != null && !playersInLineupList.contains(list.get(index).getKey()) && positionNeeded) {  // Not already in lineup, save P for end
-						/*System.out.println(player.getFirstLastName() + " " + player.getPrimaryPosition() + " SB: " + player.getBattingStats().getBattingStats().getStolenBases() + " H: " +
-							player.getBattingStats().getBattingStats().getHits() + " HR: " + player.getBattingStats().getBattingStats().getHomeRuns() + " RBI: " + 
-							player.getBattingStats().getBattingStats().getRbis());*/
+						/*System.out.println(player.getFirstLastName() + " " + player.getPrimaryPosition() + " SB: " + player.getMlbBattingStats().getBattingStats().getStolenBases() + " H: " +
+							player.getMlbBattingStats().getBattingStats().getHits() + " HR: " + player.getMlbBattingStats().getBattingStats().getHomeRuns() + " RBI: " + 
+							player.getMlbBattingStats().getBattingStats().getRbis());*/
 						playersInLineupList.add(list.get(index).getKey());
 						batters.get(t).get(i-1).add(new Player(player.getFullName(), player.getMlbPlayerId(), player.getPrimaryPosition()));
 						positionsUsed.add(player.getPrimaryPosition());
@@ -1011,14 +1011,14 @@ public class BaseballSimulator {
 		if (roster.getBatters().get(id) == null) {
 			return new BattingStats(75, 10, 2, 0, 1, 2, 44, 0, 4, 3, 0, 100, 0); // Default pitcher batting stats
 		}
-		return roster.getBatters().get(id).getBattingStats().getBattingStats();
+		return roster.getBatters().get(id).getMlbBattingStats().getBattingStats();
 	}
 	
 	static PitchingStats getPitchersSeasonPitchingStats(Roster roster, int id) {
 		if (roster.getPitchers().get(id) == null) {
 			return new PitchingStats();
 		}
-		return roster.getPitchers().get(id).getPitchingStats().getPitchingStats();
+		return roster.getPitchers().get(id).getMlbPitchingStats().getPitchingStats();
 	}
 	
 	/*
