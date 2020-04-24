@@ -188,11 +188,11 @@ public class BaseballSimulator {
 					Player currentBatter = batters.get(gameState.getBattingOrder()[top] - 1).get(batters.get(gameState.getBattingOrder()[top] - 1).size() - 1);
 					System.out.println(currentBatter.getName() + " UP OUTS: " + gameState.getOuts() + " "  + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()) + 
 						" (" + getBatterNameFromId(gameState.getBaseRunnerId(1)) + ":" + getBatterNameFromId(gameState.getBaseRunnerId(2)) + ":" + getBatterNameFromId(gameState.getBaseRunnerId(3)) + ")");
-					
+					Player currentPitcher = gameState.getCurrentPitchers()[top==0?1:0];
 					BattingStats currentBatterGameStats = currentBatter.getBattingStats();
 					BattingStats currentBatterSeasonStats = getBattersSeasonBattingStats(roster, currentBatter.getId());
-					PitchingStats currentPitcherGameStats = boxScores[top==0?1:0].getPitchers().get(gameState.getCurrentPitchers()[top==0?1:0].getId()).getPitchingStats();
-					PitchingStats currentPitcherSeasonStats = getPitchersSeasonPitchingStats(rosters[top==0?1:0], gameState.getCurrentPitchers()[top==0?1:0].getId());
+					PitchingStats currentPitcherGameStats = currentPitcher.getPitchingStats();
+					PitchingStats currentPitcherSeasonStats = getPitchersSeasonPitchingStats(rosters[top==0?1:0], currentPitcher.getId());
 						
 					if (!simulationMode || autoBeforeInning <= inning) {
 						myObj = new Scanner(System.in);
@@ -222,6 +222,13 @@ public class BaseballSimulator {
 					}
 					gameTiedStartOfAB = boxScores[1].getScore(inning) == boxScores[0].getScore(inning);
 					long onBaseEndPoint = 1000 - Math.round(((currentBatterSeasonStats.getOnBasePercentage() + currentPitcherSeasonStats.getOnBasePercentage())/2.0)*1000);
+					onBaseEndPoint -= currentPitcherGameStats.getBattersFaced(); // pitcher fatigue
+					/*if (currentPitcher.getThrows().equals(currentBatter.getBats())) {  // TBD: throws v bats
+						onBaseEndPoint += 10;
+					}
+					else {
+						onBaseEndPoint -= 10;
+					}*/
 					if (rando <= onBaseEndPoint) { // OUT
 						int outResult = getOutResult(currentBatter, currentBatterSeasonStats, currentPitcherGameStats, currentPitcherSeasonStats);
 						gameState.setOuts(gameState.getOuts() + outResult);
@@ -236,7 +243,7 @@ public class BaseballSimulator {
 							currentPitcherGameStats.incrementWalks();
 							updateBasesSituationNoRunnersAdvance(currentBatter);
 						}
-						if (rando >= (bbEndPoint + onBaseEndPoint) && rando < ((bbEndPoint + onBaseEndPoint) + 10)) { // Hard coded HBP rate ~3%
+						else if (rando >= (bbEndPoint + onBaseEndPoint) && rando < ((bbEndPoint + onBaseEndPoint) + 10)) { // Hard coded HBP rate ~3%
 							System.out.println("HIT BY PITCH");
 							updateBasesSituationNoRunnersAdvance(currentBatter);
 						}
@@ -266,6 +273,7 @@ public class BaseballSimulator {
 							break;
 						}
 					}
+					currentPitcherGameStats.incrementBattersFaced();
 					gameState.incrementBattingOrder(top);
 					gameState.setHitAndRun(false);  // clear hit and run, if on
 				} // outs
@@ -303,7 +311,7 @@ public class BaseballSimulator {
 	
 	private static int getNotOutResult(BattingStats batterGameStats, BattingStats batterSeasonStats, PitchingStats pitcherGameStats, PitchingStats pitcherSeasonStats) {
 		long errorEndPoint = 25;
-		long hrEndPoint = Math.round(((batterSeasonStats.getHomeRunRate() + pitcherSeasonStats.getHomeRunsAllowedRate())/2)*1000) + errorEndPoint;
+		long hrEndPoint = Math.round(((double)(batterSeasonStats.getHomeRunRate() + pitcherSeasonStats.getHomeRunsAllowedRate())/2.0)*1000) + errorEndPoint;
 		long triplesEndPoint = Math.round((((double)batterSeasonStats.getTriples()/batterSeasonStats.getHits())*1000)) + hrEndPoint;
 		triplesEndPoint = batterSeasonStats.getTriples() == 0 ? 8 + hrEndPoint : triplesEndPoint; // Give some chance if batter has 0 triples
 		long doublesEndPoint = Math.round((((double)batterSeasonStats.getDoubles()/batterSeasonStats.getHits())*1000)) + triplesEndPoint;

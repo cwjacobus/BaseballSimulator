@@ -207,6 +207,10 @@ public class PitchingStats {
 	public void setBattersFaced(int battersFaced) {
 		this.battersFaced = battersFaced;
 	}
+	
+	public void incrementBattersFaced() {
+		this.battersFaced++;
+	}
 
 	public int getOuts() {
 		int outs = 0;
