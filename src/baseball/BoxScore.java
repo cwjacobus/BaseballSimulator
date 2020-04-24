@@ -3,20 +3,22 @@ package baseball;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
+import db.MLBPlayer;
+
 public class BoxScore {
 	public static final int NUM_OF_PLAYERS_IN_LINEUP = 9;
 	int hits = 0;
 	int errors = 0;
 	int[] runsScored = new int[50];
 	boolean walkOff = false;
-	ArrayList<ArrayList<Player>> batters = new ArrayList<ArrayList<Player>>();
-	LinkedHashMap<Integer, Player> pitchers = new LinkedHashMap<Integer, Player>();
+	ArrayList<ArrayList<MLBPlayer>> batters = new ArrayList<ArrayList<MLBPlayer>>();
+	LinkedHashMap<Integer, MLBPlayer> pitchers = new LinkedHashMap<Integer, MLBPlayer>();
 	String teamName;
 	int year = 2019;
 	
 	public BoxScore() {
 		for (int i = 0; i < NUM_OF_PLAYERS_IN_LINEUP; i++) {
-			batters.add(new ArrayList<Player>());
+			batters.add(new ArrayList<MLBPlayer>());
 		}
 	}
 
@@ -72,19 +74,19 @@ public class BoxScore {
 		this.walkOff = walkOff;
 	}
 
-	public ArrayList<ArrayList<Player>> getBatters() {
+	public ArrayList<ArrayList<MLBPlayer>> getBatters() {
 		return batters;
 	}
 
-	public void setBatters(ArrayList<ArrayList<Player>> batters) {
+	public void setBatters(ArrayList<ArrayList<MLBPlayer>> batters) {
 		this.batters = batters;
 	}
 
-	public LinkedHashMap<Integer, Player> getPitchers() {
+	public LinkedHashMap<Integer, MLBPlayer> getPitchers() {
 		return pitchers;
 	}
 
-	public void setPitchers(LinkedHashMap<Integer, Player> pitchers) {
+	public void setPitchers(LinkedHashMap<Integer, MLBPlayer> pitchers) {
 		this.pitchers = pitchers;
 	}
 

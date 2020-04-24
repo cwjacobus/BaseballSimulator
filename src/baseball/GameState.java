@@ -3,13 +3,15 @@ package baseball;
 import java.util.HashMap;
 import java.util.Map;
 
+import db.MLBPlayer;
+
 public class GameState {
 	int outs = 0;
 	Integer inning = 1;
 	int top = 0;
 	BaseRunner[] baseRunners = new BaseRunner[3];
 	int[] battingOrder = {1, 1};
-	Player[] currentPitchers = {null, null};
+	MLBPlayer[] currentPitchers = {null, null};
 	boolean intentionalWalk = false;
 	boolean hitAndRun = false;
 	boolean buntAttempt = false;
@@ -95,10 +97,6 @@ public class GameState {
 		this.baseRunners[base - 1] = baseRunner;
 	}
 	
-	public void setBaseRunnerId(int base, int baseRunnerId) {
-		this.baseRunners[base - 1].setRunnerId(baseRunnerId);;
-	}
-
 	public int[] getBattingOrder() {
 		return battingOrder;
 	}
@@ -111,15 +109,15 @@ public class GameState {
 		this.battingOrder[top] = battingOrder[top] == 9 ? 1 : battingOrder[top] + 1;
 	}
 
-	public Player[] getCurrentPitchers() {
+	public MLBPlayer[] getCurrentPitchers() {
 		return currentPitchers;
 	}
 
-	public void setCurrentPitchers(Player[] currentPitchers) {
+	public void setCurrentPitchers(MLBPlayer[] currentPitchers) {
 		this.currentPitchers = currentPitchers;
 	}
 
-	public void setCurrentPitcher(Player currentPitcher, int top) {
+	public void setCurrentPitcher(MLBPlayer currentPitcher, int top) {
 		this.currentPitchers[top] = currentPitcher;
 	}
 
