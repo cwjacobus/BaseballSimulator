@@ -1,5 +1,6 @@
 package baseball;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,6 +16,8 @@ public class GameState {
 	boolean intentionalWalk = false;
 	boolean hitAndRun = false;
 	boolean buntAttempt = false;
+	int virtualErrorOuts = 0; // Used to determine earned runs
+	ArrayList<Integer> baseRunnersReachedByError = new ArrayList<Integer>(); // Used to determine earned runs
 	
 	public static final int BASES_EMPTY = 0;
 	public static final int MAN_ON_FIRST = 1;
@@ -145,6 +148,26 @@ public class GameState {
 		this.buntAttempt = buntAttempt;
 	}
 	
+	public int getVirtualErrorOuts() {
+		return virtualErrorOuts;
+	}
+
+	public void setVirtualErrorOuts(int virtualErrorOuts) {
+		this.virtualErrorOuts = virtualErrorOuts;
+	}
+	
+	public void incrementVirtualErrorOuts() {
+		this.virtualErrorOuts++;
+	}
+
+	public ArrayList<Integer> getBaseRunnersReachedByError() {
+		return baseRunnersReachedByError;
+	}
+
+	public void setBaseRunnersReachedByError(ArrayList<Integer> baseRunnersReachedByError) {
+		this.baseRunnersReachedByError = baseRunnersReachedByError;
+	}
+
 	public int getCurrentBasesSituation() {
 		int baseSituation = BASES_EMPTY;
 		if (getBaseRunnerId(1) != 0 && getBaseRunnerId(2) == 0 && getBaseRunnerId(3) == 0) {

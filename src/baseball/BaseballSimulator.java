@@ -178,6 +178,8 @@ public class BaseballSimulator {
 				ArrayList<ArrayList<MLBPlayer>> batters = boxScore.getBatters();
 				gameState.setTop(top);
 				gameState.setOuts(0);
+				gameState.setVirtualErrorOuts(0);
+				gameState.setBaseRunnersReachedByError(new ArrayList<Integer>());
 				System.out.println((top == 0 ? "\n***TOP " : "***BOTTOM ") + " INN: " + inning + " ***");
 				if (top == 0) {
 					System.out.println("SCORE - " + boxScores[0].getTeamName() + ": " + boxScores[0].getScore(gameState.getInning())  + " " + 
@@ -254,6 +256,8 @@ public class BaseballSimulator {
 							boolean reachedByError = false;
 							if (noOutResult == 0) {
 								reachedByError = true;
+								gameState.incrementVirtualErrorOuts();
+								gameState.getBaseRunnersReachedByError().add(currentBatter.getMlbPlayerId());
 								noOutResult = 1;
 							}
 							if (noOutResult == 1 && (getRandomNumberInRange(0, 5) + currentBatterGameStats.getSpeedRating()) > 4) { // infield single/error?
@@ -618,11 +622,19 @@ public class BaseballSimulator {
 	
 	private static void runScores() {
 		BoxScore boxScore = boxScores[gameState.getTop()];
-		PitchingStats pitcherGameStats = boxScores[gameState.getTop()==0?1:0].getPitchers().get(gameState.getCurrentPitchers()[gameState.getTop()==0?1:0].getMlbPlayerId()).getMlbPitchingStats().getPitchingStats();
 		MLBPlayer runner = getBatterFromId(gameState.getBaseRunnerId(3));
+		//PitchingStats pitcherGameStats = boxScores[gameState.getTop()==0?1:0].getPitchers().get(gameState.getCurrentPitchers()[gameState.getTop()==0?1:0].getMlbPlayerId()).getMlbPitchingStats().getPitchingStats();
+		PitchingStats pitcherGameStats = boxScores[gameState.getTop()==0?1:0].getPitchers().get(gameState.getBaseRunner(3).getResponsiblePitcherId()).getMlbPitchingStats().getPitchingStats();
 		runner.getMlbBattingStats().getBattingStats().incrementRuns();
 		pitcherGameStats.incrementRunsAllowed();
-		pitcherGameStats.incrementEarnedRunsAllowed();
+		if (gameState.getBaseRunnersReachedByError().contains(runner.getMlbPlayerId())) {
+			gameState.getBaseRunnersReachedByError().remove(runner.getMlbPlayerId());
+		}
+		else {
+			if ((gameState.getOuts() + gameState.getVirtualErrorOuts()) < 3) {
+				pitcherGameStats.incrementEarnedRunsAllowed();
+			}	
+		}
 		boxScore.setRunsScored(gameState.getInning(), 1); // run scores
 		System.out.println("RUN SCORES - " + boxScores[0].getTeamName() + ": " + boxScores[0].getScore(gameState.getInning())  + " " + 
 			boxScores[1].getTeamName() + ": " + boxScores[1].getScore(gameState.getInning()));
