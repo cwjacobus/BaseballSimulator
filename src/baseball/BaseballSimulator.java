@@ -186,6 +186,7 @@ public class BaseballSimulator {
 				boolean gameTiedStartOfAB;
 				Arrays.fill(gameState.getBaseRunners(), new BaseRunner());
 				while (gameState.getOuts() < OUTS_PER_INNING) {
+					// TBD change pitcher logic
 					MLBPlayer currentBatter = batters.get(gameState.getBattingOrder()[top] - 1).get(batters.get(gameState.getBattingOrder()[top] - 1).size() - 1);
 					System.out.println(currentBatter.getFirstLastName() + " UP OUTS: " + gameState.getOuts() + " "  + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()) + 
 						" (" + getBatterNameFromId(gameState.getBaseRunnerId(1)) + ":" + getBatterNameFromId(gameState.getBaseRunnerId(2)) + ":" + getBatterNameFromId(gameState.getBaseRunnerId(3)) + ")");
@@ -224,12 +225,12 @@ public class BaseballSimulator {
 					gameTiedStartOfAB = boxScores[1].getScore(inning) == boxScores[0].getScore(inning);
 					long onBaseEndPoint = 1000 - Math.round(((currentBatterSeasonStats.getOnBasePercentage() + currentPitcherSeasonStats.getOnBasePercentage())/2.0)*1000);
 					onBaseEndPoint -= currentPitcherGameStats.getBattersFaced(); // pitcher fatigue
-					/*if (currentPitcher.getThrows().equals(currentBatter.getBats())) {  // TBD: throws v bats
+					if (currentPitcher.getArmThrows().equals(currentBatter.getBats())) {  // TBD: throws v bats
 						onBaseEndPoint += 10;
 					}
 					else {
 						onBaseEndPoint -= 10;
-					}*/
+					}
 					if (rando <= onBaseEndPoint) { // OUT
 						int outResult = getOutResult(currentBatter, currentBatterSeasonStats, currentPitcherGameStats, currentPitcherSeasonStats);
 						gameState.setOuts(gameState.getOuts() + outResult);
@@ -248,9 +249,14 @@ public class BaseballSimulator {
 							System.out.println("HIT BY PITCH");
 							updateBasesSituationNoRunnersAdvance(currentBatter);
 						}
-						else { // HIT
+						else { // HIT or ERROR
 							int noOutResult = getNotOutResult(currentBatterGameStats, currentBatterSeasonStats, currentPitcherGameStats, currentPitcherSeasonStats);
-							if (noOutResult == 1 && (getRandomNumberInRange(0, 5) + currentBatterGameStats.getSpeedRating()) > 4) { // infield single ?
+							boolean reachedByError = false;
+							if (noOutResult == 0) {
+								reachedByError = true;
+								noOutResult = 1;
+							}
+							if (noOutResult == 1 && (getRandomNumberInRange(0, 5) + currentBatterGameStats.getSpeedRating()) > 4) { // infield single/error?
 								if (gameState.getOuts() != 2) {  // less than 2 outs runners hold
 									updateBasesSituationNoRunnersAdvance(currentBatter);
 								}
@@ -262,10 +268,12 @@ public class BaseballSimulator {
 							else {
 								updateBasesSituationRunnersAdvance(noOutResult, currentBatter);
 							}
-							boxScore.incrementHits();
-							currentBatterGameStats.incrementHits();
 							currentBatterGameStats.incrementAtBats();
-							currentPitcherGameStats.incrementHitsAllowed();
+							if (!reachedByError) {
+								boxScore.incrementHits();
+								currentBatterGameStats.incrementHits();
+								currentPitcherGameStats.incrementHitsAllowed();
+							}
 						}
 						currentBatter.getMlbBattingStats().setBattingStats(currentBatterGameStats);
 						if (inning >= 9 && boxScores[1].getScore(inning) > boxScores[0].getScore(inning) && gameTiedStartOfAB) {
@@ -320,8 +328,8 @@ public class BaseballSimulator {
 		int notOutRando = getRandomNumberInRange(1, 1000);
 		if (notOutRando > 1 && notOutRando <= errorEndPoint) {
 			System.out.println("REACHED BY ERROR");
-			notOutResult = 1;
-			boxScores[gameState.getTop() == 0 ? 1 : 0].incrementErrors();
+			notOutResult = 0;
+			boxScores[gameState.getTop()==0?1:0].incrementErrors();
 		}
 		else if (notOutRando > errorEndPoint && notOutRando <= hrEndPoint) {
 			System.out.println("HOME RUN");
@@ -342,7 +350,6 @@ public class BaseballSimulator {
 		else {
 			System.out.println("SINGLE");
 		}
-		
 		return notOutResult;
 	}
 	
@@ -615,6 +622,7 @@ public class BaseballSimulator {
 		MLBPlayer runner = getBatterFromId(gameState.getBaseRunnerId(3));
 		runner.getMlbBattingStats().getBattingStats().incrementRuns();
 		pitcherGameStats.incrementRunsAllowed();
+		pitcherGameStats.incrementEarnedRunsAllowed();
 		boxScore.setRunsScored(gameState.getInning(), 1); // run scores
 		System.out.println("RUN SCORES - " + boxScores[0].getTeamName() + ": " + boxScores[0].getScore(gameState.getInning())  + " " + 
 			boxScores[1].getTeamName() + ": " + boxScores[1].getScore(gameState.getInning()));
