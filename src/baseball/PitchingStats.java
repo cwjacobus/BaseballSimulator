@@ -50,7 +50,18 @@ public class PitchingStats {
 		this.inningsPitched = inningsPitched;
 	}
 	
-	public void incrementInningsPitched(int incrementBy) {
+	public void addInningsPitched(String ipString2) {
+		String ipString1 = Double.toString(inningsPitched);
+		int ip = Integer.parseInt(ipString1.split("\\.")[0]) + Integer.parseInt(ipString2.split("\\.")[0]);
+		int thirds = Integer.parseInt(ipString1.split("\\.")[1]) + Integer.parseInt(ipString2.split("\\.")[1]);
+		if (thirds >=3) {
+			ip++;
+			thirds = 0;
+		}
+		this.inningsPitched = Double.parseDouble(ip + "." + thirds);
+	}
+	
+	public void incrementInningsPitchedBy(int incrementBy) { // Increment Innings Pitched by outs
 		for (int i = 1; i <= incrementBy; i++) {
 			String iPString = Double.toString(inningsPitched);
 			if (iPString != null && iPString.length() > 0 && iPString.contains(".")) {

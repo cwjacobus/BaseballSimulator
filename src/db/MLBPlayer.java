@@ -13,6 +13,15 @@ public class MLBPlayer {
 	public MLBPlayer() {
 	}
 	
+	public MLBPlayer(Integer mlbPlayerId, String fullName, String primaryPosition) {
+		this.mlbPlayerId = mlbPlayerId;
+		this.fullName = fullName;
+		this.primaryPosition = primaryPosition;
+		this.mlbBattingStats = new MLBBattingStats();
+		this.mlbPitchingStats = new MLBPitchingStats();
+	}
+	
+	
 	public MLBPlayer(Integer mlbPlayerId, String fullName, String primaryPosition, String armThrows, String bats,
 			Integer jerseyNumber) {
 		this.mlbPlayerId = mlbPlayerId;

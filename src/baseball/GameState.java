@@ -18,6 +18,7 @@ public class GameState {
 	boolean buntAttempt = false;
 	int virtualErrorOuts = 0; // Used to determine earned runs
 	ArrayList<Integer> baseRunnersReachedByError = new ArrayList<Integer>(); // Used to determine earned runs
+	boolean[] closerIsPitching = {false, false}; 
 	
 	public static final int BASES_EMPTY = 0;
 	public static final int MAN_ON_FIRST = 1;
@@ -166,6 +167,18 @@ public class GameState {
 
 	public void setBaseRunnersReachedByError(ArrayList<Integer> baseRunnersReachedByError) {
 		this.baseRunnersReachedByError = baseRunnersReachedByError;
+	}
+
+	public boolean isCloserIsPitching(int top) {
+		return closerIsPitching[top];
+	}
+
+	public void setCloserIsPitching(boolean[] closerIsPitching) {
+		this.closerIsPitching = closerIsPitching;
+	}
+	
+	public void setCloserIsPitching(boolean closerIsPitching, int top) {
+		this.closerIsPitching[top] = closerIsPitching;
 	}
 
 	public int getCurrentBasesSituation() {
