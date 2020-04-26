@@ -186,18 +186,28 @@ public class BaseballSimulator {
 						boxScores[1].getTeamName() + ": " + boxScores[1].getScore(gameState.getInning()));
 				}
 				boolean gameTiedStartOfAB;
+				boolean closerPitching = false;
 				Arrays.fill(gameState.getBaseRunners(), new BaseRunner());
 				while (gameState.getOuts() < OUTS_PER_INNING) {
-					// TBD change pitcher logic
 					MLBPlayer currentBatter = batters.get(gameState.getBattingOrder()[top] - 1).get(batters.get(gameState.getBattingOrder()[top] - 1).size() - 1);
-					System.out.println(currentBatter.getFirstLastName() + " UP OUTS: " + gameState.getOuts() + " "  + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()) + 
-						" (" + getBatterNameFromId(gameState.getBaseRunnerId(1)) + ":" + getBatterNameFromId(gameState.getBaseRunnerId(2)) + ":" + getBatterNameFromId(gameState.getBaseRunnerId(3)) + ")");
 					MLBPlayer currentPitcher = gameState.getCurrentPitchers()[top==0?1:0];
 					BattingStats currentBatterGameStats = currentBatter.getMlbBattingStats().getBattingStats();
 					BattingStats currentBatterSeasonStats = getBattersSeasonBattingStats(roster, currentBatter.getMlbPlayerId());
 					PitchingStats currentPitcherGameStats = currentPitcher.getMlbPitchingStats().getPitchingStats();
 					PitchingStats currentPitcherSeasonStats = getPitchersSeasonPitchingStats(rosters[top==0?1:0], currentPitcher.getMlbPlayerId());
-						
+					if (gameState.getInning() >= 9 && Math.abs(boxScores[1].getScore(9) - boxScores[0].getScore(9)) < 4 && !closerPitching && ((gameState.getTop() == 0 && 
+						boxScores[1].getScore(9) > boxScores[0].getScore(9)) || gameState.getTop() == 1 && (boxScores[0].getScore(9) > boxScores[1].getScore(9)))) { 
+							MLBPlayer newPitcher = DAO.getReliefPitcher((Integer)franchisesMap.get(boxScores[top==0?1:0].getTeamName()), boxScores[top==0?1:0].getYear(), boxScores[top==0?1:0].getPitchers(), true);
+							changePitcher(newPitcher);
+							closerPitching = true;
+					}
+					else if (currentPitcherGameStats.getBattersFaced() > 30 || currentPitcherGameStats.getEarnedRunsAllowed() > 6 || 
+						(currentPitcherGameStats.getEarnedRunsAllowed() > 3 && currentPitcherGameStats.getBattersFaced() > 20)) {
+							MLBPlayer newPitcher = DAO.getReliefPitcher((Integer)franchisesMap.get(boxScores[top==0?1:0].getTeamName()), boxScores[top==0?1:0].getYear(), boxScores[top==0?1:0].getPitchers(), false);
+							changePitcher(newPitcher);
+					}
+					System.out.println(currentBatter.getFirstLastName() + " UP OUTS: " + gameState.getOuts() + " "  + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()) + 
+						" (" + getBatterNameFromId(gameState.getBaseRunnerId(1)) + ":" + getBatterNameFromId(gameState.getBaseRunnerId(2)) + ":" + getBatterNameFromId(gameState.getBaseRunnerId(3)) + ")");	
 					if (!simulationMode || autoBeforeInning <= inning) {
 						myObj = new Scanner(System.in);
 						System.out.print("PITCH: ");
@@ -1115,9 +1125,8 @@ public class BaseballSimulator {
 			}
 			MLBPlayer newPitcher = new MLBPlayer(newPitcherFromRoster.getMlbPlayerId(), newPitcherFromRoster.getFullName(), newPitcherFromRoster.getPrimaryPosition(), 
 				newPitcherFromRoster.getArmThrows(), newPitcherFromRoster.getBats(), newPitcherFromRoster.getJerseyNumber());
-			boxScores[top==0?1:0].getPitchers().put(newPitcher.getMlbPlayerId(), newPitcher);
-			gameState.setCurrentPitcher(newPitcher, top==0?1:0);
-			System.out.println("Pitcher changed to: " + newPitcher.getFirstLastName() + "\n");
+			changePitcher(newPitcher);
+			System.out.println();
 			return false;
 		}
 		else if (command.indexOf("SUBB") != -1) {
@@ -1202,6 +1211,12 @@ public class BaseballSimulator {
 			}
 		}
 		//return true;
+	}
+	
+	private static void changePitcher(MLBPlayer newPitcher) {
+		boxScores[gameState.getTop()==0?1:0].getPitchers().put(newPitcher.getMlbPlayerId(), newPitcher);
+		gameState.setCurrentPitcher(newPitcher, gameState.getTop()==0?1:0);
+		System.out.println("Pitcher changed to: " + newPitcher.getFirstLastName());
 	}
 	
 	// Get batting stats from API

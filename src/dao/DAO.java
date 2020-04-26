@@ -207,8 +207,40 @@ public class DAO {
 		return pitchersMap;
 	}
 	
+	public static MLBPlayer getReliefPitcher(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers, boolean closer) {
+		// For getting a random starting pitcher
+		ArrayList<MLBPlayer> pitcherList = new ArrayList<MLBPlayer>();
+		try {
+			String excludingSql = excludingPitchers != null && excludingPitchers.size() > 0 ? " AND BS.MLB_PLAYER_ID NOT IN (" : "";
+			if (excludingPitchers != null && excludingPitchers.size() > 0) {
+				for (Map.Entry<Integer, MLBPlayer> entry : excludingPitchers.entrySet()) {
+					excludingSql += entry.getValue().getMlbPlayerId() + ",";
+				}
+				excludingSql = excludingSql.substring(0, excludingSql.length() - 1) + ")";
+			}
+			String orderBy = closer ? "SAVES" : "HOLDS";
+			Statement stmt = conn.createStatement();
+			String sql = "SELECT P.* from MLB_PITCHING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR = " + year + " AND MLB_TEAM_ID = " + 
+				mlbTeamId + excludingSql + " ORDER BY " + orderBy + " DESC";
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				MLBPlayer p = new MLBPlayer(rs.getInt("MLB_PLAYER_ID"), rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
+				pitcherList.add(p);
+			}
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		if (pitcherList.size() > 0) {
+			return pitcherList.get(0);
+		}
+		else {
+			return null;
+		}
+	}
+	
 	public static MLBPlayer getStartingPitcherByIndex(Integer mlbTeamId, Integer year, int index) {
-		// FOr getting a random starting pitcher
+		// For getting a random starting pitcher
 		ArrayList<MLBPlayer> pitcherList = new ArrayList<MLBPlayer>();
 		try {
 			Statement stmt = conn.createStatement();
@@ -247,13 +279,13 @@ public class DAO {
 				excludingSql = excludingSql.substring(0, excludingSql.length() - 1) + ")";
 			}
 			// Add hits to sum for uniqueness
-			String sql = "SELECT * FROM mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and bs.mlb_team_id =  " + teamId;
+			String sql = "SELECT * FROM MLB_BATTING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID=P.MLB_PLAYER_ID AND BS.MLB_TEAM_ID =  " + teamId;
 			if (position != null) {
-				sql += " and p.primary_position = '" + position + "'";
+				sql += " AND P.PRIMARY_POSITION = '" + position + "'";
 			}
-			sql += " and bs.year = " + year + " and (bs.plate_appearances + bs.hits) = (select max(plate_appearances + hits) from mlb_batting_stats bs, mlb_player p where bs.mlb_player_id=p.mlb_player_id and  bs.mlb_team_id = " +teamId;
+			sql += " and bs.year = " + year + " aND (BS.PLATE_APPEARANCES + BS.HITS) = (SELECT MAX(PLATE_APPEARANCES + HITS) FROM MLB_BATTING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID=P.MLB_PLAYER_ID AND BS.MLB_TEAM_ID = " +teamId;
 			if (position != null) {
-				sql += " and p.primary_position = '" + position + "'";
+				sql += " AND P.PRIMARY_POSITION = '" + position + "'";
 			}
 			sql += " and bs.year = " + year + excludingSql + ")";
 			ResultSet rs = stmt.executeQuery(sql);
