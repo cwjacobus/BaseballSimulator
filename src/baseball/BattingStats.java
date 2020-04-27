@@ -168,6 +168,10 @@ public class BattingStats {
 		this.plateAppearances = plateAppearances;
 	}
 	
+	public void incrementPlateAppearances() {
+		this.plateAppearances++;
+	}
+	
 	public int getCaughtStealing() {
 		return caughtStealing;
 	}

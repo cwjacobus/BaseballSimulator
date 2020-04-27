@@ -150,38 +150,33 @@ public class BaseballSimulator {
 			updateSeriesStatsFromBoxScores(seriesStats, boxScores);
 		}
 		if (seriesLength > 1) { // Series results and calculations
-			System.out.println("Series Stats");
+			System.out.println("\nSeries Stats");
 			outputBoxScore(seriesStats);
 			HashMap<String, Integer> totalWins = new HashMap<String, Integer>();
 			HashMap<String, Integer> totalRuns = new HashMap<String, Integer>();
-			totalWins.put(boxScores[0].getTeamName(), 0);
-			totalWins.put(boxScores[1].getTeamName(), 0);
-			totalRuns.put(boxScores[0].getTeamName(), 0);
-			totalRuns.put(boxScores[1].getTeamName(), 0);
+			totalWins.put(boxScores[0].getTeamName() + "" + boxScores[0].getYear(), 0);
+			totalWins.put(boxScores[1].getTeamName() + "" + boxScores[1].getYear(), 0);
+			totalRuns.put(boxScores[0].getTeamName() + "" + boxScores[0].getYear(), 0);
+			totalRuns.put(boxScores[1].getTeamName() + "" + boxScores[1].getYear(), 0);
 			System.out.println("\n");
 			for (BoxScore[] bsArray : seriesBoxScores) {
 				int winner = bsArray[0].getFinalScore() > bsArray[1].getFinalScore() ? 0 : 1;
-				System.out.println(bsArray[winner].getTeamName() + " " + bsArray[winner].getFinalScore() + "  " +  bsArray[winner==1?0:1].getTeamName() + " " + bsArray[winner==1?0:1].getFinalScore());
-				totalWins.put(bsArray[winner].getTeamName(), totalWins.get(bsArray[winner].getTeamName()) + 1);
-				totalRuns.put(bsArray[0].getTeamName(), totalRuns.get(bsArray[0].getTeamName()) + bsArray[0].getFinalScore());
-				totalRuns.put(bsArray[1].getTeamName(), totalRuns.get(bsArray[1].getTeamName()) + bsArray[1].getFinalScore());
+				System.out.println(bsArray[winner].getTeamName() + "" + bsArray[winner].getYear() + " " + bsArray[winner].getFinalScore() + "  " +  bsArray[winner==1?0:1].getTeamName() + 
+					"" + bsArray[winner].getYear() +  " " + bsArray[winner==1?0:1].getFinalScore());
+				totalWins.put(bsArray[winner].getTeamName() + "" + bsArray[winner].getYear(), totalWins.get(bsArray[winner].getTeamName() + "" + bsArray[winner].getYear()) + 1);
+				totalRuns.put(bsArray[0].getTeamName() + "" + bsArray[0].getYear(), totalRuns.get(bsArray[0].getTeamName() + "" + bsArray[0].getYear()) + bsArray[0].getFinalScore());
+				totalRuns.put(bsArray[1].getTeamName() + "" + bsArray[1].getYear(), totalRuns.get(bsArray[1].getTeamName() + "" + bsArray[1].getYear()) + bsArray[1].getFinalScore());
 			}
 			System.out.println("\nTotals:");
-			int homeWinner = totalWins.get(boxScores[1].getTeamName()) > totalWins.get(boxScores[0].getTeamName()) ?1 : 0;
-			System.out.println(boxScores[homeWinner].getTeamName() + ": " + totalWins.get(boxScores[homeWinner].getTeamName()) + "(" + 
-				df.format((double)totalWins.get(boxScores[homeWinner].getTeamName())/seriesLength) +  ") " + boxScores[homeWinner==1?0:1].getTeamName() + ": " + totalWins.get(boxScores[homeWinner==1?0:1].getTeamName()) + 
-				"(" + df.format((double)totalWins.get(boxScores[homeWinner==1?0:1].getTeamName())/seriesLength) + ")");
-			System.out.println("Average Score:");
-			System.out.println(boxScores[homeWinner].getTeamName() + ": " + df.format((double)totalRuns.get(boxScores[homeWinner].getTeamName())/seriesLength) + " " + boxScores[homeWinner==1?0:1].getTeamName() + 
-				": " + df.format((double)totalRuns.get(boxScores[homeWinner==1?0:1].getTeamName())/seriesLength));
-			System.out.println("\nSeries Stats");
-			for (int t = 0; t < 2; t++) {
-				System.out.println("\n" + boxScores[t].getTeamName() + " Pitching");
-				for (Map.Entry<Integer, MLBPlayer> entry : seriesStats[t].getPitchers().entrySet()) {
-					System.out.println(entry.getValue().getFirstLastName() + " " + entry.getValue().getMlbPitchingStats().getPitchingStats().getInningsPitched() + " HR: " +
-						entry.getValue().getMlbPitchingStats().getPitchingStats().getHomeRunsAllowed());
-				}
-			}
+			int homeWinner = totalWins.get(boxScores[1].getTeamName() + "" + boxScores[1].getYear()) > totalWins.get(boxScores[0].getTeamName() + "" + boxScores[0].getYear()) ? 1 : 0;
+			System.out.println(boxScores[homeWinner].getTeamName() + "" + boxScores[homeWinner].getYear() + ": " + totalWins.get(boxScores[homeWinner].getTeamName() + "" + boxScores[homeWinner].getYear()) + "(" + 
+				df.format((double)totalWins.get(boxScores[homeWinner].getTeamName()+ "" + boxScores[homeWinner].getYear())/seriesLength) +  ") " + boxScores[homeWinner==1?0:1].getTeamName() + 
+				"" + boxScores[homeWinner==1?0:1].getYear() + ": " + totalWins.get(boxScores[homeWinner==1?0:1].getTeamName() + "" + boxScores[homeWinner==1?0:1].getYear()) + "(" + 
+				df.format((double)totalWins.get(boxScores[homeWinner==1?0:1].getTeamName() + "" + boxScores[homeWinner==1?0:1].getYear())/seriesLength) + ")");
+			System.out.println("Average Score:"); 
+			System.out.println(boxScores[homeWinner].getTeamName() + boxScores[homeWinner].getYear() + ": " + df.format((double)totalRuns.get(boxScores[homeWinner].getTeamName()+ "" + 
+				boxScores[homeWinner].getYear())/seriesLength) + " " + boxScores[homeWinner==1?0:1].getTeamName() + boxScores[homeWinner==1?0:1].getYear() + ": " + df.format((double)totalRuns.get(boxScores[homeWinner==1?0:1].getTeamName() + 
+				"" + boxScores[homeWinner==1?0:1].getYear())/seriesLength));
 		}
 	}
 	
@@ -198,6 +193,11 @@ public class BaseballSimulator {
 	            PitchingStats ps1 = p1.getMlbPitchingStats().getPitchingStats();
 	            PitchingStats ps2 = p2.getMlbPitchingStats().getPitchingStats();
 	            ps2.setHomeRunsAllowed(ps1.getHomeRunsAllowed() + ps2.getHomeRunsAllowed());
+	            ps2.setEarnedRunsAllowed(ps1.getEarnedRunsAllowed() + ps2.getEarnedRunsAllowed());
+	            ps2.setRunsAllowed(ps1.getRunsAllowed() + ps2.getRunsAllowed());
+	            ps2.setHitsAllowed(ps1.getHitsAllowed() + ps2.getHitsAllowed());
+	            ps2.setStrikeouts(ps1.getStrikeouts() + ps2.getStrikeouts());
+	            ps2.setWalks(ps1.getWalks() + ps2.getWalks());
 	            ps2.addInningsPitched(Double.toString(ps1.getInningsPitched()));
 	            p2.getMlbPitchingStats().setPitchingStats(ps2);
 	            seriesStats[t].getPitchers().put(p1.getMlbPlayerId(), p2);
@@ -213,6 +213,13 @@ public class BaseballSimulator {
 	        		bs2.setHomeRuns(bs1.getHomeRuns() + bs2.getHomeRuns());
 	        		bs2.setAtBats(bs1.getAtBats() + bs2.getAtBats());
 	        		bs2.setHits(bs1.getHits() + bs2.getHits());
+	        		bs2.setStrikeOuts(bs1.getStrikeOuts() + bs2.getStrikeOuts());
+	        		bs2.setWalks(bs1.getWalks() + bs2.getWalks());
+	        		bs2.setRuns(bs1.getRuns() + bs2.getRuns());
+	        		bs2.setPlateAppearances(bs1.getPlateAppearances() + bs2.getPlateAppearances());
+	        		bs2.setDoubles(bs1.getDoubles() + bs2.getDoubles());
+	        		bs2.setTriples(bs1.getTriples() + bs2.getTriples());
+	        		bs2.setHitByPitch(bs1.getHitByPitch() + bs2.getHitByPitch());
 	        		b2.getMlbBattingStats().setBattingStats(bs2);
 	        		seriesStats[t].getBatters().put(b1.getMlbPlayerId(), b2);
 	        	}
@@ -362,6 +369,7 @@ public class BaseballSimulator {
 						}
 					}
 					currentPitcherGameStats.incrementBattersFaced();
+					currentBatterGameStats.incrementPlateAppearances();
 					gameState.incrementBattingOrder(top);
 					gameState.setHitAndRun(false);  // clear hit and run, if on
 				} // outs
@@ -1001,7 +1009,7 @@ public class BaseballSimulator {
 			ArrayList<ArrayList<MLBPlayer>> batters = boxScores[top].getBatters();
 			System.out.println();
 			System.out.print(boxScores[top].getTeamName() + " ");
-			System.out.println("Hitting\t\t\t" + "AB  R   H  RBI  BB  K    AVG  OBP  SLG");
+			System.out.println("Hitting\t\t\t" + "AB   R    H    RBI  BB   K     AVG  OBP  SLG");
 			for (ArrayList<MLBPlayer> playerList : batters) {
 				for (MLBPlayer batter : playerList) {
 					BattingStats gameStats = batter.getMlbBattingStats().getBattingStats();
@@ -1013,15 +1021,18 @@ public class BaseballSimulator {
 							System.out.print("\t");
 						}
 					}
-					System.out.print(gameStats.getAtBats() + (gameStats.getAtBats() > 9 ? "  " : "   "));
-					System.out.print(gameStats.getRuns() + (gameStats.getRuns() > 9 ? "  " : "   "));
-					System.out.print(gameStats.getHits() + (gameStats.getHits() > 9 ? "  " : "   "));
-					System.out.print(gameStats.getRbis() + (gameStats.getRbis() > 9 ? "  " : "   "));
-					System.out.print(gameStats.getWalks() + (gameStats.getWalks() > 9 ? "  " : "   "));
-					System.out.print(gameStats.getStrikeOuts() + (gameStats.getStrikeOuts() > 9 ? "  " : "   "));
-					System.out.print(playerSeasonStats.getBattingAverage() == 1.0 ? "1.00" : df.format(playerSeasonStats.getBattingAverage()) + " ");
-					System.out.print(playerSeasonStats.getOnBasePercentage() == 1.0 ? "1.00" : df.format(playerSeasonStats.getOnBasePercentage()) + " ");
-					System.out.print(playerSeasonStats.getSluggingPercentage() == 1.0 ? "1.00" : df.format(playerSeasonStats.getSluggingPercentage()) + " ");
+					System.out.print(gameStats.getAtBats() + padSpaces("  ", gameStats.getAtBats()));
+					System.out.print(gameStats.getRuns() + padSpaces("  ", gameStats.getRuns()));
+					System.out.print(gameStats.getHits() + padSpaces("  ", gameStats.getHits()));
+					System.out.print(gameStats.getRbis() + padSpaces("  ", gameStats.getRbis()));
+					System.out.print(gameStats.getWalks() + padSpaces("  ", gameStats.getWalks()));
+					System.out.print(gameStats.getStrikeOuts() + padSpaces("  ", gameStats.getStrikeOuts()));
+					double ba = series ? gameStats.getBattingAverage() : playerSeasonStats.getBattingAverage();
+					double obp = series ? gameStats.getOnBasePercentage() : playerSeasonStats.getOnBasePercentage();
+					double sp = series ? gameStats.getSluggingPercentage() : playerSeasonStats.getSluggingPercentage();
+					System.out.print(ba == 1.0 ? "1.00" : df.format(ba) + " ");
+					System.out.print(obp == 1.0 ? "1.00" : df.format(obp) + " ");
+					System.out.print(sp == 1.0 ? "1.00" : df.format(sp) + " ");
 					System.out.println();
 				}
 			}
@@ -1080,11 +1091,11 @@ public class BaseballSimulator {
 			}
 		}
 		System.out.println();
-		DecimalFormat eraDf = new DecimalFormat(".00");
+		DecimalFormat eraDf = new DecimalFormat("0.00");
 		for (int top = 0; top < 2; top++) {
 			System.out.println();
 			System.out.print(boxScores[top].getTeamName() + " ");
-			System.out.println("Pitching\t\t\t" + "IP    H   R   ER  BB  K   HR  ERA");
+			System.out.println("Pitching\t\t\t" + "IP     H    R    ER   BB   K    HR    ERA");
 			HashMap<Integer, MLBPlayer> pitchers = boxScores[top].getPitchers();
 			for (Map.Entry<Integer, MLBPlayer> entry : pitchers.entrySet()) {
 				PitchingStats ps = entry.getValue().getMlbPitchingStats().getPitchingStats();
@@ -1094,16 +1105,28 @@ public class BaseballSimulator {
 				if (entry.getValue().getFirstLastName().length() < 16) {
 					System.out.print("\t");
 				}
-				System.out.print(ps.getInningsPitched() + (ps.getInningsPitched() > 9.2 ? "  " : "   "));
-				System.out.print(ps.getHitsAllowed() + (ps.getHitsAllowed() > 9 ? "  " : "   "));
-				System.out.print(ps.getRunsAllowed() + (ps.getRunsAllowed() > 9 ? "  " : "   "));
-				System.out.print(ps.getEarnedRunsAllowed() + (ps.getEarnedRunsAllowed() > 9 ? "  " : "   "));
-				System.out.print(ps.getWalks() + (ps.getWalks() > 9 ? "  " : "   "));
-				System.out.print(ps.getStrikeouts() + (ps.getStrikeouts() > 9 ? "  " : "   "));
-				System.out.print(ps.getHomeRunsAllowed() + (ps.getHomeRunsAllowed() > 9 ? "  " : "   "));
-				System.out.println(eraDf.format(pitcherSeasonStats.getEarnedRunAverage()));
+				System.out.print(ps.getInningsPitched() + padSpaces("  ", ps.getInningsPitched()));
+				System.out.print(ps.getHitsAllowed() + padSpaces("  ", ps.getHitsAllowed()));
+				System.out.print(ps.getRunsAllowed() + padSpaces("  ", ps.getRunsAllowed()));
+				System.out.print(ps.getEarnedRunsAllowed() + padSpaces("  ", ps.getEarnedRunsAllowed()));
+				System.out.print(ps.getWalks() + padSpaces("  ", ps.getWalks()));
+				System.out.print(ps.getStrikeouts() + padSpaces("  ", ps.getStrikeouts()));
+				System.out.print(ps.getHomeRunsAllowed() + padSpaces("  ", ps.getHomeRunsAllowed()));
+				double era = series ? ps.getEarnedRunAverage() : pitcherSeasonStats.getEarnedRunAverage();
+				System.out.println(eraDf.format(era));
 			}
 		}
+	}
+	
+	public static String padSpaces(String defSpaces, double stat) {
+		String spaces = defSpaces;
+		if (stat < 100.0) {
+			spaces += " ";
+		}
+		if (stat < 10.0) {
+			spaces += " ";
+		}
+		return spaces;
 	}
 	
 	static int getBattingOrderForPlayer(int id) {
