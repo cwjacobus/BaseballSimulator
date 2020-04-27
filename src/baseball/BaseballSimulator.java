@@ -150,6 +150,8 @@ public class BaseballSimulator {
 			updateSeriesStatsFromBoxScores(seriesStats, boxScores);
 		}
 		if (seriesLength > 1) { // Series results and calculations
+			System.out.println("Series Stats");
+			outputBoxScore(seriesStats);
 			HashMap<String, Integer> totalWins = new HashMap<String, Integer>();
 			HashMap<String, Integer> totalRuns = new HashMap<String, Integer>();
 			totalWins.put(boxScores[0].getTeamName(), 0);
@@ -186,6 +188,7 @@ public class BaseballSimulator {
 	private static void updateSeriesStatsFromBoxScores(SeriesStats[] seriesStats,  BoxScore[] boxScores) {
 		for (int t = 0; t < 2; t++) {
 			Set<Integer> keys = boxScores[t].getPitchers().keySet();
+			ArrayList<ArrayList<MLBPlayer>> batters = boxScores[t].getBatters();
 	        for(Integer k : keys){
 	            MLBPlayer p1 = boxScores[t].getPitchers().get(k);
 	            MLBPlayer p2 = seriesStats[t].getPitchers().get(p1.getMlbPlayerId());
@@ -198,6 +201,21 @@ public class BaseballSimulator {
 	            ps2.addInningsPitched(Double.toString(ps1.getInningsPitched()));
 	            p2.getMlbPitchingStats().setPitchingStats(ps2);
 	            seriesStats[t].getPitchers().put(p1.getMlbPlayerId(), p2);
+	        }
+	        for(ArrayList<MLBPlayer>  playerList : batters){
+	        	for (MLBPlayer b1 : playerList) {
+	        		MLBPlayer b2 = seriesStats[t].getBatters().get(b1.getMlbPlayerId());
+	        		if (b2 == null) {
+	        			b2 = new MLBPlayer(b1.getMlbPlayerId(), b1.getFullName(), b1.getPrimaryPosition());
+	        		}
+	        		BattingStats bs1 = b1.getMlbBattingStats().getBattingStats();
+	        		BattingStats bs2 = b2.getMlbBattingStats().getBattingStats();
+	        		bs2.setHomeRuns(bs1.getHomeRuns() + bs2.getHomeRuns());
+	        		bs2.setAtBats(bs1.getAtBats() + bs2.getAtBats());
+	        		bs2.setHits(bs1.getHits() + bs2.getHits());
+	        		b2.getMlbBattingStats().setBattingStats(bs2);
+	        		seriesStats[t].getBatters().put(b1.getMlbPlayerId(), b2);
+	        	}
 	        }
 		}
 	}
@@ -364,7 +382,7 @@ public class BaseballSimulator {
 			System.out.println("BLOWN SAVE BY " + (boxScores[0].getFinalScore() > boxScores[1].getFinalScore() ? gameState.getCurrentPitchers()[1].getFirstLastName() :  gameState.getCurrentPitchers()[0].getFirstLastName()));
 		}
 		// Output Box Score
-		 outputBoxScore();
+		 outputBoxScore(boxScores, false);
 		 
 		 /*JSONObject bsJSON = new JSONObject(boxScores[0]);
 		 System.out.println(bsJSON);
@@ -939,23 +957,45 @@ public class BaseballSimulator {
 		return true;
 	}*/
 	
-	private static void outputBoxScore() {
-		BoxScore boxScore;
+	private static void outputBoxScore(SeriesStats[] seriesStats) {
+		BoxScore[] boxScores = new BoxScore[2];
 		for (int top = 0; top < 2; top++) {
-			boxScore = boxScores[top];
-			String team = (top == 0) ? "\n" + boxScore.getTeamName() : boxScore.getTeamName();
-			team += team.length() < 3 ? " " : "";
-			System.out.print(team + " ");
-			for (int i = 1; i < gameState.getInning(); i++) {
-				if (i == (gameState.getInning() - 1) && (boxScores[1].getScore(i) > boxScores[0].getScore(i) && top == 1) && !boxScore.isWalkOff()) {
-					System.out.print("X "); // Bottom of inning was not necessary
-				}
-				else {
-					System.out.print(boxScore.getRunsScored(i) + (boxScores[top == 0 ? 1: 0].getRunsScored(i) < 10 ? " " : "  "));
-				}
+			boxScores[top] = new BoxScore();
+			boxScores[top].setTeamName(seriesStats[top].getTeamName());
+			boxScores[top].setBatters(new ArrayList<ArrayList<MLBPlayer>>());
+			LinkedHashMap<Integer, MLBPlayer> pitchers = new LinkedHashMap<Integer, MLBPlayer>();
+			for (Map.Entry<Integer, MLBPlayer> entry : seriesStats[top].getPitchers().entrySet()) {
+				pitchers.put(entry.getKey(), entry.getValue());
 			}
-			System.out.println(" " + boxScore.getFinalScore() + (boxScore.getFinalScore() < 10 ? " " : "") + " " + boxScore.getHits() + 
-				(boxScore.getHits() < 10 ? " " : "") + " " +  boxScore.getErrors());
+			boxScores[top].setPitchers(pitchers);
+			ArrayList<MLBPlayer> batters = new ArrayList<MLBPlayer>();
+			for (Map.Entry<Integer, MLBPlayer> entry : seriesStats[top].getBatters().entrySet()) {
+				batters.add(entry.getValue());
+			}
+			boxScores[top].getBatters().add(batters);
+		}
+		outputBoxScore(boxScores, true);
+	}
+	
+	private static void outputBoxScore(BoxScore[] boxScores, boolean series) {
+		BoxScore boxScore;
+		if (!series) {
+			for (int top = 0; top < 2; top++) {
+				boxScore = boxScores[top];
+				String team = (top == 0) ? "\n" + boxScore.getTeamName() : boxScore.getTeamName();
+				team += team.length() < 3 ? " " : "";
+				System.out.print(team + " ");
+				for (int i = 1; i < gameState.getInning(); i++) {
+					if (i == (gameState.getInning() - 1) && (boxScores[1].getScore(i) > boxScores[0].getScore(i) && top == 1) && !boxScore.isWalkOff()) {
+						System.out.print("X "); // Bottom of inning was not necessary
+					}
+					else {
+						System.out.print(boxScore.getRunsScored(i) + (boxScores[top == 0 ? 1: 0].getRunsScored(i) < 10 ? " " : "  "));
+					}
+				}
+				System.out.println(" " + boxScore.getFinalScore() + (boxScore.getFinalScore() < 10 ? " " : "") + " " + boxScore.getHits() + 
+					(boxScore.getHits() < 10 ? " " : "") + " " +  boxScore.getErrors());
+			}
 		}
 		for (int top = 0; top < 2; top++) {
 			ArrayList<ArrayList<MLBPlayer>> batters = boxScores[top].getBatters();
