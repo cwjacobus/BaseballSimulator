@@ -207,7 +207,25 @@ public class DAO {
 		return pitchersMap;
 	}
 	
-	public static MLBPlayer getReliefPitcher(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers, boolean closer) {
+	public static MLBPlayer getLongReliefPitcher(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers) {
+		String andWhere = "AND BS.GAMES_STARTED < 12 AND SAVES < 5";
+		String orderBy = "ORDER BY INNINGS_PITCHED DESC";
+		return getReliefPitcher(mlbTeamId, year, excludingPitchers, andWhere, orderBy);
+	}
+	
+	public static MLBPlayer getSetupMan(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers) {
+		String andWhere = "";
+		String orderBy = "ORDER BY HOLDS DESC";
+		return getReliefPitcher(mlbTeamId, year, excludingPitchers, andWhere, orderBy);
+	}
+
+	public static MLBPlayer getCloser(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers) {
+		String andWhere = "";
+		String orderBy = "ORDER BY SAVES DESC";
+		return getReliefPitcher(mlbTeamId, year, excludingPitchers, andWhere, orderBy);
+	}
+	
+	private static MLBPlayer getReliefPitcher(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers, String andWhere, String orderBy) {
 		// For getting a random starting pitcher
 		ArrayList<MLBPlayer> pitcherList = new ArrayList<MLBPlayer>();
 		try {
@@ -216,12 +234,11 @@ public class DAO {
 				for (Map.Entry<Integer, MLBPlayer> entry : excludingPitchers.entrySet()) {
 					excludingSql += entry.getValue().getMlbPlayerId() + ",";
 				}
-				excludingSql = excludingSql.substring(0, excludingSql.length() - 1) + ")";
+				excludingSql = excludingSql.substring(0, excludingSql.length() - 1) + ") ";
 			}
-			String orderBy = closer ? "SAVES" : "HOLDS";
 			Statement stmt = conn.createStatement();
 			String sql = "SELECT P.* from MLB_PITCHING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR = " + year + " AND MLB_TEAM_ID = " + 
-				mlbTeamId + excludingSql + " ORDER BY " + orderBy + " DESC";
+				mlbTeamId + excludingSql + andWhere + " " + orderBy;
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				MLBPlayer p = new MLBPlayer(rs.getInt("MLB_PLAYER_ID"), rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
