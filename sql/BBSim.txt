@@ -119,3 +119,10 @@ select avg(strikeouts/(innings_pitched*3)) from mlb_pitching_stats where year=20
 
 // Pitcher OBP
 select avg((hits_allowed+walks+hit_batters)/(batters_faced)) from mlb_pitching_stats where year = 2019;
+
+// Get reliever 1
+select p.full_name, t.short_name, year, p.mlb_player_id, saves, holds, innings_pitched, games_started from mlb_pitching_stats bs, mlb_player p, mlb_franchise t where 
+bs.mlb_player_id = p.mlb_player_id and bs.mlb_team_id = t.mlb_franchise_id and bs.mlb_team_id = 114 and bs.year=2019 order by bs.games_started asc, innings_pitched desc;
+
+// Get reliever 2
+select p.full_name, t.short_name, year, p.mlb_player_id, saves, holds, innings_pitched, games_started from mlb_pitching_stats bs, mlb_player p, mlb_franchise t where bs.mlb_player_id = p.mlb_player_id and bs.mlb_team_id = t.mlb_franchise_id and bs.mlb_team_id = 114 and bs.games_started < 12 and saves < 5 and bs.year=2019 order by innings_pitched desc;

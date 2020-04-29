@@ -111,7 +111,6 @@ public class BaseballSimulator {
 				catch (Exception e) {
 					autoBeforeInning = 1000;
 				}
-				//simulationMode = true;
 				simulationMode = false;
 				autoBeforeMode = true;
 				gameMode = false;
@@ -309,7 +308,6 @@ public class BaseballSimulator {
 							if (sbOuts > 0) {
 								currentPitcherGameStats.incrementInningsPitchedBy(1);
 								gameState.setOuts(gameState.getOuts() + sbOuts);
-								// Check if 3 outs decrement batting order so same batter bats next inning
 							}
 						}
 					}
@@ -725,7 +723,6 @@ public class BaseballSimulator {
 	private static void runScores() {
 		BoxScore boxScore = boxScores[gameState.getTop()];
 		MLBPlayer runner = getBatterFromId(gameState.getBaseRunnerId(3));
-		//PitchingStats pitcherGameStats = boxScores[gameState.getTop()==0?1:0].getPitchers().get(gameState.getCurrentPitchers()[gameState.getTop()==0?1:0].getMlbPlayerId()).getMlbPitchingStats().getPitchingStats();
 		PitchingStats pitcherGameStats = boxScores[gameState.getTop()==0?1:0].getPitchers().get(gameState.getBaseRunner(3).getResponsiblePitcherId()).getMlbPitchingStats().getPitchingStats();
 		runner.getMlbBattingStats().getBattingStats().incrementRuns();
 		pitcherGameStats.incrementRunsAllowed();
@@ -1233,7 +1230,6 @@ public class BaseballSimulator {
 			}
 			catch (Exception e) {
 			}
-			//simulationMode = true;
 			autoBeforeMode = true;
 			gameMode = false;
 			return true;
@@ -1343,7 +1339,6 @@ public class BaseballSimulator {
 					return false;
 			}
 		}
-		//return true;
 	}
 	
 	private static PitchingStats changePitcher(MLBPlayer newPitcher) {
