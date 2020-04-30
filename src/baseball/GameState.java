@@ -231,4 +231,15 @@ public class GameState {
 	public boolean isBaseOccupied(int base) {
 		return getBaseRunnerId(base) == 0 ? false : true;
 	}
+	
+	public boolean isValidHitAnRunScenario() {
+		if (outs == 2 && getCurrentBasesSituation() != BASES_EMPTY) {
+			return true;
+		}
+		if (outs < 2 && (getCurrentBasesSituation() == MAN_ON_FIRST || getCurrentBasesSituation() == MAN_ON_SECOND || 
+				         getCurrentBasesSituation() == MAN_ON_FIRST_AND_SECOND || getCurrentBasesSituation() == MAN_ON_FIRST_AND_THIRD)) {
+			return true;
+		}
+		return false;
+	}
 }
