@@ -147,7 +147,7 @@ public class BaseballSimulator {
 					boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
 				}
 			}
-			playBall(gameState, boxScores);
+			playBall(gameState, boxScores, s + 1);
 			seriesBoxScores[s] = boxScores;
 			updateSeriesStatsFromBoxScores(seriesStats, boxScores);
 		}
@@ -161,23 +161,26 @@ public class BaseballSimulator {
 			totalRuns.put(boxScores[0].getTeamName() + "" + boxScores[0].getYear(), 0);
 			totalRuns.put(boxScores[1].getTeamName() + "" + boxScores[1].getYear(), 0);
 			System.out.println("\n");
+			String[] displayYearString = {"",""}; 
 			for (BoxScore[] bsArray : seriesBoxScores) {
 				int winner = bsArray[0].getFinalScore() > bsArray[1].getFinalScore() ? 0 : 1;
-				System.out.println(bsArray[winner].getTeamName() + "" + bsArray[winner].getYear() + " " + bsArray[winner].getFinalScore() + "  " +  bsArray[winner==1?0:1].getTeamName() + 
-					"" + bsArray[winner].getYear() +  " " + bsArray[winner==1?0:1].getFinalScore());
+				displayYearString[0] = bsArray[0].getTeamName().equals(bsArray[1].getTeamName()) ? "'" + Integer.toString(bsArray[0].getYear()).substring(2) : "";
+				displayYearString[1] = bsArray[0].getTeamName().equals(bsArray[1].getTeamName()) ? "'" + Integer.toString(bsArray[1].getYear()).substring(2) : "";
+				System.out.println(bsArray[winner].getTeamName() + displayYearString[winner] + " " + bsArray[winner].getFinalScore() + "  " +  bsArray[winner==1?0:1].getTeamName() + 
+					displayYearString[winner==1?0:1] + " " + bsArray[winner==1?0:1].getFinalScore());
 				totalWins.put(bsArray[winner].getTeamName() + "" + bsArray[winner].getYear(), totalWins.get(bsArray[winner].getTeamName() + "" + bsArray[winner].getYear()) + 1);
 				totalRuns.put(bsArray[0].getTeamName() + "" + bsArray[0].getYear(), totalRuns.get(bsArray[0].getTeamName() + "" + bsArray[0].getYear()) + bsArray[0].getFinalScore());
 				totalRuns.put(bsArray[1].getTeamName() + "" + bsArray[1].getYear(), totalRuns.get(bsArray[1].getTeamName() + "" + bsArray[1].getYear()) + bsArray[1].getFinalScore());
 			}
 			System.out.println("\nTotals:");
 			int homeWinner = totalWins.get(boxScores[1].getTeamName() + "" + boxScores[1].getYear()) > totalWins.get(boxScores[0].getTeamName() + "" + boxScores[0].getYear()) ? 1 : 0;
-			System.out.println(boxScores[homeWinner].getTeamName() + "" + boxScores[homeWinner].getYear() + ": " + totalWins.get(boxScores[homeWinner].getTeamName() + "" + boxScores[homeWinner].getYear()) + "(" + 
+			System.out.println(boxScores[homeWinner].getTeamName() + displayYearString[homeWinner] + ": " + totalWins.get(boxScores[homeWinner].getTeamName() + "" + boxScores[homeWinner].getYear()) + "(" + 
 				df.format((double)totalWins.get(boxScores[homeWinner].getTeamName()+ "" + boxScores[homeWinner].getYear())/seriesLength) +  ") " + boxScores[homeWinner==1?0:1].getTeamName() + 
-				"" + boxScores[homeWinner==1?0:1].getYear() + ": " + totalWins.get(boxScores[homeWinner==1?0:1].getTeamName() + "" + boxScores[homeWinner==1?0:1].getYear()) + "(" + 
+				displayYearString[homeWinner==1?0:1] + ": " + totalWins.get(boxScores[homeWinner==1?0:1].getTeamName() + "" + boxScores[homeWinner==1?0:1].getYear()) + "(" + 
 				df.format((double)totalWins.get(boxScores[homeWinner==1?0:1].getTeamName() + "" + boxScores[homeWinner==1?0:1].getYear())/seriesLength) + ")");
 			System.out.println("Average Score:"); 
-			System.out.println(boxScores[homeWinner].getTeamName() + boxScores[homeWinner].getYear() + ": " + df.format((double)totalRuns.get(boxScores[homeWinner].getTeamName()+ "" + 
-				boxScores[homeWinner].getYear())/seriesLength) + " " + boxScores[homeWinner==1?0:1].getTeamName() + boxScores[homeWinner==1?0:1].getYear() + ": " + df.format((double)totalRuns.get(boxScores[homeWinner==1?0:1].getTeamName() + 
+			System.out.println(boxScores[homeWinner].getTeamName() + displayYearString[homeWinner] + ": " + df.format((double)totalRuns.get(boxScores[homeWinner].getTeamName() + "" + 
+				boxScores[homeWinner].getYear())/seriesLength) + " " + boxScores[homeWinner==1?0:1].getTeamName() + displayYearString[homeWinner==1?0:1] + ": " + df.format((double)totalRuns.get(boxScores[homeWinner==1?0:1].getTeamName() + 
 				"" + boxScores[homeWinner==1?0:1].getYear())/seriesLength));
 		}
 	}
@@ -229,12 +232,12 @@ public class BaseballSimulator {
 		}
 	}
 	
-	private static void playBall (GameState gameState, BoxScore[] boxScores) {
+	private static void playBall (GameState gameState, BoxScore[] boxScores, int gameNumber) {
 		/*getBattingStatsFromAPI();
 		if (!setRandomLineup()) {
 			return;
 		}*/
-		System.out.println("\nStarting pitchers : " + boxScores[0].getTeamName() + ": " + gameState.getCurrentPitchers()[0].getFirstLastName() + " v " + boxScores[1].getTeamName() + 
+		System.out.println("\nStarting pitchers for Game #" + gameNumber +  " " + boxScores[0].getTeamName() + ": " + gameState.getCurrentPitchers()[0].getFirstLastName() + " v " + boxScores[1].getTeamName() + 
 			": " + gameState.getCurrentPitchers()[1].getFirstLastName());
 		while (gameState.getInning() <= INNINGS_PER_GAME || boxScores[0].getScore(gameState.getInning()) == boxScores[1].getScore(gameState.getInning())) {
 			int inning = gameState.getInning();
@@ -255,6 +258,9 @@ public class BaseballSimulator {
 				boolean gameTiedStartOfAB;
 				Arrays.fill(gameState.getBaseRunners(), new BaseRunner());
 				while (gameState.getOuts() < OUTS_PER_INNING) {
+					if (gameState.getOuts() == 2 && gameState.getCurrentBasesSituation() != GameState.BASES_EMPTY) {
+						gameState.setHitAndRun(true);  // start runners with 2 outs and runners on
+					}
 					MLBPlayer currentBatter = batters.get(gameState.getBattingOrder()[top] - 1).get(batters.get(gameState.getBattingOrder()[top] - 1).size() - 1);
 					MLBPlayer currentPitcher = gameState.getCurrentPitchers()[top==0?1:0];
 					BattingStats currentBatterGameStats = currentBatter.getMlbBattingStats().getBattingStats();
@@ -315,6 +321,7 @@ public class BaseballSimulator {
 						}
 					}
 					if (gameState.getOuts() == OUTS_PER_INNING) {
+						gameState.setHitAndRun(false);  // clear hit and run, if on
 						break;
 					}
 					int rando = getRandomNumberInRange(1, 1000);
@@ -469,6 +476,12 @@ public class BaseballSimulator {
 			System.out.println(outTypes.get(STRUCK_OUT)); 
 			currentBatter.getMlbBattingStats().getBattingStats().incremenStrikeOuts();
 			pitcherGameStats.incrementStrikeouts();
+			if (gameState.isHitAndRun() && gameState.getOuts() < 2) {
+				int baseToSteal = gameState.isBaseOccupied(2) ? 3 : 2;
+				if (stealBase(baseToSteal) == 1) {
+					outsRecorded++;
+				}
+			}
 		}
 		else if (notOutRando > soEndPoint && notOutRando <= soEndPoint + outIncrement) {
 			String groundBallRecipientPosition = positions.get(getRandomNumberInRange(1, 6));
