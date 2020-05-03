@@ -1273,6 +1273,7 @@ public class BaseballSimulator {
 		HashMap<Integer, MLBPlayer> rosterPitchers = rosters[top==0?1:0].getPitchers();
 		ArrayList<ArrayList<MLBPlayer>> gameBatters = boxScores[top].getBatters();
 		HashMap<Integer, MLBPlayer> rosterBatters = rosters[top].getBatters();
+		MLBPlayer currentPitcher = gameState.getCurrentPitchers()[gameState.getTop()==0?1:0];
 		if (command.indexOf("STEAL") != -1) {
 			int baseToSteal = 0;
 			try {
@@ -1332,7 +1333,6 @@ public class BaseballSimulator {
 				System.out.print("INVALID COMMAND!\n");
 				return false;
 			}
-			 
 			int newBatterId = Integer.parseInt(commandArray[1]);
 			MLBPlayer newBatterFromRoster = (MLBPlayer)rosterBatters.get(newBatterId);
 			if (newBatterFromRoster == null) {
@@ -1348,6 +1348,37 @@ public class BaseballSimulator {
 			int bo = gameState.getBattingOrder()[gameState.getTop()];
 			gameBatters.get(bo - 1).add(newBatter);
 			System.out.println("Batter changed to: " + newBatterFromRoster.getFirstLastName() + "\n");
+			return false;
+		}
+		else if (command.indexOf("SUBR") != -1) {
+			String[] commandArray = command.split(" ");
+			if (commandArray.length < 3) {
+				System.out.print("INVALID COMMAND!\n");
+				return false;
+			}
+			int base = Integer.parseInt(commandArray[2]);
+			if ((base < 1 || base > 3) || !gameState.isBaseOccupied(base)) {
+				System.out.print("No base runner on " + base + "!\n");
+				return false;
+			}
+			int pinchRunnerId = Integer.parseInt(commandArray[1]);
+			int replacedRunnerId = gameState.getBaseRunnerId(base);
+			MLBPlayer pinchRunnerFromRoster = (MLBPlayer)rosterBatters.get(pinchRunnerId);
+			MLBPlayer replacedRunnerFromRoster = (MLBPlayer)rosterBatters.get(replacedRunnerId);
+			if (pinchRunnerFromRoster == null) {
+				System.out.print("No player found for " + pinchRunnerId + "!\n");
+				return false;
+			}
+			if (getBattingOrderForPlayer(pinchRunnerId, gameState.getTop()) != 0) {
+				System.out.print("Player has already appeared in this game " + pinchRunnerId + "!\n");
+				return false;
+			}
+			MLBPlayer pinchRunner = new MLBPlayer(pinchRunnerFromRoster.getMlbPlayerId(), pinchRunnerFromRoster.getFullName(), replacedRunnerFromRoster.getPrimaryPosition(), pinchRunnerFromRoster.getArmThrows(), 
+				pinchRunnerFromRoster.getBats(), pinchRunnerFromRoster.getJerseyNumber());
+			int bo = getBattingOrderForPlayer(replacedRunnerId, gameState.getTop());
+			gameBatters.get(bo - 1).add(pinchRunner);
+			gameState.setBaseRunner(base, new BaseRunner(pinchRunner.getMlbPlayerId(), currentPitcher.getMlbPlayerId()));
+			System.out.println("Pinch running at " + base + " : " + pinchRunner.getFirstLastName() + "\n");
 			return false;
 		}
 		else {
@@ -1425,8 +1456,12 @@ public class BaseballSimulator {
 						gameState.setHitAndRun(true);
 					}
 					return false;
+				case "PITCHERSTATUS":
+					System.out.println("CURRENT PITCHER STATUS: " + currentPitcher.getFirstLastName() + " BF:" + currentPitcher.getMlbPitchingStats().getPitchingStats().getBattersFaced() +
+						" ER: " + currentPitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunsAllowed());
+					return false;
 				case "?":
-					System.out.print("COMMANDS - SIM, AUTO<inning#>, STEAL<#>, PITCHERS,  SUBP <id#>, BATTERS, SUBB <id#>, INTBB, SACBUNT, HITRUN, \n\n");
+					System.out.print("COMMANDS - SIM, AUTO<inning#>, STEAL<#>, PITCHERS,  SUBP <id#>, BATTERS, SUBB <id#>, INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, PITCHERSTATUS\n\n");
 					return false;
 				default:
 					System.out.println("UNKNOWN COMMAND!");
