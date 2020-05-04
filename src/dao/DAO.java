@@ -10,8 +10,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import baseball.BattingStats;
+import baseball.FieldingStats;
 import baseball.PitchingStats;
 import db.MLBBattingStats;
+import db.MLBFieldingStats;
 import db.MLBFranchise;
 import db.MLBPitchingStats;
 import db.MLBPlayer;
@@ -103,6 +105,12 @@ public class DAO {
 						mbs.getMlbPlayerId() + ", " + mbs.getMlbTeamId() + ", " + mbs.getYear() + ", " + bs.getAtBats() + ", " + bs.getHits() + ", " + bs.getDoubles() + ", " + bs.getTriples() + ", " + bs.getHomeRuns() +
 						", " + bs.getWalks() + ", " + bs.getStrikeOuts() + ", " + bs.getHitByPitch() + ", " + bs.getRuns() + ", " + bs.getRbis() + ", " + bs.getStolenBases() +
 						", " + bs.getPlateAppearances() + ", " + bs.getCaughtStealing() + ");";
+				}
+				else if (entry.getValue() instanceof MLBFieldingStats) {
+					MLBFieldingStats mfs = (MLBFieldingStats)entry.getValue();
+					FieldingStats fs = mfs.getFieldingStats();
+					insertSQL = "INSERT IGNORE INTO MLB_FIELDING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, POSITION, ASSISTS, PUT_OUTS, ERRORS) VALUES (" +
+						mfs.getMlbPlayerId() + ", " + mfs.getMlbTeamId() + ", " + mfs.getYear() + ", '" + mfs.getPosition() + "', " + fs.getAssists() + ", " + fs.getPutOuts() + ", " + fs.getErrors() + ");";
 				}
 				stmt.addBatch(insertSQL);
 				mlbDataCount++;

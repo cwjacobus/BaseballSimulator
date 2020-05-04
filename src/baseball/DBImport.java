@@ -17,6 +17,7 @@ import org.json.JSONObject;
 
 import dao.DAO;
 import db.MLBBattingStats;
+import db.MLBFieldingStats;
 import db.MLBFranchise;
 import db.MLBPitchingStats;
 import db.MLBPlayer;
@@ -61,17 +62,16 @@ public class DBImport {
 			HashMap<Integer, MLBPlayer> filteredHittersMap = new HashMap<Integer, MLBPlayer>();
 			HashMap<Integer, MLBPlayer> pitchersMap = importMlbPlayers(year, allTeams, teamId, false, franchisesMap); // import pitchers
 			HashMap<Integer, MLBPlayer> filteredPitchersMap = new HashMap<Integer, MLBPlayer>();
+			HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
 			ArrayList<Object> battingStatsList = importBattingStats(hittersMap, year, filteredHittersMap);
 			ArrayList<Object> pitchingStatsList = importPitchingStats(pitchersMap, year, filteredPitchersMap);
-			
-			for (Map.Entry<Integer, MLBPlayer> entry : hittersMap.entrySet()) {
-				System.out.println(entry.getValue().getMlbPlayerId() + " " + entry.getValue().getFirstLastName() + " " + entry.getValue().getPrimaryPosition() +
-				    " " + entry.getValue().getArmThrows() + " " + entry.getValue().getBats() + " " + entry.getValue().getJerseyNumber());
-			}
+			importFieldingStats(hittersMap, year, fieldingStatsMap);  // hitters fielding
+			importFieldingStats(pitchersMap, year, fieldingStatsMap); // pitchers fielding
 			DAO.createBatchDataFromMap(filteredHittersMap);
 			DAO.createBatchDataFromMap(filteredPitchersMap);
 			DAO.createBatchDataFromList(battingStatsList);
 			DAO.createBatchDataFromList(pitchingStatsList);
+			DAO.createBatchDataFromMap(fieldingStatsMap);
 		}
 		else {
 			System.out.println("INVALID FUNCTION");
@@ -239,11 +239,11 @@ public class DBImport {
 		catch (IOException e) { 
 			e.printStackTrace();
 		}
-		for (Object o : battingStatsList) {
+		/*for (Object o : battingStatsList) {
 			MLBBattingStats mbs = (MLBBattingStats) o;
 			System.out.println(mbs.getMlbPlayerId() + " " + mbs.getMlbTeamId() + " " +  mbs.getYear() + " " +
 				mbs.getBattingStats().getAtBats() + " " + mbs.getBattingStats().getPlateAppearances());
-		}
+		}*/
 		return battingStatsList;
 	}
 	
@@ -297,12 +297,66 @@ public class DBImport {
 		catch (IOException e) { 
 			e.printStackTrace();
 		}
-		for (Object o : pitchingStatsList) {
+		/*for (Object o : pitchingStatsList) {
 			MLBPitchingStats mps = (MLBPitchingStats) o;
 			System.out.println(mps.getMlbPlayerId() + " " + mps.getMlbTeamId() + " " +  mps.getYear() + " " +
-					mps.getPitchingStats().getInningsPitched() + " " + mps.getPitchingStats().getEarnedRunsAllowed());
-		}
+				mps.getPitchingStats().getInningsPitched() + " " + mps.getPitchingStats().getEarnedRunsAllowed());
+		}*/
 		return pitchingStatsList;
+	}
+	
+	private static void importFieldingStats(HashMap<Integer, MLBPlayer> playersMap, int year, HashMap<Integer, MLBFieldingStats> fieldingStatsMap) {
+		try {   
+			for (Map.Entry<Integer, MLBPlayer> entry : playersMap.entrySet()) {
+				String getFieldingStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_fielding_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + 
+					year + "%27" + "&player_id=%27" + entry.getValue().getMlbPlayerId() + "%27";
+				URL obj = new URL(getFieldingStatsAPI);
+				HttpURLConnection con = (HttpURLConnection)obj.openConnection();
+				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream())); 
+				try {
+					JSONObject playerStats = new JSONObject(in.readLine());
+					JSONObject sportHittingTm = new JSONObject(playerStats.getString("sport_fielding_tm"));
+					JSONObject queryResults = new JSONObject(sportHittingTm.getString("queryResults"));
+					int numberOfResults = Integer.parseInt(queryResults.getString("totalSize"));
+					if (numberOfResults == 0) {
+						continue;
+					}
+					JSONObject fieldingStatsJson = null;
+					if (numberOfResults > 1) {
+						JSONArray multipleTeamStats = new JSONArray(queryResults.getString("row"));
+						for (int i = 0; i < multipleTeamStats.length(); i++) {
+							fieldingStatsJson = multipleTeamStats.getJSONObject(i);
+							if (Integer.parseInt(fieldingStatsJson.getString("g")) > 20) { // only import if games > 20
+								MLBFieldingStats mbs = createMLBFieldingStats(entry.getValue().getMlbPlayerId(), fieldingStatsJson, year);
+								fieldingStatsMap.put(entry.getValue().getMlbPlayerId(), mbs);
+							}
+						}
+					}
+					else {
+						fieldingStatsJson = new JSONObject(queryResults.getString("row"));
+						if (Integer.parseInt(fieldingStatsJson.getString("g")) > 20) { // only import if games > 20
+							MLBFieldingStats mbs = createMLBFieldingStats(entry.getValue().getMlbPlayerId(), fieldingStatsJson, year);
+							fieldingStatsMap.put(entry.getValue().getMlbPlayerId(), mbs);
+						}
+					}
+				}
+				catch (JSONException e) {
+					System.out.println(getFieldingStatsAPI);
+					e.printStackTrace();
+				}
+			}
+		}
+		catch (MalformedURLException e) { 	
+			e.printStackTrace();
+		}
+		catch (IOException e) { 
+			e.printStackTrace();
+		}
+		/*for (Map.Entry<Integer, MLBFieldingStats> entry : fieldingStatsMap.entrySet()) {
+			MLBFieldingStats mbs = entry.getValue();
+			System.out.println(mbs.getMlbPlayerId() + " " + mbs.getMlbTeamId() + " " +  mbs.getYear() + " " +
+				mbs.getFieldingStats().getAssists() + " " + mbs.getFieldingStats().getPutOuts() + " " + mbs.getFieldingStats().getErrors());
+		}*/
 	}
 	
 	static MLBBattingStats createMLBBattingStats(Integer mlbPlayerId, JSONObject battingStatsJson, Integer year) {
@@ -338,6 +392,18 @@ public class DBImport {
 			e.printStackTrace();
 		}
 		return mps;
+	}
+	
+	static MLBFieldingStats createMLBFieldingStats(Integer mlbPlayerId, JSONObject fieldingStatsJson, Integer year) {
+		MLBFieldingStats mbs = null;
+		try {
+			mbs = new MLBFieldingStats(mlbPlayerId, Integer.parseInt(fieldingStatsJson.getString("team_id")), year, fieldingStatsJson.getString("position_txt"),
+				new FieldingStats(Integer.parseInt(fieldingStatsJson.getString("a")), Integer.parseInt(fieldingStatsJson.getString("po")), Integer.parseInt(fieldingStatsJson.getString("e"))));
+		}
+		catch (JSONException e) {
+			e.printStackTrace();
+		}
+		return mbs;
 	}
 
 }
