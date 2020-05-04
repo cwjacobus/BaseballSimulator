@@ -85,7 +85,18 @@ BATTERS_FACED int(11),
 CONSTRAINT PS_CONST1 UNIQUE (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR)
 );
 
-
+CREATE TABLE MLB_FIELDING_STATS
+(
+MLB_FIELDING_STATS_ID int(11) PRIMARY KEY AUTO_INCREMENT,
+MLB_PLAYER_ID int(11),
+MLB_TEAM_ID int(11),
+YEAR int(11),
+POSITION varchar(10),
+ASSISTS int(11),
+PUT_OUTS int(11),
+ERRORS int(11),
+CONSTRAINT BS_CONST1 UNIQUE (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR)
+);
 
 insert into MLB_TEAM (TEAM_ID, FULL_NAME, SHORT_NAME, LEAGUE, ACTIVE) values (147, 'New York Yankees', 'NYY', 'AL', true);
 
@@ -102,7 +113,8 @@ f.mlb_franchise_id = ms.mlb_team_id order by ms.home_runs desc;
 select f.short_name, count(*) from mlb_batting_stats ms, mlb_franchise f where ms.mlb_team_id = f.mlb_franchise_id  group by ms.mlb_team_id order by f.short_name;
 
 // Get players with stats for multiple teams
-select p.full_name, count(*) from mlb_batting_stats mbs, mlb_player p where p.mlb_player_id=mbs.mlb_player_id group by mbs.mlb_player_id order by count(*) desc;
+select p.full_name, count(*) from mlb_batting_stats mbs, mlb_player p where p.mlb_player_id=mbs.mlb_player_id group by mbs.mlb_player_id having count(*) > 1;
+select p.full_name, count(*) from mlb_pitching_stats mbs, mlb_player p where p.mlb_player_id=mbs.mlb_player_id group by mbs.mlb_player_id having count(*) > 1;
 
 // Get player with max plate appearances for a team and position (with excluding)
 SELECT p.full_name, p.mlb_player_id, bs.plate_appearances

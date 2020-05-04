@@ -17,7 +17,7 @@ import org.json.JSONObject;
 
 import dao.DAO;
 import db.MLBBattingStats;
-import db.MLBFieldingStats;
+//import db.MLBFieldingStats;
 import db.MLBFranchise;
 import db.MLBPitchingStats;
 import db.MLBPlayer;
@@ -62,16 +62,16 @@ public class DBImport {
 			HashMap<Integer, MLBPlayer> filteredHittersMap = new HashMap<Integer, MLBPlayer>();
 			HashMap<Integer, MLBPlayer> pitchersMap = importMlbPlayers(year, allTeams, teamId, false, franchisesMap); // import pitchers
 			HashMap<Integer, MLBPlayer> filteredPitchersMap = new HashMap<Integer, MLBPlayer>();
-			HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
+			//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
 			ArrayList<Object> battingStatsList = importBattingStats(hittersMap, year, filteredHittersMap);
 			ArrayList<Object> pitchingStatsList = importPitchingStats(pitchersMap, year, filteredPitchersMap);
-			importFieldingStats(hittersMap, year, fieldingStatsMap);  // hitters fielding
-			importFieldingStats(pitchersMap, year, fieldingStatsMap); // pitchers fielding
+			//importFieldingStats(hittersMap, year, fieldingStatsMap);  // hitters fielding
+			//importFieldingStats(pitchersMap, year, fieldingStatsMap); // pitchers fielding
 			DAO.createBatchDataFromMap(filteredHittersMap);
 			DAO.createBatchDataFromMap(filteredPitchersMap);
 			DAO.createBatchDataFromList(battingStatsList);
 			DAO.createBatchDataFromList(pitchingStatsList);
-			DAO.createBatchDataFromMap(fieldingStatsMap);
+			//DAO.createBatchDataFromMap(fieldingStatsMap);
 		}
 		else {
 			System.out.println("INVALID FUNCTION");
@@ -191,6 +191,7 @@ public class DBImport {
 	
 	private static ArrayList<Object> importBattingStats(HashMap<Integer, MLBPlayer> hittersMap, int year, HashMap<Integer, MLBPlayer> filteredHittersMap) {
 		ArrayList<Object> battingStatsList = new ArrayList<Object>();
+		int index = 1;
 		try {   
 			for (Map.Entry<Integer, MLBPlayer> entry : hittersMap.entrySet()) {
 				String getBattingStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_hitting_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + 
@@ -212,18 +213,28 @@ public class DBImport {
 						for (int i = 0; i < multipleTeamStats.length(); i++) {
 							battingStatsJson = multipleTeamStats.getJSONObject(i);
 							if (Integer.parseInt(battingStatsJson.getString("tpa")) > 100) { // only import if p app > 100
+								System.out.print(index + " ");
+								if (index % 50 == 0) {
+									System.out.println();
+								}
 								MLBBattingStats mbs = createMLBBattingStats(entry.getValue().getMlbPlayerId(), battingStatsJson, year);
 								battingStatsList.add(mbs);
 								filteredHittersMap.put(entry.getValue().getMlbPlayerId(), entry.getValue());
+								index++;
 							}
 						}
 					}
 					else {
 						battingStatsJson = new JSONObject(queryResults.getString("row"));
 						if (Integer.parseInt(battingStatsJson.getString("tpa")) > 100) { // only import if p app > 100
+							System.out.print(index + " ");
+							if (index % 50 == 0) {
+								System.out.println();
+							}
 							MLBBattingStats mbs = createMLBBattingStats(entry.getValue().getMlbPlayerId(), battingStatsJson, year);
 							battingStatsList.add(mbs);
 							filteredHittersMap.put(entry.getValue().getMlbPlayerId(), entry.getValue());
+							index++;
 						}
 					}
 				}
@@ -244,11 +255,13 @@ public class DBImport {
 			System.out.println(mbs.getMlbPlayerId() + " " + mbs.getMlbTeamId() + " " +  mbs.getYear() + " " +
 				mbs.getBattingStats().getAtBats() + " " + mbs.getBattingStats().getPlateAppearances());
 		}*/
+		System.out.println("\nBatter import complete");
 		return battingStatsList;
 	}
 	
 	private static ArrayList<Object> importPitchingStats(HashMap<Integer, MLBPlayer> pitchersMap, int year, HashMap<Integer, MLBPlayer> filteredPitchersMap) {
 		ArrayList<Object> pitchingStatsList = new ArrayList<Object>();
+		int index = 1;
 		try {   
 			for (Map.Entry<Integer, MLBPlayer> entry : pitchersMap.entrySet()) {
 				String getPitchingStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_pitching_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + 
@@ -270,18 +283,28 @@ public class DBImport {
 						for (int i = 0; i < multipleTeamStats.length(); i++) {
 							pitchingStatsJson = multipleTeamStats.getJSONObject(i);
 							if (Integer.parseInt(pitchingStatsJson.getString("g")) > 20) { // only import if games > 20
+								System.out.print(index + " ");
+								if (index % 50 == 0) {
+									System.out.println();
+								}
 								MLBPitchingStats mps = createMLBPitchingStats(entry.getValue().getMlbPlayerId(), pitchingStatsJson, year);
 								pitchingStatsList.add(mps);
 								filteredPitchersMap.put(entry.getValue().getMlbPlayerId(), entry.getValue());
+								index++;
 							}
 						}
 					}
 					else {
 						pitchingStatsJson = new JSONObject(queryResults.getString("row"));
 						if (Integer.parseInt(pitchingStatsJson.getString("g")) > 20) { // only import if games > 20
+							System.out.print(index + " ");
+							if (index % 50 == 0) {
+								System.out.println();
+							}
 							MLBPitchingStats mps = createMLBPitchingStats(entry.getValue().getMlbPlayerId(), pitchingStatsJson, year);
 							pitchingStatsList.add(mps);
 							filteredPitchersMap.put(entry.getValue().getMlbPlayerId(), entry.getValue());
+							index++;
 						}
 					}
 				}
@@ -302,10 +325,13 @@ public class DBImport {
 			System.out.println(mps.getMlbPlayerId() + " " + mps.getMlbTeamId() + " " +  mps.getYear() + " " +
 				mps.getPitchingStats().getInningsPitched() + " " + mps.getPitchingStats().getEarnedRunsAllowed());
 		}*/
+		System.out.println("\nPitcher import complete");
 		return pitchingStatsList;
 	}
 	
+	/*
 	private static void importFieldingStats(HashMap<Integer, MLBPlayer> playersMap, int year, HashMap<Integer, MLBFieldingStats> fieldingStatsMap) {
+		int index = 1;
 		try {   
 			for (Map.Entry<Integer, MLBPlayer> entry : playersMap.entrySet()) {
 				String getFieldingStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_fielding_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + 
@@ -327,16 +353,26 @@ public class DBImport {
 						for (int i = 0; i < multipleTeamStats.length(); i++) {
 							fieldingStatsJson = multipleTeamStats.getJSONObject(i);
 							if (Integer.parseInt(fieldingStatsJson.getString("g")) > 20) { // only import if games > 20
+								System.out.print(index + " ");
+								if (index % 50 == 0) {
+									System.out.println();
+								}
 								MLBFieldingStats mbs = createMLBFieldingStats(entry.getValue().getMlbPlayerId(), fieldingStatsJson, year);
 								fieldingStatsMap.put(entry.getValue().getMlbPlayerId(), mbs);
+								index++;
 							}
 						}
 					}
 					else {
 						fieldingStatsJson = new JSONObject(queryResults.getString("row"));
 						if (Integer.parseInt(fieldingStatsJson.getString("g")) > 20) { // only import if games > 20
+							System.out.print(index + " ");
+							if (index % 50 == 0) {
+								System.out.println();
+							}
 							MLBFieldingStats mbs = createMLBFieldingStats(entry.getValue().getMlbPlayerId(), fieldingStatsJson, year);
 							fieldingStatsMap.put(entry.getValue().getMlbPlayerId(), mbs);
+							index++;
 						}
 					}
 				}
@@ -352,12 +388,13 @@ public class DBImport {
 		catch (IOException e) { 
 			e.printStackTrace();
 		}
-		/*for (Map.Entry<Integer, MLBFieldingStats> entry : fieldingStatsMap.entrySet()) {
+		for (Map.Entry<Integer, MLBFieldingStats> entry : fieldingStatsMap.entrySet()) {
 			MLBFieldingStats mbs = entry.getValue();
 			System.out.println(mbs.getMlbPlayerId() + " " + mbs.getMlbTeamId() + " " +  mbs.getYear() + " " +
 				mbs.getFieldingStats().getAssists() + " " + mbs.getFieldingStats().getPutOuts() + " " + mbs.getFieldingStats().getErrors());
-		}*/
-	}
+		}
+		System.out.println("\nFielder import complete");
+	}*/
 	
 	static MLBBattingStats createMLBBattingStats(Integer mlbPlayerId, JSONObject battingStatsJson, Integer year) {
 		MLBBattingStats mbs = null;
@@ -394,6 +431,7 @@ public class DBImport {
 		return mps;
 	}
 	
+	/*
 	static MLBFieldingStats createMLBFieldingStats(Integer mlbPlayerId, JSONObject fieldingStatsJson, Integer year) {
 		MLBFieldingStats mbs = null;
 		try {
@@ -404,6 +442,6 @@ public class DBImport {
 			e.printStackTrace();
 		}
 		return mbs;
-	}
+	}*/
 
 }

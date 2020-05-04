@@ -37,4 +37,5 @@ public class FieldingStats {
 	public void setErrors(int errors) {
 		this.errors = errors;
 	}
+
 }

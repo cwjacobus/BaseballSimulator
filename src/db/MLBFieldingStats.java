@@ -1,5 +1,7 @@
 package db;
 
+import java.util.Arrays;
+
 import baseball.FieldingStats;
 
 public class MLBFieldingStats {
@@ -9,6 +11,8 @@ public class MLBFieldingStats {
 	private Integer year;
 	private String position;
 	private FieldingStats fieldingStats;
+	
+	private static final String[] outfieldPositions = {"CF","LF","RF","OF"};
 	
 	public MLBFieldingStats () {
 		this.fieldingStats = new FieldingStats();
@@ -68,6 +72,26 @@ public class MLBFieldingStats {
 
 	public void setFieldingStats(FieldingStats fieldingStats) {
 		this.fieldingStats = fieldingStats;
+	}
+	
+	public int getFieldingRating() {
+		int fieldingRating = 0;
+		
+		return fieldingRating;
+	}
+	
+	public int getOutfielderArmRating() {
+		int armRating = 0;
+		
+		if (Arrays.asList(outfieldPositions).contains(position)) {
+			if (fieldingStats.getAssists() >= 5) {
+				armRating = 5;
+			}
+			else {
+				armRating = fieldingStats.getAssists();
+			}
+		}
+		return armRating;
 	}
 
 }
