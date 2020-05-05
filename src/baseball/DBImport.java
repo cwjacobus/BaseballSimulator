@@ -423,7 +423,7 @@ public class DBImport {
 					Integer.parseInt(pitchingStatsJson.getString("bb")), Integer.parseInt(pitchingStatsJson.getString("so")), Integer.parseInt(pitchingStatsJson.getString("hr")), 
 					sb, Integer.parseInt(pitchingStatsJson.getString("hb")), Integer.parseInt(pitchingStatsJson.getString("h")), hld, Integer.parseInt(pitchingStatsJson.getString("sv")), 
 					Integer.parseInt(pitchingStatsJson.getString("gs")), Integer.parseInt(pitchingStatsJson.getString("bk")), Integer.parseInt(pitchingStatsJson.getString("wp")),
-					sf, Integer.parseInt(pitchingStatsJson.getString("tbf"))));
+					sf, Integer.parseInt(pitchingStatsJson.getString("tbf")), Integer.parseInt(pitchingStatsJson.getString("w")), Integer.parseInt(pitchingStatsJson.getString("l"))));
 		}
 		catch (JSONException e) {
 			e.printStackTrace();

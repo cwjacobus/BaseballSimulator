@@ -17,13 +17,15 @@ public class PitchingStats {
 	private int wildPitches;
 	private int sacrificeFlies;
 	private int battersFaced;
+	private int wins;
+	private int losses;
 	
 	public PitchingStats() {
 	}
 	
 	public PitchingStats(double inningsPitched, int earnedRunsAllowed, int runsAllowed, int walks, int strikeouts, int homeRunsAllowed,
 			int stolenBasesAllowed, int hitBatters, int hitsAllowed, int holds, int saves, int gamesStarted, int balks,
-			int wildPitches, int sacrificeFlies, int battersFaced) {
+			int wildPitches, int sacrificeFlies, int battersFaced, int wins, int losses) {
 		this.inningsPitched = inningsPitched;
 		this.earnedRunsAllowed = earnedRunsAllowed;
 		this.runsAllowed = runsAllowed;
@@ -40,6 +42,8 @@ public class PitchingStats {
 		this.wildPitches = wildPitches;
 		this.sacrificeFlies = sacrificeFlies;
 		this.battersFaced = battersFaced;
+		this.wins = wins;
+		this.losses = losses;
 	}
 
 	public double getInningsPitched() {
@@ -219,6 +223,22 @@ public class PitchingStats {
 		this.battersFaced = battersFaced;
 	}
 	
+	public int getWins() {
+		return wins;
+	}
+
+	public void setWins(int wins) {
+		this.wins = wins;
+	}
+
+	public int getLosses() {
+		return losses;
+	}
+
+	public void setLosses(int losses) {
+		this.losses = losses;
+	}
+
 	public void incrementBattersFaced() {
 		this.battersFaced++;
 	}

@@ -42,6 +42,13 @@ public class GameState {
 	    put(MAN_ON_SECOND_AND_THIRD, "MAN ON SECOND AND THIRD");
 	    put(BASES_LOADED, "BASES LOADED");
 	}};
+	
+	public Map<String, Integer> pitchersOfRecord  = new HashMap<String, Integer>() {
+		private static final long serialVersionUID = 1L;
+	{
+	    put("W", 0);
+	    put("L", 0);
+	}};
 
 	public GameState() {
 	}
@@ -241,5 +248,17 @@ public class GameState {
 			return true;
 		}
 		return false;
+	}
+
+	public Map<String, Integer> getPitchersOfRecord() {
+		return pitchersOfRecord;
+	}
+
+	public void setPitchersOfRecord(Map<String, Integer> pitchersOfRecord) {
+		this.pitchersOfRecord = pitchersOfRecord;
+	}
+	
+	public void setPitcherOfRecord(String winLoss, int pitcherId) {
+		this.pitchersOfRecord.put(winLoss, pitcherId);
 	}
 }
