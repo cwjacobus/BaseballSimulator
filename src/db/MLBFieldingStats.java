@@ -12,7 +12,7 @@ public class MLBFieldingStats {
 	private String position;
 	private FieldingStats fieldingStats;
 	
-	private static final String[] outfieldPositions = {"CF","LF","RF","OF"};
+	public static final String[] outfieldPositions = {"CF","LF","RF","OF"};
 	
 	public MLBFieldingStats () {
 		this.fieldingStats = new FieldingStats();
