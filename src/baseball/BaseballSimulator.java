@@ -1,5 +1,11 @@
 package baseball;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,6 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 //import org.json.JSONObject;
 
@@ -165,26 +175,25 @@ public class BaseballSimulator {
 			totalRuns.put(boxScores[0].getTeamName() + "" + boxScores[0].getYear(), 0);
 			totalRuns.put(boxScores[1].getTeamName() + "" + boxScores[1].getYear(), 0);
 			System.out.println("\n");
-			String[] displayYearString = {"",""}; 
+			String[] displayTeamYearString = {"",""}; 
 			for (BoxScore[] bsArray : seriesBoxScores) {
 				int winner = bsArray[0].getFinalScore() > bsArray[1].getFinalScore() ? 0 : 1;
-				displayYearString[0] = bsArray[0].getTeamName().equals(bsArray[1].getTeamName()) ? "'" + Integer.toString(bsArray[0].getYear()).substring(2) : "";
-				displayYearString[1] = bsArray[0].getTeamName().equals(bsArray[1].getTeamName()) ? "'" + Integer.toString(bsArray[1].getYear()).substring(2) : "";
-				System.out.println(bsArray[winner].getTeamName() + displayYearString[winner] + " " + bsArray[winner].getFinalScore() + "  " +  bsArray[winner==1?0:1].getTeamName() + 
-					displayYearString[winner==1?0:1] + " " + bsArray[winner==1?0:1].getFinalScore());
+				displayTeamYearString[0] = bsArray[0].getTeamName().equals(bsArray[1].getTeamName()) ? bsArray[0].getTeamAndYearDisplay() : bsArray[0].getTeamName();
+				displayTeamYearString[1] = bsArray[0].getTeamName().equals(bsArray[1].getTeamName()) ? bsArray[1].getTeamAndYearDisplay() : bsArray[1].getTeamName();
+				System.out.println(displayTeamYearString[winner] + " " + bsArray[winner].getFinalScore() + (bsArray[winner].getFinalScore() > 9 ? " " : "  ") +  
+					displayTeamYearString[winner==1?0:1] + " " + bsArray[winner==1?0:1].getFinalScore());
 				totalWins.put(bsArray[winner].getTeamName() + "" + bsArray[winner].getYear(), totalWins.get(bsArray[winner].getTeamName() + "" + bsArray[winner].getYear()) + 1);
 				totalRuns.put(bsArray[0].getTeamName() + "" + bsArray[0].getYear(), totalRuns.get(bsArray[0].getTeamName() + "" + bsArray[0].getYear()) + bsArray[0].getFinalScore());
 				totalRuns.put(bsArray[1].getTeamName() + "" + bsArray[1].getYear(), totalRuns.get(bsArray[1].getTeamName() + "" + bsArray[1].getYear()) + bsArray[1].getFinalScore());
 			}
 			System.out.println("\nTotals:");
 			int homeWinner = totalWins.get(boxScores[1].getTeamName() + "" + boxScores[1].getYear()) > totalWins.get(boxScores[0].getTeamName() + "" + boxScores[0].getYear()) ? 1 : 0;
-			System.out.println(boxScores[homeWinner].getTeamName() + displayYearString[homeWinner] + ": " + totalWins.get(boxScores[homeWinner].getTeamName() + "" + boxScores[homeWinner].getYear()) + "(" + 
-				df.format((double)totalWins.get(boxScores[homeWinner].getTeamName()+ "" + boxScores[homeWinner].getYear())/seriesLength) +  ") " + boxScores[homeWinner==1?0:1].getTeamName() + 
-				displayYearString[homeWinner==1?0:1] + ": " + totalWins.get(boxScores[homeWinner==1?0:1].getTeamName() + "" + boxScores[homeWinner==1?0:1].getYear()) + "(" + 
-				df.format((double)totalWins.get(boxScores[homeWinner==1?0:1].getTeamName() + "" + boxScores[homeWinner==1?0:1].getYear())/seriesLength) + ")");
+			System.out.println(displayTeamYearString[homeWinner] + ": " + totalWins.get(boxScores[homeWinner].getTeamName() + "" + boxScores[homeWinner].getYear()) + "(" + df.format((double)totalWins.get(boxScores[homeWinner].getTeamName() + 
+				"" + boxScores[homeWinner].getYear())/seriesLength) +  ") " + displayTeamYearString[homeWinner==1?0:1] + ": " + totalWins.get(boxScores[homeWinner==1?0:1].getTeamName() + "" + boxScores[homeWinner==1?0:1].getYear()) + 
+				"(" + df.format((double)totalWins.get(boxScores[homeWinner==1?0:1].getTeamName() + "" + boxScores[homeWinner==1?0:1].getYear())/seriesLength) + ")");
 			System.out.println("Average Score:"); 
-			System.out.println(boxScores[homeWinner].getTeamName() + displayYearString[homeWinner] + ": " + df.format((double)totalRuns.get(boxScores[homeWinner].getTeamName() + "" + 
-				boxScores[homeWinner].getYear())/seriesLength) + " " + boxScores[homeWinner==1?0:1].getTeamName() + displayYearString[homeWinner==1?0:1] + ": " + df.format((double)totalRuns.get(boxScores[homeWinner==1?0:1].getTeamName() + 
+			System.out.println(displayTeamYearString[homeWinner] + ": " + df.format((double)totalRuns.get(boxScores[homeWinner].getTeamName() + "" + 
+				boxScores[homeWinner].getYear())/seriesLength) + " " + displayTeamYearString[homeWinner==1?0:1] + ": " + df.format((double)totalRuns.get(boxScores[homeWinner==1?0:1].getTeamName() + 
 				"" + boxScores[homeWinner==1?0:1].getYear())/seriesLength));
 		}
 	}
@@ -665,14 +674,15 @@ public class BaseballSimulator {
 		int outAdvancing = 0;
 		MLBPlayer outfielder = null;
 		int outfielderArmRating = 0;
+		int sacRando = getRandomNumberInRange(0, 5) + runnerOnThird.getMlbBattingStats().getBattingStats().getSpeedRating();
 		if (!deep) {
 			outfielder = getBoxScorePlayerFromPosition(outfielderPosition, gameState.getTop()==0?1:0);
-			outfielderArmRating = getOutfielderArmRating(outfielder);
+			outfielderArmRating = getOutfielderArmRating(outfielder, boxScores[gameState.getTop()==0?1:0].getYear());
+			sacRando -= outfielderArmRating;
 		}
-		int sacRando = getRandomNumberInRange(0, 5) + runnerOnThird.getMlbBattingStats().getBattingStats().getSpeedRating() - outfielderArmRating;
-		sacRando += deep ? 5 : 0;  // Tagging on deep FB should be almost a sure thing
+		sacRando += deep ? 2 : 0;  // Tagging on deep FB should be almost a sure thing
 		System.out.println(runnerOnThird.getFirstLastName() + " TAGGING UP ON A FLY BALL");
-		if (sacRando > 5) { // safe
+		if (sacRando >= 3) { // safe
 			runScores();
 		}
 		else { // out
@@ -1073,6 +1083,7 @@ public class BaseballSimulator {
 			boxScores[top] = new BoxScore();
 			boxScores[top].setTeamName(seriesStats[top].getTeamName());
 			boxScores[top].setBatters(new ArrayList<ArrayList<MLBPlayer>>());
+			boxScores[top].setYear(seriesStats[top].getYear());
 			LinkedHashMap<Integer, MLBPlayer> pitchers = new LinkedHashMap<Integer, MLBPlayer>();
 			for (Map.Entry<Integer, MLBPlayer> entry : seriesStats[top].getPitchers().entrySet()) {
 				pitchers.put(entry.getKey(), entry.getValue());
@@ -1089,10 +1100,13 @@ public class BaseballSimulator {
 	
 	private static void outputBoxScore(BoxScore[] boxScores, boolean series, Integer gameLength, Map<String, Integer> pitchersOfRecord) {
 		BoxScore boxScore;
+		String[] displayTeamYearString = {"",""};
+		displayTeamYearString[0] = boxScores[0].getTeamName().equals(boxScores[1].getTeamName()) ? boxScores[0].getTeamAndYearDisplay() : boxScores[0].getTeamName();
+		displayTeamYearString[1] = boxScores[0].getTeamName().equals(boxScores[1].getTeamName()) ? boxScores[1].getTeamAndYearDisplay() : boxScores[1].getTeamName();
 		if (!series) {
 			for (int top = 0; top < 2; top++) {
 				boxScore = boxScores[top];
-				String team = (top == 0) ? "\n" + boxScore.getTeamName() : boxScore.getTeamName();
+				String team = (top == 0) ? "\n" + displayTeamYearString[top] : displayTeamYearString[top];
 				team += team.length() < 3 ? " " : "";
 				System.out.print(team + " ");
 				for (int i = 1; i < gameLength; i++) {
@@ -1110,8 +1124,12 @@ public class BaseballSimulator {
 		for (int top = 0; top < 2; top++) {
 			ArrayList<ArrayList<MLBPlayer>> batters = boxScores[top].getBatters();
 			System.out.println();
-			System.out.print(boxScores[top].getTeamName() + " ");
-			System.out.println("Hitting\t\t\t" + "AB   R    H    RBI  BB   K     AVG  OBP  SLG");
+			System.out.print(displayTeamYearString[top] + " ");
+			System.out.print("Hitting\t\t");
+			if (displayTeamYearString[top].length() < 8) {
+				System.out.print("\t");
+			}
+			System.out.println("AB   R    H    RBI  BB   K     AVG  OBP  SLG");
 			for (ArrayList<MLBPlayer> playerList : batters) {
 				for (MLBPlayer batter : playerList) {
 					BattingStats gameStats = batter.getMlbBattingStats().getBattingStats();
@@ -1168,7 +1186,7 @@ public class BaseballSimulator {
 				if (doublesString[top].length() == 0) {
 					continue;
 				}
-				System.out.println(boxScores[top].getTeamName());
+				System.out.println(displayTeamYearString[top]);
 				System.out.println(doublesString[top].substring(0, doublesString[top].length()-2));
 			}
 		}
@@ -1178,7 +1196,7 @@ public class BaseballSimulator {
 				if (triplesString[top].length() == 0) {
 					continue;
 				}
-				System.out.println(boxScores[top].getTeamName());
+				System.out.println(displayTeamYearString[top]);
 				System.out.println(triplesString[top].substring(0, triplesString[top].length()-2));
 			}
 		}
@@ -1188,16 +1206,20 @@ public class BaseballSimulator {
 				if (homeRunsString[top].length() == 0) {
 					continue;
 				}
-				System.out.println(boxScores[top].getTeamName());
+				System.out.println(displayTeamYearString[top]);
 				System.out.println(homeRunsString[top].substring(0, homeRunsString[top].length()-2));
 			}
 		}
 		System.out.println();
 		for (int top = 0; top < 2; top++) {
 			System.out.println();
-			System.out.print(boxScores[top].getTeamName() + " ");
+			System.out.print(displayTeamYearString[top] + " ");
+			System.out.print("Pitching\t\t");
+			if (displayTeamYearString[top].length() < 8) {
+				System.out.print("\t");
+			}
 			String wlString = series ? "W    L    " : "";
-			System.out.println("Pitching\t\t\t" + "IP     H    R    ER   BB   K    HR   " + wlString + "ERA");
+			System.out.println("IP     H    R    ER   BB   K    HR   " + wlString + "ERA");
 			HashMap<Integer, MLBPlayer> pitchers = boxScores[top].getPitchers();
 			for (Map.Entry<Integer, MLBPlayer> entry : pitchers.entrySet()) {
 				PitchingStats ps = entry.getValue().getMlbPitchingStats().getPitchingStats();
@@ -1312,9 +1334,55 @@ public class BaseballSimulator {
 		return roster.getPitchers().get(id).getMlbPitchingStats().getPitchingStats();
 	}
 	
-	private static Integer getOutfielderArmRating(MLBPlayer outfielder) {
+	private static Integer getOutfielderArmRating(MLBPlayer outfielder, int year) {
+		// Get arm rating from API
+		// Note: Fielding stats seem to only be from 1999 - present
 		Integer armRating = 0;
-		
+		try {
+			String getFieldingStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_fielding_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + 
+				year + "%27" + "&player_id=%27" + outfielder.getMlbPlayerId() + "%27";
+			URL obj = new URL(getFieldingStatsAPI);
+			HttpURLConnection con = (HttpURLConnection)obj.openConnection();
+			BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream())); 
+			try {
+				JSONObject playerStats = new JSONObject(in.readLine());
+				JSONObject sportHittingTm = new JSONObject(playerStats.getString("sport_fielding_tm"));
+				JSONObject queryResults = new JSONObject(sportHittingTm.getString("queryResults"));
+				int numberOfResults = Integer.parseInt(queryResults.getString("totalSize"));
+				JSONObject fieldingStatsJson = null;
+				if (numberOfResults > 1) {
+					JSONArray multipleTeamStats = new JSONArray(queryResults.getString("row"));
+					for (int i = 0; i < multipleTeamStats.length(); i++) {
+						fieldingStatsJson = multipleTeamStats.getJSONObject(i);
+						if (fieldingStatsJson.getString("a").length() > 0 && Arrays.asList(MLBFieldingStats.outfieldPositions).contains(fieldingStatsJson.getString("position_txt"))) {
+								armRating += Integer.parseInt(fieldingStatsJson.getString("a"));
+						}
+					}
+				}
+				else if (numberOfResults == 1){
+					fieldingStatsJson = new JSONObject(queryResults.getString("row"));
+					if (fieldingStatsJson.getString("a").length() > 0) {
+						armRating = Integer.parseInt(fieldingStatsJson.getString("a"));
+					}
+				}
+				else {
+					armRating = 1; // Default if no fielding record for player
+				}
+			}
+			catch (JSONException e) {
+				System.out.println(getFieldingStatsAPI);
+				e.printStackTrace();
+			}
+		}
+		catch (MalformedURLException e) { 	
+			e.printStackTrace();
+		}
+		catch (IOException e) { 
+			e.printStackTrace();
+		}
+		if (armRating > 5) {
+			armRating = 5;
+		}
 		return armRating;
 	}
 	/*
@@ -1514,6 +1582,9 @@ public class BaseballSimulator {
 					}
 					System.out.println();
 					return false;
+				case "OUTFIELDERS":
+					System.out.println("\nCurrent outfielders:");
+					return false;
 				case "INTBB":
 					gameState.setIntentionalWalk(true);
 					return true;
@@ -1542,7 +1613,7 @@ public class BaseballSimulator {
 						" ER: " + currentPitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunsAllowed());
 					return false;
 				case "?":
-					System.out.print("COMMANDS - SIM, AUTO<inning#>, STEAL<#>, PITCHERS, SUBP <id#>, BATTERS, SUBB <id#>, INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, PITCHERSTATUS\n\n");
+					System.out.print("COMMANDS - SIM, AUTO<inning#>, STEAL<#>, PITCHERS, SUBP <id#>, BATTERS, SUBB <id#>, OUTFIELDERS, INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, PITCHERSTATUS\n\n");
 					return false;
 				default:
 					System.out.println("UNKNOWN COMMAND!");
