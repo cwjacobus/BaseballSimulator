@@ -44,6 +44,10 @@ public class BattingStats {
 		this.atBats = atBats;
 	}
 	
+	public void decrementAtBats() {
+		this.atBats--;
+	}
+	
 	public void incrementAtBats() {
 		this.atBats++;
 	}

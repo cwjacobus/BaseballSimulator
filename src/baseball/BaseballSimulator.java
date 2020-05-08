@@ -539,7 +539,7 @@ public class BaseballSimulator {
 						MLBPlayer runnerOnThird = getPlayerFromId(gameState.getBaseRunnerId(3));
 						// Sac fly if in sim mode or autoBefore mode before sim mode stops, less than 2 outs, runner > 2 speed (if deep, no dependency on runners speed)
 						if (deep || (!deep && runnerOnThird.getMlbBattingStats().getBattingStats().getSpeedRating() > 2)) {
-							if (updateBasesSituationSacFly(runnerOnThird, deep, outfielderPosition) == 1) {
+							if (updateBasesSituationTagUp(3, runnerOnThird, deep, outfielderPosition, currentBatter) == 1) {
 								outsRecorded++;
 							}
 						}
@@ -550,10 +550,15 @@ public class BaseballSimulator {
 					for (int base = 1; base < 4; base++) {
 						if ((base == 3 && gameState.isBaseOccupied(3)) ||
 						    (base != 3 && gameState.isBaseOccupied(base) && !gameState.isBaseOccupied(base + 1))) { 
+								MLBPlayer runnerOnAdvancing = getPlayerFromId(gameState.getBaseRunnerId(base));
 								myObj = new Scanner(System.in);
 								System.out.print("Tag up from " + base + "?");
 								String command = myObj.nextLine();
-								System.out.println(command);
+								if (command != null && command.equalsIgnoreCase("Y")) {
+									if (updateBasesSituationTagUp(base, runnerOnAdvancing, deep, outfielderPosition, currentBatter) == 1) {
+										outsRecorded++;
+									}
+								}
 						}
 					}
 				}
@@ -676,26 +681,41 @@ public class BaseballSimulator {
 		currentPitcherGameStats.incrementInningsPitchedBy(1);
 	}
 	
-	private static int updateBasesSituationSacFly(MLBPlayer runnerOnThird, boolean deep, String outfielderPosition) {
+	private static int updateBasesSituationTagUp(int fromBase, MLBPlayer runnerAdvancing, boolean deep, String outfielderPosition, MLBPlayer currentBatter) {
 		int outAdvancing = 0;
 		MLBPlayer outfielder = null;
 		int outfielderArmRating = 0;
-		int sacRando = getRandomNumberInRange(0, 5) + runnerOnThird.getMlbBattingStats().getBattingStats().getSpeedRating();
+		int sacRando = getRandomNumberInRange(0, 5) + runnerAdvancing.getMlbBattingStats().getBattingStats().getSpeedRating();
 		if (!deep) {
 			outfielder = getBoxScorePlayerFromPosition(outfielderPosition, gameState.getTop()==0?1:0);
 			outfielderArmRating = getOutfielderArmRating(outfielder, boxScores[gameState.getTop()==0?1:0].getYear());
 			sacRando -= outfielderArmRating;
 		}
-		sacRando += deep ? 2 : 0;  // Tagging on deep FB should be almost a sure thing
-		System.out.println(runnerOnThird.getFirstLastName() + " TAGGING UP ON A FLY BALL");
+		if (deep && fromBase == 3) { // Tagging on deep FB from third should be almost a sure thing
+			sacRando += 2;
+		}
+		if (!deep && fromBase != 3) { // Not deep 1 or 2
+			sacRando -= 4;
+		}
+		if (deep && fromBase != 3) { // Deep 1 or 2
+			sacRando -= 2;
+		}
+		System.out.println(runnerAdvancing.getFirstLastName() + " TAGGING UP ON A FLY BALL FROM " + fromBase);
 		if (sacRando >= 3) { // safe
-			runScores();
+			System.out.println("SAFE!");
+			if (fromBase == 3) {
+				currentBatter.getMlbBattingStats().getBattingStats().decrementAtBats();
+				runScores();
+			}
+			else {
+				gameState.setBaseRunner(fromBase + 1, gameState.getBaseRunner(fromBase));
+			}
 		}
 		else { // out
 			outAdvancing = 1;
-			System.out.println("OUT AT THE PLATE");
+			System.out.println("OUT!");
 		}
-		gameState.setBaseRunner(3, new BaseRunner());
+		gameState.setBaseRunner(fromBase, new BaseRunner());
 		return outAdvancing;
 	}
 	
