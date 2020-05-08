@@ -48,6 +48,8 @@ public class BaseballSimulator {
 	static List<String> randoLog = new ArrayList<String>();
 	static HashMap<?, ?> franchisesMap;
 	static boolean useDH = true;
+	static MLBPlayer[] setupMen = new MLBPlayer[2];
+	static MLBPlayer[] closers = new MLBPlayer[2];
 	
 	static final int STRUCK_OUT = 0;
 	static final int GROUNDED_OUT = 1;
@@ -90,21 +92,7 @@ public class BaseballSimulator {
 			System.out.println("Invalid args - expecting <visYear> <vis> <homeYear> <homeYear> <MODE>[SIM|GAME|AUTO] <AUTO_AFTER>|<SERIES_LENGTH> - ex. 2019 HOU 2019 NYY SIM 7 or 2019 HOU 2019 NYY AUTO 9");
 			return;
 		}
-		DAO.setConnection();
-		rosters  = new Roster[2];
-		franchisesMap = DAO.getDataMap("MLB_FRANCHISE");
-		int years[] = {Integer.parseInt(args[0]), Integer.parseInt(args[2])};
-		String[] teamNames = {args[1].toUpperCase(), args[3].toUpperCase()};
-		useDH = !Arrays.asList(nationalLeagueTeams).contains(teamNames[1]) && years[1] >= 1973;
-		for (int t = 0; t < 2; t++) {
-			rosters[t] = new Roster();
-			if (franchisesMap.get(teamNames[t]) == null) {
-				System.out.println("Invalid team name: " + teamNames[t]);
-				return;
-			}
-			rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear((Integer)franchisesMap.get(teamNames[t]), years[t]));
-			rosters[t].setBatters(DAO.getBattersMapByTeamAndYear((Integer)franchisesMap.get(teamNames[t]), years[t]));
-		}	
+		// Process arguments
 		if (args.length > 4 && args[4] != null) {
 			if (args[4].equalsIgnoreCase("GAME")) {
 				autoBeforeInning = 0;
@@ -135,15 +123,32 @@ public class BaseballSimulator {
 				}
 			}
 		}
-		
+		DAO.setConnection();
+		rosters  = new Roster[2];
+		franchisesMap = DAO.getDataMap("MLB_FRANCHISE");
+		int years[] = {Integer.parseInt(args[0]), Integer.parseInt(args[2])};
+		String[] teamNames = {args[1].toUpperCase(), args[3].toUpperCase()};
+		useDH = !Arrays.asList(nationalLeagueTeams).contains(teamNames[1]) && years[1] >= 1973;
+		BoxScore[][] seriesBoxScores = new BoxScore[seriesLength][2];
+		SeriesStats[] seriesStats = new SeriesStats[2];
+		for (int t = 0; t < 2; t++) {
+			rosters[t] = new Roster();
+			if (franchisesMap.get(teamNames[t]) == null) {
+				System.out.println("Invalid team name: " + teamNames[t]);
+				return;
+			}
+			rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear((Integer)franchisesMap.get(teamNames[t]), years[t]));
+			rosters[t].setBatters(DAO.getBattersMapByTeamAndYear((Integer)franchisesMap.get(teamNames[t]), years[t]));
+			HashMap<Integer, MLBPlayer> excludingPitchers = new HashMap<Integer, MLBPlayer>();
+			closers[t] = DAO.getCloser((Integer)franchisesMap.get(teamNames[t]), years[t], null);
+			excludingPitchers.put(closers[t].getMlbPlayerId(), closers[t]);
+			setupMen[t] = DAO.getSetupMan((Integer)franchisesMap.get(teamNames[t]), years[t], excludingPitchers);	
+			seriesStats[t] = new SeriesStats(teamNames[t], years[t], seriesLength);
+		}	
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalLineup(teamNames, years);
 		if (lineupBatters == null) {
 			return;
 		}
-		BoxScore[][] seriesBoxScores = new BoxScore[seriesLength][2];
-		SeriesStats[] seriesStats = new SeriesStats[2];
-		seriesStats[0] = new SeriesStats(teamNames[0], years[0], seriesLength);
-		seriesStats[1] = new SeriesStats(teamNames[1], years[1], seriesLength);
 		for (int s = 0; s < seriesLength; s++) {
 			gameState = new GameState();
 			boxScores = new BoxScore[2];
@@ -153,13 +158,14 @@ public class BaseballSimulator {
 				boxScores[t].setTeamName(teamNames[t]);
 				boxScores[t].setBatters(lineupBatters.get(t));
 				clearPlayerGameData(boxScores[t]);
-				MLBPlayer startingPitcher = DAO.getStartingPitcherByIndex((Integer)franchisesMap.get(boxScores[t].getTeamName()), boxScores[t].getYear(), getRandomNumberInRange(1, 5));  
+				MLBPlayer startingPitcher = seriesLength == 1 ? DAO.getRandomPitcherByIndex((Integer)franchisesMap.get(boxScores[t].getTeamName()), boxScores[t].getYear(), getRandomNumberInRange(0, 4), true, null) :
+					DAO.getRandomPitcherByIndex((Integer)franchisesMap.get(boxScores[t].getTeamName()), boxScores[t].getYear(), s % 5, true, null);  
 				gameState.setCurrentPitcher(startingPitcher, t);
 				boxScores[t].getPitchers().put(startingPitcher.getMlbPlayerId(), startingPitcher);
 				if (Arrays.asList(nationalLeagueTeams).contains(teamNames[1]) || years[1] < 1973) {
 					boxScores[t].getBatters().set(8, new ArrayList<MLBPlayer>());  // Clear out prior games pitcher spots
 					boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
-				}
+				}	
 			}
 			playBall(gameState, boxScores, s + 1);
 			seriesBoxScores[s] = boxScores;
@@ -311,14 +317,22 @@ public class BaseballSimulator {
 						}
 						else if (currentPitcherGameStats.getBattersFaced() > 30 || currentPitcherGameStats.getEarnedRunsAllowed() > 6 || 
 							(currentPitcherGameStats.getEarnedRunsAllowed() > 3 && currentPitcherGameStats.getBattersFaced() > 20)) {
-								MLBPlayer newPitcher = DAO.getLongReliefPitcher((Integer)franchisesMap.get(boxScores[top==0?1:0].getTeamName()), boxScores[top==0?1:0].getYear(), boxScores[top==0?1:0].getPitchers());
+								ArrayList<Integer> excludingPitchers = new ArrayList<Integer>(boxScores[top==0?1:0].getPitchers().keySet());
+								excludingPitchers.add(setupMen[top==0?1:0].getMlbPlayerId());
+								excludingPitchers.add(closers[top==0?1:0].getMlbPlayerId());
+								MLBPlayer newPitcher = DAO.getRandomPitcherByIndex((Integer)franchisesMap.get(boxScores[top==0?1:0].getTeamName()), boxScores[top==0?1:0].getYear(), getRandomNumberInRange(0, 3), 
+									false, excludingPitchers);
 								if (newPitcher != null) {
 									currentPitcherGameStats = changePitcher(newPitcher, gameState.getTop()==0?1:0);
 								}
 						}
 						else if (gameState.getInning() > 9 && gameState.isCloserPitching(top) && gameState.getOuts() == 0) { // Check if we're in extra innings and closer is still pitching (Blown save)
 							System.out.println("BLOWN SAVE BY: " + currentPitcher.getFullName());
-							MLBPlayer newPitcher = DAO.getLongReliefPitcher((Integer)franchisesMap.get(boxScores[top==0?1:0].getTeamName()), boxScores[top==0?1:0].getYear(), boxScores[top==0?1:0].getPitchers());
+							ArrayList<Integer> excludingPitchers = new ArrayList<Integer>(boxScores[top==0?1:0].getPitchers().keySet());
+							excludingPitchers.add(setupMen[top==0?1:0].getMlbPlayerId());
+							excludingPitchers.add(closers[top==0?1:0].getMlbPlayerId());
+							MLBPlayer newPitcher = DAO.getRandomPitcherByIndex((Integer)franchisesMap.get(boxScores[top==0?1:0].getTeamName()), boxScores[top==0?1:0].getYear(), getRandomNumberInRange(0, 3), 
+								false, excludingPitchers);
 							if (newPitcher != null) {
 								currentPitcherGameStats = changePitcher(newPitcher, gameState.getTop()==0?1:0);
 								gameState.setCloserIsPitching(false, top);

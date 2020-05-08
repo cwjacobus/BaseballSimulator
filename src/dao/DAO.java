@@ -204,38 +204,28 @@ public class DAO {
 		return pitchersMap;
 	}
 	
-	public static MLBPlayer getLongReliefPitcher(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers) {
-		String andWhere = "AND BS.GAMES_STARTED < 12 AND SAVES < 5";
-		String orderBy = "ORDER BY INNINGS_PITCHED DESC";
-		return getReliefPitcher(mlbTeamId, year, excludingPitchers, andWhere, orderBy);
-	}
-	
 	public static MLBPlayer getSetupMan(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers) {
-		String andWhere = "";
-		String orderBy = "ORDER BY HOLDS DESC";
-		return getReliefPitcher(mlbTeamId, year, excludingPitchers, andWhere, orderBy);
+		String orderBy = "ORDER BY HOLDS DESC, INNINGS_PITCHED DESC";
+		return getReliefPitcher(mlbTeamId, year, excludingPitchers, orderBy);
 	}
 
 	public static MLBPlayer getCloser(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers) {
-		String andWhere = "";
-		String orderBy = "ORDER BY SAVES DESC";
-		return getReliefPitcher(mlbTeamId, year, excludingPitchers, andWhere, orderBy);
+		String orderBy = "ORDER BY SAVES DESC, INNINGS_PITCHED DESC";
+		return getReliefPitcher(mlbTeamId, year, excludingPitchers, orderBy);
 	}
 	
-	private static MLBPlayer getReliefPitcher(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers, String andWhere, String orderBy) {
+	private static MLBPlayer getReliefPitcher(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers, String orderBy) {
 		// For getting a random starting pitcher
+		ArrayList<Integer> aList = new ArrayList<Integer>();
+		if (excludingPitchers != null) {
+			aList.addAll(excludingPitchers.keySet());
+		}
 		ArrayList<MLBPlayer> pitcherList = new ArrayList<MLBPlayer>();
 		try {
-			String excludingSql = excludingPitchers != null && excludingPitchers.size() > 0 ? " AND BS.MLB_PLAYER_ID NOT IN (" : "";
-			if (excludingPitchers != null && excludingPitchers.size() > 0) {
-				for (Map.Entry<Integer, MLBPlayer> entry : excludingPitchers.entrySet()) {
-					excludingSql += entry.getValue().getMlbPlayerId() + ",";
-				}
-				excludingSql = excludingSql.substring(0, excludingSql.length() - 1) + ") ";
-			}
+			String excludingSql = getExcludingSQL(aList);
 			Statement stmt = conn.createStatement();
 			String sql = "SELECT P.* from MLB_PITCHING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR = " + year + " AND MLB_TEAM_ID = " + 
-				mlbTeamId + excludingSql + andWhere + " " + orderBy;
+				mlbTeamId + excludingSql + " " + orderBy;
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				MLBPlayer p = new MLBPlayer(rs.getInt("MLB_PLAYER_ID"), rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
@@ -253,13 +243,21 @@ public class DAO {
 		}
 	}
 	
-	public static MLBPlayer getStartingPitcherByIndex(Integer mlbTeamId, Integer year, int index) {
-		// For getting a random starting pitcher
+	public static MLBPlayer getRandomPitcherByIndex(Integer mlbTeamId, Integer year, int index, boolean starter, ArrayList<Integer> excludingPitchers) {
+		// For getting a random pitcher
+		String andWhere = "";
+		if (starter) {
+			andWhere = " AND GAMES_STARTED > 3 AND SAVES < 5 AND HOLDS < 5";
+		}
+		else {
+			andWhere = " AND GAMES_STARTED < 12"; // looking for a long to mid reliever
+		}
 		ArrayList<MLBPlayer> pitcherList = new ArrayList<MLBPlayer>();
 		try {
+			String excludingSql = getExcludingSQL(excludingPitchers);
 			Statement stmt = conn.createStatement();
-			String sql = "SELECT P.* from MLB_PITCHING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND GAMES_STARTED > 3 AND YEAR = " + year + 
-				" AND MLB_TEAM_ID = " + mlbTeamId + " ORDER BY INNINGS_PITCHED DESC;";
+			String sql = "SELECT P.* from MLB_PITCHING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR = " + year + 
+				" AND MLB_TEAM_ID = " + mlbTeamId + excludingSql + andWhere + " ORDER BY INNINGS_PITCHED DESC;";
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				MLBPlayer p = new MLBPlayer(rs.getInt("MLB_PLAYER_ID"), rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
@@ -269,8 +267,13 @@ public class DAO {
 		catch (SQLException e) {
 			e.printStackTrace();
 		}
-		index = ((index - 1) >= pitcherList.size()) ? 1 : index;
-		return pitcherList.get(index-1);
+		if (index >= pitcherList.size()) {
+			index = 0;
+		}
+		if (pitcherList.size() == 0) {
+			return null;
+		}
+		return pitcherList.get(index);
 	}
 	
 	public static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, String position) {
@@ -285,13 +288,7 @@ public class DAO {
 		MLBPlayer player = new MLBPlayer();
 		try {
 			Statement stmt = conn.createStatement();
-			String excludingSql = excludingList != null && excludingList.size() > 0 ? " and bs.mlb_player_id not in (" : "";
-			if (excludingList != null && excludingList.size() > 0) {
-				for (Integer id : excludingList) {
-					excludingSql += id + ",";
-				}
-				excludingSql = excludingSql.substring(0, excludingSql.length() - 1) + ")";
-			}
+			String excludingSql = getExcludingSQL(excludingList);
 			// Add hits to sum for uniqueness
 			String sql = "SELECT * FROM MLB_BATTING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID=P.MLB_PLAYER_ID AND BS.MLB_TEAM_ID =  " + teamId;
 			if (position != null) {
@@ -331,5 +328,18 @@ public class DAO {
 			System.out.println("SQLState: " + ex.getSQLState());
 			System.out.println("VendorError: " + ex.getErrorCode());
 		}
+	}
+	
+	private static String getExcludingSQL(ArrayList<Integer> excludingPitchers) {
+		String excludingSQL= "";
+		if (excludingPitchers != null && excludingPitchers.size() > 0) {
+			excludingSQL = " AND BS.MLB_PLAYER_ID NOT IN (";
+			for (Integer pitcherId : excludingPitchers) {
+				excludingSQL += pitcherId + ",";
+			}
+			excludingSQL = excludingSQL.substring(0, excludingSQL.length() - 1) + ")";
+		}
+		
+		return excludingSQL;
 	}
 }
