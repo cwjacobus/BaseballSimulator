@@ -12,6 +12,7 @@ public class PitchingStats {
 	private int hitsAllowed;
 	private int holds;
 	private int saves;
+	private int blownSaves;
 	private int gamesStarted;
 	private int balks;
 	private int wildPitches;
@@ -24,7 +25,7 @@ public class PitchingStats {
 	}
 	
 	public PitchingStats(double inningsPitched, int earnedRunsAllowed, int runsAllowed, int walks, int strikeouts, int homeRunsAllowed,
-			int stolenBasesAllowed, int hitBatters, int hitsAllowed, int holds, int saves, int gamesStarted, int balks,
+			int stolenBasesAllowed, int hitBatters, int hitsAllowed, int holds, int saves, int blownSaves, int gamesStarted, int balks,
 			int wildPitches, int sacrificeFlies, int battersFaced, int wins, int losses) {
 		this.inningsPitched = inningsPitched;
 		this.earnedRunsAllowed = earnedRunsAllowed;
@@ -37,6 +38,7 @@ public class PitchingStats {
 		this.hitsAllowed = hitsAllowed;
 		this.holds = holds;
 		this.saves = saves;
+		this.blownSaves = blownSaves;
 		this.gamesStarted = gamesStarted;
 		this.balks = balks;
 		this.wildPitches = wildPitches;
@@ -181,6 +183,14 @@ public class PitchingStats {
 
 	public void setSaves(int saves) {
 		this.saves = saves;
+	}
+
+	public int getBlownSaves() {
+		return blownSaves;
+	}
+
+	public void setBlownSaves(int blownSaves) {
+		this.blownSaves = blownSaves;
 	}
 
 	public int getGamesStarted() {
