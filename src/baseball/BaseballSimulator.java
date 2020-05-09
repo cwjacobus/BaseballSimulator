@@ -28,6 +28,7 @@ import org.json.JSONObject;
 import dao.DAO;
 import db.MLBBattingStats;
 import db.MLBFieldingStats;
+import db.MLBPitchingStats;
 import db.MLBPlayer;
 
 public class BaseballSimulator {
@@ -139,10 +140,16 @@ public class BaseballSimulator {
 			}
 			rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear((Integer)franchisesMap.get(teamNames[t]), years[t]));
 			rosters[t].setBatters(DAO.getBattersMapByTeamAndYear((Integer)franchisesMap.get(teamNames[t]), years[t]));
-			HashMap<Integer, MLBPlayer> excludingPitchers = new HashMap<Integer, MLBPlayer>();
-			closers[t] = DAO.getCloser((Integer)franchisesMap.get(teamNames[t]), years[t], null);
-			excludingPitchers.put(closers[t].getMlbPlayerId(), closers[t]);
-			setupMen[t] = DAO.getSetupMan((Integer)franchisesMap.get(teamNames[t]), years[t], excludingPitchers);	
+			if (rosters[t].getBatters().size() == 0 || rosters[t].getPitchers().size() == 0) {
+				System.out.println("Players for " + years[t] + " " + teamNames[t] + " not found in database.  Import player stats from API.");
+				importTeam(years[t], teamNames[t], t);
+			}
+			else {
+				HashMap<Integer, MLBPlayer> excludingPitchers = new HashMap<Integer, MLBPlayer>();
+				closers[t] = DAO.getCloser((Integer)franchisesMap.get(teamNames[t]), years[t], null);
+				excludingPitchers.put(closers[t].getMlbPlayerId(), closers[t]);
+				setupMen[t] = DAO.getSetupMan((Integer)franchisesMap.get(teamNames[t]), years[t], excludingPitchers);	
+			}
 			seriesStats[t] = new SeriesStats(teamNames[t], years[t], seriesLength);
 		}	
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalLineup(teamNames, years);
@@ -160,6 +167,10 @@ public class BaseballSimulator {
 				clearPlayerGameData(boxScores[t]);
 				MLBPlayer startingPitcher = seriesLength == 1 ? DAO.getRandomPitcherByIndex((Integer)franchisesMap.get(boxScores[t].getTeamName()), boxScores[t].getYear(), getRandomNumberInRange(0, 4), true, null) :
 					DAO.getRandomPitcherByIndex((Integer)franchisesMap.get(boxScores[t].getTeamName()), boxScores[t].getYear(), s % 5, true, null);  
+				if (startingPitcher == null) {  // Pitcher not in DB, create from Roster
+					MLBPlayer pitcherFromRoster = rosters[t].getPitchers().get(rosters[t].getPitchers().keySet().toArray()[0]);
+					startingPitcher = new MLBPlayer(pitcherFromRoster.getMlbPlayerId(), pitcherFromRoster.getFullName(), "P", pitcherFromRoster.getArmThrows(), pitcherFromRoster.getBats(), pitcherFromRoster.getJerseyNumber());
+				}
 				gameState.setCurrentPitcher(startingPitcher, t);
 				boxScores[t].getPitchers().put(startingPitcher.getMlbPlayerId(), startingPitcher);
 				if (Arrays.asList(nationalLeagueTeams).contains(teamNames[1]) || years[1] < 1973) {
@@ -320,8 +331,12 @@ public class BaseballSimulator {
 						else if (currentPitcherGameStats.getBattersFaced() > 30 || currentPitcherGameStats.getEarnedRunsAllowed() > 6 || 
 							(currentPitcherGameStats.getEarnedRunsAllowed() > 3 && currentPitcherGameStats.getBattersFaced() > 20)) {
 								ArrayList<Integer> excludingPitchers = new ArrayList<Integer>(boxScores[top==0?1:0].getPitchers().keySet());
-								excludingPitchers.add(setupMen[top==0?1:0].getMlbPlayerId());
-								excludingPitchers.add(closers[top==0?1:0].getMlbPlayerId());
+								if (setupMen[top==0?1:0] != null) {
+									excludingPitchers.add(setupMen[top==0?1:0].getMlbPlayerId());
+								}
+								if (closers[top==0?1:0] != null) {
+									excludingPitchers.add(closers[top==0?1:0].getMlbPlayerId());
+								}
 								MLBPlayer newPitcher = DAO.getRandomPitcherByIndex((Integer)franchisesMap.get(boxScores[top==0?1:0].getTeamName()), pitcherYear, getRandomNumberInRange(0, 3), 
 									false, excludingPitchers);
 								if (newPitcher != null) {
@@ -976,6 +991,12 @@ public class BaseballSimulator {
             			return 0;
             		}
             		return (o1.getValue().getMlbBattingStats().getBattingStats().getRbis() > o2.getValue().getMlbBattingStats().getBattingStats().getRbis() ? -1 : 1);
+            	}
+            	else if (type.equals("GS")){
+            		if (o1.getValue().getMlbPitchingStats().getPitchingStats().getGamesStarted() == o2.getValue().getMlbPitchingStats().getPitchingStats().getGamesStarted()) {
+            			return 0;
+            		}
+            		return (o1.getValue().getMlbPitchingStats().getPitchingStats().getGamesStarted() > o2.getValue().getMlbPitchingStats().getPitchingStats().getGamesStarted() ? -1 : 1);
             	}
             	else {
             		return 0;
@@ -1805,5 +1826,43 @@ public class BaseballSimulator {
 	        	e.printStackTrace();
 	        }     		
 		}*/
-
+	
+	private static void importTeam(Integer year, String teamName, int top) {
+		HashMap<Integer, MLBPlayer> battersMap = DBImport.importMlbPlayers(year, false, (Integer)franchisesMap.get(teamName), true, franchisesMap); // import batters
+		HashMap<Integer, MLBPlayer> filteredBattersMap = new HashMap<Integer, MLBPlayer>();
+		HashMap<Integer, MLBPlayer> pitchersMap = DBImport.importMlbPlayers(year, false, (Integer)franchisesMap.get(teamName), false, franchisesMap); // import pitchers
+		HashMap<Integer, MLBPlayer> filteredPitchersMap = new HashMap<Integer, MLBPlayer>();
+		//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
+		ArrayList<Object> battingStatsList = DBImport.importBattingStats(battersMap, year, filteredBattersMap);
+		ArrayList<Object> pitchingStatsList = DBImport.importPitchingStats(pitchersMap, year, filteredPitchersMap);
+		for (Map.Entry<Integer, MLBPlayer> entry : filteredBattersMap.entrySet()) {
+			MLBBattingStats mlbBattingStats;
+			for (Object o : battingStatsList) {
+				mlbBattingStats = (MLBBattingStats)o;
+				if (mlbBattingStats.getMlbPlayerId() == entry.getKey() && mlbBattingStats.getMlbTeamId() == ((Integer)franchisesMap.get(teamName)).intValue()) {
+					entry.getValue().setMlbBattingStats(mlbBattingStats);
+					break;
+				}
+			}
+		}
+		for (Map.Entry<Integer, MLBPlayer> entry : filteredPitchersMap.entrySet()) {
+			MLBPitchingStats mlbPitchingStats;
+			for (Object o : pitchingStatsList) {
+				mlbPitchingStats = (MLBPitchingStats)o;
+				if (mlbPitchingStats.getMlbPlayerId() == entry.getKey() && mlbPitchingStats.getMlbTeamId() == ((Integer)franchisesMap.get(teamName)).intValue()) {
+					entry.getValue().setMlbPitchingStats(mlbPitchingStats);
+					break;
+				}
+			}
+		}
+		rosters[top].setPitchers(sortHashMapByValue(filteredPitchersMap, "GS"));
+		rosters[top].setBatters(filteredBattersMap);
+		
+		for (Map.Entry<Integer, MLBPlayer> entry : filteredBattersMap.entrySet()) {
+			System.out.println(entry.getValue().getFirstLastName() + " " + entry.getValue().getMlbBattingStats().getBattingStats().getHomeRuns());
+		}
+		for (Map.Entry<Integer, MLBPlayer> entry : filteredPitchersMap.entrySet()) {
+			System.out.println(entry.getValue().getFirstLastName() + " " + entry.getValue().getMlbPitchingStats().getPitchingStats().getStrikeouts());
+		}
+	}
 }

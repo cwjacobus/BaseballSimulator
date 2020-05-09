@@ -9,6 +9,7 @@ public class MLBPlayer {
 	private Integer jerseyNumber;
 	private MLBBattingStats mlbBattingStats;
 	private MLBPitchingStats mlbPitchingStats;
+	private MLBFieldingStats mlbFieldingStats;
 	
 	public MLBPlayer() {
 	}
@@ -19,6 +20,7 @@ public class MLBPlayer {
 		this.primaryPosition = primaryPosition;
 		this.mlbBattingStats = new MLBBattingStats();
 		this.mlbPitchingStats = new MLBPitchingStats();
+		this.mlbFieldingStats = new MLBFieldingStats();
 	}
 	
 	
@@ -32,6 +34,7 @@ public class MLBPlayer {
 		this.jerseyNumber = jerseyNumber;
 		this.mlbBattingStats = new MLBBattingStats();
 		this.mlbPitchingStats = new MLBPitchingStats();
+		this.mlbFieldingStats = new MLBFieldingStats();
 	}
 
 	public Integer getMlbPlayerId() {
@@ -96,6 +99,14 @@ public class MLBPlayer {
 
 	public void setMlbPitchingStats(MLBPitchingStats mlbPitchingStats) {
 		this.mlbPitchingStats = mlbPitchingStats;
+	}
+
+	public MLBFieldingStats getMlbFieldingStats() {
+		return mlbFieldingStats;
+	}
+
+	public void setMlbFieldingStats(MLBFieldingStats mlbFieldingStats) {
+		this.mlbFieldingStats = mlbFieldingStats;
 	}
 
 	public String getFirstLastName() {

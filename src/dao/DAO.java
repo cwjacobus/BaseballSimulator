@@ -68,6 +68,24 @@ public class DAO {
 			e.printStackTrace();
 		}
 	}
+	/*
+	public static void createBatchStatsDataFromPlayersMaps(HashMap<Integer, MLBPlayer> battersMap, HashMap<Integer, MLBPlayer> pitchersMap, HashMap<Integer, MLBPlayer> fieldersMap) {
+		HashMap<Integer, MLBBattingStats> mlbBattingStatsMap = new HashMap<Integer, MLBBattingStats>();
+		HashMap<Integer, MLBPitchingStats> mlbPitchingStatsMap = new HashMap<Integer, MLBPitchingStats>();
+		HashMap<Integer, MLBFieldingStats> mlbFieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
+		for (Map.Entry<Integer, MLBPlayer> entry : battersMap.entrySet()) {
+			mlbBattingStatsMap.put(entry.getKey(), entry.getValue().getMlbBattingStats());
+		}
+		for (Map.Entry<Integer, MLBPlayer> entry : pitchersMap.entrySet()) {
+			mlbPitchingStatsMap.put(entry.getKey(), entry.getValue().getMlbPitchingStats());
+		}
+		for (Map.Entry<Integer, MLBPlayer> entry : fieldersMap.entrySet()) {
+			mlbFieldingStatsMap.put(entry.getKey(), entry.getValue().getMlbFieldingStats());
+		}
+		createBatchDataFromMap(mlbBattingStatsMap);
+		createBatchDataFromMap(mlbPitchingStatsMap);
+		//createBatchDataFromMap(mlbFieldingStatsMap);
+	}*/
 	
 	public static void createBatchDataFromMap(HashMap<?, ?> mlbDataMap) {
 		try {
@@ -98,14 +116,6 @@ public class DAO {
 						teamPlayer.getTeamPlayerId() + ", " + teamPlayer.getMlbTeamId() + ", " + teamPlayer.getMlbPlayerId() +
 						", " + teamPlayer.getYear() + ");";
 				}
-				/*else if (entry.getValue() instanceof MLBBattingStats) {
-					MLBBattingStats mbs = (MLBBattingStats)entry.getValue();
-					BattingStats bs = mbs.getBattingStats();
-					insertSQL = "INSERT IGNORE INTO MLB_BATTING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, AT_BATS, HITS, DOUBLES, TRIPLES, HOME_RUNS, WALKS, STRIKEOUTS, HIT_BY_PITCH, RUNS, RBIS, STOLEN_BASES, PLATE_APPEARANCES, CAUGHT_STEALING) VALUES (" +
-						mbs.getMlbPlayerId() + ", " + mbs.getMlbTeamId() + ", " + mbs.getYear() + ", " + bs.getAtBats() + ", " + bs.getHits() + ", " + bs.getDoubles() + ", " + bs.getTriples() + ", " + bs.getHomeRuns() +
-						", " + bs.getWalks() + ", " + bs.getStrikeOuts() + ", " + bs.getHitByPitch() + ", " + bs.getRuns() + ", " + bs.getRbis() + ", " + bs.getStolenBases() +
-						", " + bs.getPlateAppearances() + ", " + bs.getCaughtStealing() + ");";
-				}*/
 				else if (entry.getValue() instanceof MLBFieldingStats) {
 					MLBFieldingStats mfs = (MLBFieldingStats)entry.getValue();
 					FieldingStats fs = mfs.getFieldingStats();

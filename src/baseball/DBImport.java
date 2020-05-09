@@ -17,7 +17,7 @@ import org.json.JSONObject;
 
 import dao.DAO;
 import db.MLBBattingStats;
-//import db.MLBFieldingStats;
+import db.MLBFieldingStats;
 import db.MLBFranchise;
 import db.MLBPitchingStats;
 import db.MLBPlayer;
@@ -136,7 +136,7 @@ public class DBImport {
 		DAO.createBatchDataFromMap(allTeamsMap);
 	}
 	
-	private static HashMap<Integer, MLBPlayer> importMlbPlayers(Integer year, boolean allTeams, Integer teamId, boolean hitters, HashMap<?, ?> franchisesMap) {
+	public static HashMap<Integer, MLBPlayer> importMlbPlayers(Integer year, boolean allTeams, Integer teamId, boolean hitters, HashMap<?, ?> franchisesMap) {
 		HashMap<Integer, MLBPlayer> allPlayersMap = new HashMap<Integer, MLBPlayer>();
 		for (Map.Entry<?, ?> entry : franchisesMap.entrySet()) {
 			teamId = allTeams ? (Integer)entry.getValue() : teamId;
@@ -189,7 +189,7 @@ public class DBImport {
 		return allPlayersMap;
 	}
 	
-	private static ArrayList<Object> importBattingStats(HashMap<Integer, MLBPlayer> hittersMap, int year, HashMap<Integer, MLBPlayer> filteredHittersMap) {
+	public static ArrayList<Object> importBattingStats(HashMap<Integer, MLBPlayer> hittersMap, int year, HashMap<Integer, MLBPlayer> filteredHittersMap) {
 		ArrayList<Object> battingStatsList = new ArrayList<Object>();
 		int index = 1;
 		try {   
@@ -255,11 +255,11 @@ public class DBImport {
 			System.out.println(mbs.getMlbPlayerId() + " " + mbs.getMlbTeamId() + " " +  mbs.getYear() + " " +
 				mbs.getBattingStats().getAtBats() + " " + mbs.getBattingStats().getPlateAppearances());
 		}*/
-		System.out.println("\nBatter import complete");
+		System.out.println("\nBatter stats import complete");
 		return battingStatsList;
 	}
 	
-	private static ArrayList<Object> importPitchingStats(HashMap<Integer, MLBPlayer> pitchersMap, int year, HashMap<Integer, MLBPlayer> filteredPitchersMap) {
+	public static ArrayList<Object> importPitchingStats(HashMap<Integer, MLBPlayer> pitchersMap, int year, HashMap<Integer, MLBPlayer> filteredPitchersMap) {
 		ArrayList<Object> pitchingStatsList = new ArrayList<Object>();
 		int index = 1;
 		try {   
@@ -325,12 +325,12 @@ public class DBImport {
 			System.out.println(mps.getMlbPlayerId() + " " + mps.getMlbTeamId() + " " +  mps.getYear() + " " +
 				mps.getPitchingStats().getInningsPitched() + " " + mps.getPitchingStats().getEarnedRunsAllowed());
 		}*/
-		System.out.println("\nPitcher import complete");
+		System.out.println("\nPitcher stats import complete");
 		return pitchingStatsList;
 	}
 	
 	/*
-	private static void importFieldingStats(HashMap<Integer, MLBPlayer> playersMap, int year, HashMap<Integer, MLBFieldingStats> fieldingStatsMap) {
+	public static void importFieldingStats(HashMap<Integer, MLBPlayer> playersMap, int year, HashMap<Integer, MLBFieldingStats> fieldingStatsMap) {
 		int index = 1;
 		try {   
 			for (Map.Entry<Integer, MLBPlayer> entry : playersMap.entrySet()) {
@@ -433,7 +433,6 @@ public class DBImport {
 		return mps;
 	}
 	
-	/*
 	static MLBFieldingStats createMLBFieldingStats(Integer mlbPlayerId, JSONObject fieldingStatsJson, Integer year) {
 		MLBFieldingStats mbs = null;
 		try {
@@ -444,6 +443,6 @@ public class DBImport {
 			e.printStackTrace();
 		}
 		return mbs;
-	}*/
+	}
 
 }
