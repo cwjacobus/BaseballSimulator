@@ -286,10 +286,6 @@ public class DAO {
 		return pitcherList.get(index);
 	}
 	
-	public static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, String position) {
-		return getMlbPlayerWithMostPlateAppearances(teamId, year, position, null);
-	}
-	
 	public static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, ArrayList<Integer> excludingList) {
 		return getMlbPlayerWithMostPlateAppearances(teamId, year, null, excludingList);
 	}
@@ -304,7 +300,7 @@ public class DAO {
 			if (position != null) {
 				sql += " AND P.PRIMARY_POSITION = '" + position + "'";
 			}
-			sql += " and bs.year = " + year + " aND (BS.PLATE_APPEARANCES + BS.HITS) = (SELECT MAX(PLATE_APPEARANCES + HITS) FROM MLB_BATTING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID=P.MLB_PLAYER_ID AND BS.MLB_TEAM_ID = " +teamId;
+			sql += " and bs.year = " + year + " AND (BS.PLATE_APPEARANCES + BS.HITS) = (SELECT MAX(PLATE_APPEARANCES + HITS) FROM MLB_BATTING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID=P.MLB_PLAYER_ID AND BS.MLB_TEAM_ID = " +teamId;
 			if (position != null) {
 				sql += " AND P.PRIMARY_POSITION = '" + position + "'";
 			}

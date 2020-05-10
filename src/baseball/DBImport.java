@@ -250,11 +250,6 @@ public class DBImport {
 		catch (IOException e) { 
 			e.printStackTrace();
 		}
-		/*for (Object o : battingStatsList) {
-			MLBBattingStats mbs = (MLBBattingStats) o;
-			System.out.println(mbs.getMlbPlayerId() + " " + mbs.getMlbTeamId() + " " +  mbs.getYear() + " " +
-				mbs.getBattingStats().getAtBats() + " " + mbs.getBattingStats().getPlateAppearances());
-		}*/
 		System.out.println("\nBatter stats import complete");
 		return battingStatsList;
 	}
@@ -320,11 +315,6 @@ public class DBImport {
 		catch (IOException e) { 
 			e.printStackTrace();
 		}
-		/*for (Object o : pitchingStatsList) {
-			MLBPitchingStats mps = (MLBPitchingStats) o;
-			System.out.println(mps.getMlbPlayerId() + " " + mps.getMlbTeamId() + " " +  mps.getYear() + " " +
-				mps.getPitchingStats().getInningsPitched() + " " + mps.getPitchingStats().getEarnedRunsAllowed());
-		}*/
 		System.out.println("\nPitcher stats import complete");
 		return pitchingStatsList;
 	}
@@ -423,7 +413,7 @@ public class DBImport {
 			mps = new MLBPitchingStats(mlbPlayerId, Integer.parseInt(pitchingStatsJson.getString("team_id")), year,
 				new PitchingStats(Double.parseDouble(pitchingStatsJson.getString("ip")), Integer.parseInt(pitchingStatsJson.getString("er")), Integer.parseInt(pitchingStatsJson.getString("r")), 
 					Integer.parseInt(pitchingStatsJson.getString("bb")), Integer.parseInt(pitchingStatsJson.getString("so")), Integer.parseInt(pitchingStatsJson.getString("hr")), 
-					sb, Integer.parseInt(pitchingStatsJson.getString("hb")), Integer.parseInt(pitchingStatsJson.getString("h")), hld, sv, svo - sv,
+					sb, Integer.parseInt(pitchingStatsJson.getString("hb")), Integer.parseInt(pitchingStatsJson.getString("h")), hld, sv, (svo == 0 ? 0 : svo - sv),
 					Integer.parseInt(pitchingStatsJson.getString("gs")), Integer.parseInt(pitchingStatsJson.getString("bk")), Integer.parseInt(pitchingStatsJson.getString("wp")),
 					sf, Integer.parseInt(pitchingStatsJson.getString("tbf")), Integer.parseInt(pitchingStatsJson.getString("w")), Integer.parseInt(pitchingStatsJson.getString("l"))));
 		}
