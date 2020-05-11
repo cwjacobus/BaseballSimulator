@@ -214,110 +214,6 @@ public class DAO {
 		return pitchersMap;
 	}
 	
-	public static MLBPlayer getSetupMan(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers) {
-		String orderBy = "ORDER BY HOLDS DESC, INNINGS_PITCHED DESC";
-		return getReliefPitcher(mlbTeamId, year, excludingPitchers, orderBy);
-	}
-
-	public static MLBPlayer getCloser(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers) {
-		String orderBy = "ORDER BY SAVES DESC, INNINGS_PITCHED DESC";
-		return getReliefPitcher(mlbTeamId, year, excludingPitchers, orderBy);
-	}
-	
-	private static MLBPlayer getReliefPitcher(Integer mlbTeamId, Integer year, HashMap<Integer, MLBPlayer> excludingPitchers, String orderBy) {
-		// For getting a random starting pitcher
-		ArrayList<Integer> aList = new ArrayList<Integer>();
-		if (excludingPitchers != null) {
-			aList.addAll(excludingPitchers.keySet());
-		}
-		ArrayList<MLBPlayer> pitcherList = new ArrayList<MLBPlayer>();
-		try {
-			String excludingSql = getExcludingSQL(aList);
-			Statement stmt = conn.createStatement();
-			String sql = "SELECT P.* from MLB_PITCHING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR = " + year + " AND MLB_TEAM_ID = " + 
-				mlbTeamId + excludingSql + " " + orderBy;
-			ResultSet rs = stmt.executeQuery(sql);
-			while (rs.next()) {
-				MLBPlayer p = new MLBPlayer(rs.getInt("MLB_PLAYER_ID"), rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
-				pitcherList.add(p);
-			}
-		}
-		catch (SQLException e) {
-			e.printStackTrace();
-		}
-		if (pitcherList.size() > 0) {
-			return pitcherList.get(0);
-		}
-		else {
-			return null;
-		}
-	}
-	
-	public static MLBPlayer getRandomPitcherByIndex(Integer mlbTeamId, Integer year, int index, boolean starter, ArrayList<Integer> excludingPitchers) {
-		// For getting a random pitcher
-		String andWhere = "";
-		if (starter) {
-			andWhere = " AND GAMES_STARTED > 3 AND SAVES < 5 AND HOLDS < 5";
-		}
-		else {
-			andWhere = " AND GAMES_STARTED < 12"; // looking for a long to mid reliever
-		}
-		ArrayList<MLBPlayer> pitcherList = new ArrayList<MLBPlayer>();
-		try {
-			String excludingSql = getExcludingSQL(excludingPitchers);
-			Statement stmt = conn.createStatement();
-			String sql = "SELECT P.* from MLB_PITCHING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID = P.MLB_PLAYER_ID AND YEAR = " + year + 
-				" AND MLB_TEAM_ID = " + mlbTeamId + excludingSql + andWhere + " ORDER BY INNINGS_PITCHED DESC;";
-			ResultSet rs = stmt.executeQuery(sql);
-			while (rs.next()) {
-				MLBPlayer p = new MLBPlayer(rs.getInt("MLB_PLAYER_ID"), rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
-				pitcherList.add(p);
-			}
-		}
-		catch (SQLException e) {
-			e.printStackTrace();
-		}
-		if (index >= pitcherList.size()) {
-			index = 0;
-		}
-		if (pitcherList.size() == 0) {
-			return null;
-		}
-		return pitcherList.get(index);
-	}
-	
-	public static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, ArrayList<Integer> excludingList) {
-		return getMlbPlayerWithMostPlateAppearances(teamId, year, null, excludingList);
-	}
-	
-	public static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, String position, ArrayList<Integer> excludingList) {
-		MLBPlayer player = new MLBPlayer();
-		try {
-			Statement stmt = conn.createStatement();
-			String excludingSql = getExcludingSQL(excludingList);
-			// Add hits to sum for uniqueness
-			String sql = "SELECT * FROM MLB_BATTING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID=P.MLB_PLAYER_ID AND BS.MLB_TEAM_ID =  " + teamId;
-			if (position != null) {
-				sql += " AND P.PRIMARY_POSITION = '" + position + "'";
-			}
-			sql += " and bs.year = " + year + " AND (BS.PLATE_APPEARANCES + BS.HITS) = (SELECT MAX(PLATE_APPEARANCES + HITS) FROM MLB_BATTING_STATS BS, MLB_PLAYER P WHERE BS.MLB_PLAYER_ID=P.MLB_PLAYER_ID AND BS.MLB_TEAM_ID = " +teamId;
-			if (position != null) {
-				sql += " AND P.PRIMARY_POSITION = '" + position + "'";
-			}
-			sql += " and bs.year = " + year + excludingSql + ")";
-			ResultSet rs = stmt.executeQuery(sql);
-			while (rs.next()) {
-				player.setFullName(rs.getString("FULL_NAME"));
-				player.setMlbPlayerId(rs.getInt("MLB_PLAYER_ID"));
-				player.setPrimaryPosition(rs.getString("PRIMARY_POSITION"));
-			}
-		}
-		catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return player;
-	}
-	
 	public static void setConnection() {
 		try {
             Class.forName("com.mysql.cj.jdbc.Driver").newInstance();
@@ -334,18 +230,5 @@ public class DAO {
 			System.out.println("SQLState: " + ex.getSQLState());
 			System.out.println("VendorError: " + ex.getErrorCode());
 		}
-	}
-	
-	private static String getExcludingSQL(ArrayList<Integer> excludingPitchers) {
-		String excludingSQL= "";
-		if (excludingPitchers != null && excludingPitchers.size() > 0) {
-			excludingSQL = " AND BS.MLB_PLAYER_ID NOT IN (";
-			for (Integer pitcherId : excludingPitchers) {
-				excludingSQL += pitcherId + ",";
-			}
-			excludingSQL = excludingSQL.substring(0, excludingSQL.length() - 1) + ")";
-		}
-		
-		return excludingSQL;
 	}
 }
