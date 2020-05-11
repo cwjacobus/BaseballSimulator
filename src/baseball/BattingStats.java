@@ -155,6 +155,10 @@ public class BattingStats {
 	public void setRbis(int rbis) {
 		this.rbis = rbis;
 	}
+	
+	public void incrementRbis() {
+		this.rbis++;
+	}
 
 	public int getStolenBases() {
 		return stolenBases;
