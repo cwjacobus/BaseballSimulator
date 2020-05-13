@@ -156,6 +156,7 @@ public class BaseballSimulator {
 		for (int s = 0; s < seriesLength; s++) {
 			gameState = new GameState();
 			boxScores = new BoxScore[2];
+			Arrays.fill(saveOppty, false);
 			for (int t = 0; t < 2; t++) {
 				boxScores[t] = new BoxScore();
 				boxScores[t].setYear(years[t]);
@@ -282,7 +283,6 @@ public class BaseballSimulator {
 				System.out.println("SCORE - " + displayTeamName(0) + ": " + boxScores[0].getScore(gameState.getInning())  + " " + displayTeamName(1) + ": " + boxScores[1].getScore(gameState.getInning()));
 				boolean gameTiedStartOfAB;
 				Arrays.fill(gameState.getBaseRunners(), new BaseRunner());
-				Arrays.fill(saveOppty, false);
 				if (top == 0 && gameState.getInning() == 6) { // Set winning pitcher after 5 innings
 					if (boxScores[0].getScore(gameState.getInning()) > boxScores[1].getScore(gameState.getInning())) {
 						gameState.setPitcherOfRecord("W", gameState.getCurrentPitchers()[0].getMlbPlayerId());
@@ -1320,8 +1320,8 @@ public class BaseballSimulator {
 			if (displayTeamYearString[top].length() < 8) {
 				System.out.print("\t");
 			}
-			String wlString = series ? "W    L    S    H    " : "";
-			System.out.println("IP     H    R    ER   BB   K    HR   " + wlString + "ERA");
+			String seriesOnlyString = series ? "W    L    S    BS   H    " : "";
+			System.out.println("IP     H    R    ER   BB   K    HR   " + seriesOnlyString + "ERA");
 			HashMap<Integer, MLBPlayer> pitchers = boxScores[top].getPitchers();
 			for (Map.Entry<Integer, MLBPlayer> entry : pitchers.entrySet()) {
 				PitchingStats ps = entry.getValue().getMlbPitchingStats().getPitchingStats();
@@ -1333,8 +1333,14 @@ public class BaseballSimulator {
 				else if (!series && entry.getValue().getMlbPlayerId().intValue() == pitchersOfRecord.get("L").intValue()) {
 					pitcherNameString += " (L)";
 				}
-				else if (!series && ps.getSaves() > 0) {
+				if (!series && ps.getSaves() > 0) {
 					pitcherNameString += " (S)";
+				}
+				else if (!series && ps.getBlownSaves() > 0) {
+					pitcherNameString += " (BS)";
+				}
+				else if (!series && ps.getHolds() > 0) {
+					pitcherNameString += " (H)";
 				}
 				System.out.print(pitcherNameString);
 				System.out.print("\t\t");
@@ -1352,6 +1358,7 @@ public class BaseballSimulator {
 					System.out.print(ps.getWins() + padSpaces("  ", ps.getWins()));
 					System.out.print(ps.getLosses() + padSpaces("  ", ps.getLosses()));
 					System.out.print(ps.getSaves() + padSpaces("  ", ps.getSaves()));
+					System.out.print(ps.getBlownSaves() + padSpaces("  ", ps.getBlownSaves()));
 					System.out.print(ps.getHolds() + padSpaces("  ", ps.getHolds()));
 				}
 				double era = series ? ps.getEarnedRunAverage() : pitcherSeasonStats.getEarnedRunAverage();
@@ -1784,10 +1791,12 @@ public class BaseballSimulator {
 	
 	private static PitchingStats changePitcher(MLBPlayer newPitcher, int top) {
 		if (newPitcher != null) {
+			boolean enteredWithSaveOppty = saveOppty[top];
 			int scoreDiff = boxScores[top].getScore(gameState.getInning()) - boxScores[top==0?1:0].getScore(gameState.getInning());
-			if (scoreDiff > 0  && scoreDiff <= 3) {
-				System.out.println(newPitcher.getFirstLastName() + " enters game with save opportunity");
-				saveOppty[top] = true;
+			if (scoreDiff > 0  && 
+			  ((scoreDiff <= 3 && gameState.getCurrentBasesSituation() != GameState.BASES_LOADED) ||(scoreDiff <= 4  && gameState.getCurrentBasesSituation() == GameState.BASES_LOADED))) {
+					System.out.println(newPitcher.getFirstLastName() + " enters game with save opportunity");
+					saveOppty[top] = true;
 			}
 			MLBPlayer previousPitcher = gameState.getCurrentPitchers()[top];
 			boxScores[top].getPitchers().put(newPitcher.getMlbPlayerId(), newPitcher);
@@ -1795,6 +1804,9 @@ public class BaseballSimulator {
 			int bo = previousPitcher != null ? getBattingOrderForPlayer(previousPitcher.getMlbPlayerId(), top) : NUM_OF_PLAYERS_IN_LINEUP; // Check if pitcher needs to go into batting order (assumes end of order for P)
 			if (!useDH) {
 				boxScores[top].getBatters().get(bo - 1).add(newPitcher);
+			}
+			if (enteredWithSaveOppty && previousPitcher.getMlbPitchingStats().getPitchingStats().getOuts() > 0) {
+				previousPitcher.getMlbPitchingStats().getPitchingStats().setHolds(1);
 			}
 			System.out.println("Pitcher changed to: " + newPitcher.getFirstLastName());
 			return newPitcher.getMlbPitchingStats().getPitchingStats();
