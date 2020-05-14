@@ -20,6 +20,7 @@ public class GameState {
 	ArrayList<Integer> baseRunnersReachedByError = new ArrayList<Integer>(); // Used to determine earned runs
 	boolean[] closerIsPitching = {false, false}; 
 	boolean[] setupManIsPitching = {false, false};
+	boolean[] saveOppty = {false, false};
 	
 	public static final int BASES_EMPTY = 0;
 	public static final int MAN_ON_FIRST = 1;
@@ -199,6 +200,22 @@ public class GameState {
 	
 	public void setSetupManIsPitching(boolean setupManIsPitching, int top) {
 		this.setupManIsPitching[top] = setupManIsPitching;
+	}
+
+	public boolean[] getSaveOppty() {
+		return saveOppty;
+	}
+	
+	public boolean getSaveOppty(int top) {
+		return saveOppty[top];
+	}
+
+	public void setSaveOppty(boolean[] saveOppty) {
+		this.saveOppty = saveOppty;
+	}
+	
+	public void setSaveOppty(boolean saveOppty, int top) {
+		this.saveOppty[top] = saveOppty;
 	}
 
 	public int getCurrentBasesSituation() {
