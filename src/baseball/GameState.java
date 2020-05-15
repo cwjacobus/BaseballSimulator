@@ -16,6 +16,7 @@ public class GameState {
 	boolean intentionalWalk = false;
 	boolean hitAndRun = false;
 	boolean buntAttempt = false;
+	boolean infieldIn = false;
 	int virtualErrorOuts = 0; // Used to determine earned runs
 	ArrayList<Integer> baseRunnersReachedByError = new ArrayList<Integer>(); // Used to determine earned runs
 	boolean[] closerIsPitching = {false, false}; 
@@ -158,6 +159,14 @@ public class GameState {
 		this.buntAttempt = buntAttempt;
 	}
 	
+	public boolean isInfieldIn() {
+		return infieldIn;
+	}
+
+	public void setInfieldIn(boolean infieldIn) {
+		this.infieldIn = infieldIn;
+	}
+
 	public int getVirtualErrorOuts() {
 		return virtualErrorOuts;
 	}
