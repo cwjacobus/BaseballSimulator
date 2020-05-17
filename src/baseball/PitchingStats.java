@@ -56,6 +56,11 @@ public class PitchingStats {
 		this.inningsPitched = inningsPitched;
 	}
 	
+	public void setInningsPitchedFromOuts(int outs) {
+		String ipString = outs/3 + "." + outs%3;
+		this.inningsPitched = Double.parseDouble(ipString);
+	}
+	
 	public void addInningsPitched(String ipString2) {
 		String ipString1 = Double.toString(inningsPitched);
 		int ip = Integer.parseInt(ipString1.split("\\.")[0]) + Integer.parseInt(ipString2.split("\\.")[0]);
