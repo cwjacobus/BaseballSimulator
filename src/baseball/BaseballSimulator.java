@@ -1587,6 +1587,22 @@ public class BaseballSimulator {
 			gameMode = false;
 			return true;
 		}
+		else if (command.toUpperCase().indexOf("LINEUP") != -1) {
+			String[] commandArray = command.split(" ");
+			if (commandArray.length < 2) {
+				System.out.print("INVALID COMMAND!\n");
+				return false;
+			}
+			boolean home = commandArray[1].equalsIgnoreCase("HOME") ||  commandArray[1].equalsIgnoreCase("1");
+			ArrayList<ArrayList<MLBPlayer>> lineupBatters = boxScores[home?1:0].getBatters();
+			System.out.println(boxScores[home?1:0].getTeamAndYearDisplay());
+			for (ArrayList<MLBPlayer> lineup : lineupBatters) {
+				MLBPlayer batter = lineup.get(lineup.size() -1); // get current player at that lineup spot
+				System.out.println(batter.getFirstLastName() + " " + batter.getMlbPlayerId() + " (" + batter.getPrimaryPosition() + ")");
+			}
+			System.out.println();
+			return false;
+		}
 		else if (command.toUpperCase().indexOf("SUBP") != -1) {
 			String[] commandArray = command.split(" ");
 			if (commandArray.length < 2) {
@@ -1805,7 +1821,8 @@ public class BaseballSimulator {
 						" ER: " + currentPitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunsAllowed());
 					return false;
 				case "?":
-					System.out.print("COMMANDS - SIM, AUTO<inning#>, STEAL<#>, PITCHERS, SUBP <id#>, BATTERS, SUBB <id#>, OUTFIELDERS, INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, INFIELDIN, PITCHERSTATUS\n\n");
+					System.out.println("COMMANDS - SIM, AUTO<inning#>, STEAL<#>, PITCHERS, SUBP <id#>, BATTERS, SUBB <id#>, OUTFIELDERS, "
+						+ "INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, INFIELDIN, PITCHERSTATUS, LINEUP <HOME|VIS>, DOUBLESTEAL, DOUBLESWITCH");
 					return false;
 				default:
 					System.out.println("UNKNOWN COMMAND!");
