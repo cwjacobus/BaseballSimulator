@@ -311,7 +311,7 @@ public class BaseballSimulator {
 								}
 								MLBPlayer newPitcher = getPitcher(top==0?1:0, "HD", 0, excludingPitchers);
 								if (newPitcher != null) {
-									currentPitcherGameStats = changePitcher(newPitcher, gameState.getTop()==0?1:0);
+									currentPitcherGameStats = changePitcher(newPitcher, gameState.getTop()==0?1:0, null);
 									gameState.setSetupManIsPitching(true, top);
 								}
 						}
@@ -319,7 +319,7 @@ public class BaseballSimulator {
 							boxScores[1].getScore(9) > boxScores[0].getScore(9)) || top == 1 && (boxScores[0].getScore(9) > boxScores[1].getScore(9)))) { 
 								MLBPlayer newPitcher = getPitcher(top==0?1:0, "SV", 0, excludingPitchers);
 								if (newPitcher != null) {
-									currentPitcherGameStats = changePitcher(newPitcher, gameState.getTop()==0?1:0);
+									currentPitcherGameStats = changePitcher(newPitcher, gameState.getTop()==0?1:0, null);
 									gameState.setCloserIsPitching(true, top);
 									gameState.setSetupManIsPitching(false, top);
 								}
@@ -335,7 +335,7 @@ public class BaseballSimulator {
 								}
 								MLBPlayer newPitcher = getPitcher(top==0?1:0, "IP", getRandomNumberInRange(0, 3), excludingPitchers);
 								if (newPitcher != null) {
-									currentPitcherGameStats = changePitcher(newPitcher, gameState.getTop()==0?1:0);
+									currentPitcherGameStats = changePitcher(newPitcher, gameState.getTop()==0?1:0, null);
 								}
 						}
 						else if (gameState.getInning() > 9 && gameState.isCloserPitching(top) && gameState.getOuts() == 0) { // Check if we're in extra innings and closer is still pitching (Blown save)
@@ -348,7 +348,7 @@ public class BaseballSimulator {
 							}
 							MLBPlayer newPitcher = getPitcher(top==0?1:0, "IP", getRandomNumberInRange(0, 3), excludingPitchers);
 							if (newPitcher != null) {
-								currentPitcherGameStats = changePitcher(newPitcher, gameState.getTop()==0?1:0);
+								currentPitcherGameStats = changePitcher(newPitcher, gameState.getTop()==0?1:0, null);
 								gameState.setCloserIsPitching(false, top);
 							}
 						}
@@ -1545,11 +1545,6 @@ public class BaseballSimulator {
 			return true;
 		}
 		command = command.toUpperCase();
-		int top = gameState.getTop();
-		HashMap<Integer, MLBPlayer> gamePitchers = boxScores[top==0?1:0].getPitchers();
-		HashMap<Integer, MLBPlayer> rosterPitchers = rosters[top==0?1:0].getPitchers();
-		ArrayList<ArrayList<MLBPlayer>> gameBatters = boxScores[top].getBatters();
-		HashMap<Integer, MLBPlayer> rosterBatters = rosters[top].getBatters();
 		MLBPlayer currentPitcher = gameState.getCurrentPitchers()[gameState.getTop()==0?1:0];
 		if (command.toUpperCase().indexOf("STEAL") != -1) {
 			String[] commandArray = command.split(" ");
@@ -1587,20 +1582,146 @@ public class BaseballSimulator {
 			gameMode = false;
 			return true;
 		}
+		else if (command.toUpperCase().indexOf("BATTERS") != -1) {
+			String[] commandArray = command.split(" ");
+			if (commandArray.length < 2) {
+				System.out.print("INVALID COMMAND!\n");
+				return false;
+			}
+			int top = commandArray[1].equalsIgnoreCase("HOME") ||  commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
+			ArrayList<ArrayList<MLBPlayer>> gameBatters = boxScores[top].getBatters();
+			HashMap<Integer, MLBPlayer> rosterBatters = rosters[top].getBatters();
+			System.out.println("\nEligible Pinch hitters:");
+			System.out.println("Name\t\t\t\tID      AVG  SR HR");
+			for (Map.Entry<Integer, MLBPlayer> entry : rosterBatters.entrySet()) {
+				MLBPlayer batter = entry.getValue();
+				if (getBattingOrderForPlayer(batter.getMlbPlayerId(), top) == 0) {
+					String playerOutput = batter.getFullName() + " " + batter.getPrimaryPosition();
+					System.out.print(playerOutput);
+					for (int tab = 32; tab >= 8; tab-=8) {
+						if (playerOutput.length() < tab) {
+							System.out.print("\t");
+						}
+					}
+					System.out.print(batter.getMlbPlayerId() + " ");
+					System.out.print(df.format(batter.getMlbBattingStats().getBattingStats().getBattingAverage()) + "  ");
+					System.out.print(batter.getMlbBattingStats().getBattingStats().getSpeedRating() + "  ");
+					System.out.print(batter.getMlbBattingStats().getBattingStats().getHomeRuns() + "  ");
+					System.out.println();
+				}
+			}
+			System.out.println();
+			return false;
+		}
+		else if (command.toUpperCase().indexOf("PITCHERS") != -1) {
+			String[] commandArray = command.split(" ");
+			if (commandArray.length < 2) {
+				System.out.print("INVALID COMMAND!\n");
+				return false;
+			}
+			int top = commandArray[1].equalsIgnoreCase("HOME") ||  commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
+			HashMap<Integer, MLBPlayer> gamePitchers = boxScores[top].getPitchers();
+			HashMap<Integer, MLBPlayer> rosterPitchers = rosters[top].getPitchers();
+			System.out.println("\nEligible Pitchers:");
+			System.out.println("Name\t\t\tID      ERA   GS  H   S   BS  HRA");
+			for (Map.Entry<Integer, MLBPlayer> entry : rosterPitchers.entrySet()) {
+				MLBPlayer pitcher = entry.getValue();
+				if (gamePitchers.get(pitcher.getMlbPlayerId()) == null) {
+					System.out.print(pitcher.getFirstLastName());
+					for (int tab = 24; tab >= 8; tab-=8) {
+						if (pitcher.getFirstLastName().length() < tab) {
+							System.out.print("\t");
+						}
+					}
+					System.out.print(pitcher.getMlbPlayerId() + "  ");
+					System.out.print(eraDf.format(pitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunAverage()) + "  ");
+					System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getGamesStarted() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getGamesStarted()));
+					System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getHolds() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getHolds()));
+					System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getSaves() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getSaves()));
+					System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getBlownSaves() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getBlownSaves()));
+					System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getHomeRunsAllowed() + "  ");
+					System.out.println();
+				}
+			}
+			System.out.println();
+			return false;
+		}
 		else if (command.toUpperCase().indexOf("LINEUP") != -1) {
 			String[] commandArray = command.split(" ");
 			if (commandArray.length < 2) {
 				System.out.print("INVALID COMMAND!\n");
 				return false;
 			}
-			boolean home = commandArray[1].equalsIgnoreCase("HOME") ||  commandArray[1].equalsIgnoreCase("1");
-			ArrayList<ArrayList<MLBPlayer>> lineupBatters = boxScores[home?1:0].getBatters();
-			System.out.println(boxScores[home?1:0].getTeamAndYearDisplay());
-			for (ArrayList<MLBPlayer> lineup : lineupBatters) {
+			int top = commandArray[1].equalsIgnoreCase("HOME") ||  commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
+			ArrayList<ArrayList<MLBPlayer>> gameBatters = boxScores[top].getBatters();
+			System.out.println(boxScores[top].getTeamAndYearDisplay());
+			for (ArrayList<MLBPlayer> lineup : gameBatters) {
 				MLBPlayer batter = lineup.get(lineup.size() -1); // get current player at that lineup spot
 				System.out.println(batter.getFirstLastName() + " " + batter.getMlbPlayerId() + " (" + batter.getPrimaryPosition() + ")");
 			}
 			System.out.println();
+			return false;
+		}
+		else if (command.toUpperCase().indexOf("DOUBLESWITCH") != -1) {
+			String[] commandArray = command.split(" ");
+			if (commandArray.length < 4) {
+				System.out.print("INVALID COMMAND!\n");
+				return false;
+			}
+			if (useDH) {
+				System.out.print("Double switch can only be done with NL rules!\n");
+				return false;
+			}
+			int newPitcherId = 0;
+			int newBatterId = 0;
+			int lineUpPos = 0;
+			try {
+				newPitcherId = Integer.parseInt(commandArray[1]);
+				newBatterId = Integer.parseInt(commandArray[2]);
+				lineUpPos = Integer.parseInt(commandArray[3]);
+			}
+			catch (Exception e) {
+				System.out.print("INVALID ARGUMENT!\n");
+				return false;
+			}
+			int top = gameState.getTop();
+			HashMap<Integer, MLBPlayer> gamePitchers = boxScores[top==0?1:0].getPitchers();
+			HashMap<Integer, MLBPlayer> rosterPitchers = rosters[top==0?1:0].getPitchers();
+			ArrayList<ArrayList<MLBPlayer>> gameBatters = boxScores[top==0?1:0].getBatters();
+			HashMap<Integer, MLBPlayer> rosterBatters = rosters[top==0?1:0].getBatters();
+			// Check lineup position of current pitcher
+			if (gameBatters.get(lineUpPos - 1).get(gameBatters.get(lineUpPos - 1).size() - 1).getMlbPlayerId() == newPitcherId) {
+				System.out.print("Can not replace previous pitcher's lineup position with new pitcher!\n");
+				return false;
+			}
+			MLBPlayer newPitcherFromRoster = (MLBPlayer)rosterPitchers.get(newPitcherId);
+			MLBPlayer newBatterFromRoster = (MLBPlayer)rosterBatters.get(newBatterId);
+			if (newPitcherFromRoster == null) {
+				System.out.print("No pitcher found for " + newPitcherId + "!\n");
+				return false;
+			}
+			if (gamePitchers.get(newPitcherId) != null) {
+				System.out.print("Pitcher has already pitched in this game " + newPitcherId + "!\n");
+				return false;
+			}
+			if (newBatterFromRoster == null) {
+				System.out.print("No batter found for " + newBatterId + "!\n");
+				return false;
+			}
+			if (getBattingOrderForPlayer(newBatterId, top) != 0) {
+				System.out.print("Batter has already hit in this game " + newBatterId + "!\n");
+				return false;
+			}
+			MLBPlayer newPitcher = new MLBPlayer(newPitcherFromRoster.getMlbPlayerId(), newPitcherFromRoster.getFullName(), newPitcherFromRoster.getPrimaryPosition(), 
+				newPitcherFromRoster.getArmThrows(), newPitcherFromRoster.getBats(), newPitcherFromRoster.getJerseyNumber());
+			MLBPlayer replacedPitcher = gameState.getCurrentPitchers()[top==0?1:0];
+			int pitchBo = getBattingOrderForPlayer(replacedPitcher.getMlbPlayerId(), top==0?1:0);
+			changePitcher(newPitcher, top==0?1:0, lineUpPos);
+			MLBPlayer replacedPlayer = gameBatters.get(lineUpPos - 1).get(gameBatters.get(lineUpPos - 1).size() - 1);
+			MLBPlayer newBatter = new MLBPlayer(newBatterFromRoster.getMlbPlayerId(), newBatterFromRoster.getFullName(), replacedPlayer.getPrimaryPosition(), newBatterFromRoster.getArmThrows(), 
+				newBatterFromRoster.getBats(), newBatterFromRoster.getJerseyNumber());
+			gameBatters.get(pitchBo - 1).add(newBatter);
+			System.out.println("DOUBLE SWITCH: Batter changed to: " + newBatterFromRoster.getFirstLastName() + " at lineup position: " + lineUpPos + "\n");
 			return false;
 		}
 		else if (command.toUpperCase().indexOf("SUBP") != -1) {
@@ -1617,6 +1738,9 @@ public class BaseballSimulator {
 				System.out.print("INVALID COMMAND!\n");
 				return false;
 			}
+			int top = gameState.getTop();
+			HashMap<Integer, MLBPlayer> gamePitchers = boxScores[top==0?1:0].getPitchers();
+			HashMap<Integer, MLBPlayer> rosterPitchers = rosters[top==0?1:0].getPitchers();
 			MLBPlayer newPitcherFromRoster = (MLBPlayer)rosterPitchers.get(newPitcherId);
 			if (newPitcherFromRoster == null) {
 				System.out.print("No pitcher found for " + newPitcherId + "!\n");
@@ -1628,7 +1752,7 @@ public class BaseballSimulator {
 			}
 			MLBPlayer newPitcher = new MLBPlayer(newPitcherFromRoster.getMlbPlayerId(), newPitcherFromRoster.getFullName(), newPitcherFromRoster.getPrimaryPosition(), 
 				newPitcherFromRoster.getArmThrows(), newPitcherFromRoster.getBats(), newPitcherFromRoster.getJerseyNumber());
-			changePitcher(newPitcher, gameState.getTop()==0?1:0);
+			changePitcher(newPitcher, gameState.getTop()==0?1:0, null);
 			System.out.println();
 			return false;
 		}
@@ -1646,25 +1770,28 @@ public class BaseballSimulator {
 				System.out.print("INVALID COMMAND!\n");
 				return false;
 			}
+			int top = gameState.getTop();
+			ArrayList<ArrayList<MLBPlayer>> gameBatters = boxScores[top].getBatters();
+			HashMap<Integer, MLBPlayer> rosterBatters = rosters[top].getBatters();
 			MLBPlayer newBatterFromRoster = (MLBPlayer)rosterBatters.get(newBatterId);
 			if (newBatterFromRoster == null) {
 				System.out.print("No batter found for " + newBatterId + "!\n");
 				return false;
 			}
-			if (getBattingOrderForPlayer(newBatterId, gameState.getTop()) != 0) {
+			if (getBattingOrderForPlayer(newBatterId, top) != 0) {
 				System.out.print("Batter has already hit in this game " + newBatterId + "!\n");
 				return false;
 			}
 			MLBPlayer newBatter = new MLBPlayer(newBatterFromRoster.getMlbPlayerId(), newBatterFromRoster.getFullName(), currentBatter.getPrimaryPosition(), newBatterFromRoster.getArmThrows(), 
 				newBatterFromRoster.getBats(), newBatterFromRoster.getJerseyNumber());
-			int bo = gameState.getBattingOrder()[gameState.getTop()];
+			int bo = gameState.getBattingOrder()[top];
 			gameBatters.get(bo - 1).add(newBatter);
 			if (currentBatter.getPrimaryPosition().equals("P")) {  // Pinch hitting for pitcher
 				if (newBatterFromRoster.getPrimaryPosition().equals("P")) {
-					changePitcher(newBatter, gameState.getTop());  // P pinch hitting for P
+					changePitcher(newBatter, top, null);  // P pinch hitting for P
 				}
 				else {
-					changePitcher(null, gameState.getTop());  // Remove pitcher
+					changePitcher(null, top, null);  // Remove pitcher
 				}
 			}
 			System.out.println("Batter changed to: " + newBatterFromRoster.getFirstLastName() + "\n");
@@ -1694,6 +1821,9 @@ public class BaseballSimulator {
 				System.out.print("INVALID COMMAND!\n");
 				return false;
 			}
+			int top = gameState.getTop();
+			ArrayList<ArrayList<MLBPlayer>> gameBatters = boxScores[top].getBatters();
+			HashMap<Integer, MLBPlayer> rosterBatters = rosters[top].getBatters();
 			int replacedRunnerId = gameState.getBaseRunnerId(base);
 			MLBPlayer pinchRunnerFromRoster = (MLBPlayer)rosterBatters.get(pinchRunnerId);
 			MLBPlayer replacedRunnerFromRoster = (MLBPlayer)rosterBatters.get(replacedRunnerId);
@@ -1701,20 +1831,20 @@ public class BaseballSimulator {
 				System.out.print("No player found for " + pinchRunnerId + "!\n");
 				return false;
 			}
-			if (getBattingOrderForPlayer(pinchRunnerId, gameState.getTop()) != 0) {
+			if (getBattingOrderForPlayer(pinchRunnerId, top) != 0) {
 				System.out.print("Player has already appeared in this game " + pinchRunnerId + "!\n");
 				return false;
 			}
 			MLBPlayer pinchRunner = new MLBPlayer(pinchRunnerFromRoster.getMlbPlayerId(), pinchRunnerFromRoster.getFullName(), replacedRunnerFromRoster.getPrimaryPosition(), pinchRunnerFromRoster.getArmThrows(), 
 				pinchRunnerFromRoster.getBats(), pinchRunnerFromRoster.getJerseyNumber());
-			int bo = getBattingOrderForPlayer(replacedRunnerId, gameState.getTop());
+			int bo = getBattingOrderForPlayer(replacedRunnerId, top);
 			gameBatters.get(bo - 1).add(pinchRunner);
 			if (replacedRunnerFromRoster.getPrimaryPosition().equals("P")) {  // Pinch running for pitcher
 				if (pinchRunnerFromRoster.getPrimaryPosition().equals("P")) {
-					changePitcher(pinchRunner, gameState.getTop());  // P pinch running for P
+					changePitcher(pinchRunner, top, null);  // P pinch running for P
 				}
 				else {
-					changePitcher(null, gameState.getTop());  // Remove pitcher
+					changePitcher(null, top, null);  // Remove pitcher
 				}
 			}
 			gameState.setBaseRunner(base, new BaseRunner(pinchRunner.getMlbPlayerId(), currentPitcher.getMlbPlayerId()));
@@ -1729,52 +1859,6 @@ public class BaseballSimulator {
 					autoBeforeMode = false; 
 					gameMode = false;
 					return true;
-				case "BATTERS":
-					System.out.println("\nEligible Pinch hitters:");
-					System.out.println("Name\t\t\t\tID      AVG  SR HR");
-					for (Map.Entry<Integer, MLBPlayer> entry : rosterBatters.entrySet()) {
-						MLBPlayer batter = entry.getValue();
-						if (getBattingOrderForPlayer(batter.getMlbPlayerId(), gameState.getTop()) == 0) {
-							String playerOutput = batter.getFullName() + " " + batter.getPrimaryPosition();
-							System.out.print(playerOutput);
-							for (int tab = 32; tab >= 8; tab-=8) {
-								if (playerOutput.length() < tab) {
-									System.out.print("\t");
-								}
-							}
-							System.out.print(batter.getMlbPlayerId() + " ");
-							System.out.print(df.format(batter.getMlbBattingStats().getBattingStats().getBattingAverage()) + "  ");
-							System.out.print(batter.getMlbBattingStats().getBattingStats().getSpeedRating() + "  ");
-							System.out.print(batter.getMlbBattingStats().getBattingStats().getHomeRuns() + "  ");
-							System.out.println();
-						}
-					}
-					System.out.println();
-					return false;
-				case "PITCHERS":
-					System.out.println("\nEligible Pitchers:");
-					System.out.println("Name\t\t\tID      ERA   GS  H   S   BS  HRA");
-					for (Map.Entry<Integer, MLBPlayer> entry : rosterPitchers.entrySet()) {
-						MLBPlayer pitcher = entry.getValue();
-						if (gamePitchers.get(pitcher.getMlbPlayerId()) == null) {
-							System.out.print(pitcher.getFirstLastName());
-							for (int tab = 24; tab >= 8; tab-=8) {
-								if (pitcher.getFirstLastName().length() < tab) {
-									System.out.print("\t");
-								}
-							}
-							System.out.print(pitcher.getMlbPlayerId() + "  ");
-							System.out.print(eraDf.format(pitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunAverage()) + "  ");
-							System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getGamesStarted() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getGamesStarted()));
-							System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getHolds() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getHolds()));
-							System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getSaves() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getSaves()));
-							System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getBlownSaves() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getBlownSaves()));
-							System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getHomeRunsAllowed() + "  ");
-							System.out.println();
-						}
-					}
-					System.out.println();
-					return false;
 				case "OUTFIELDERS":
 					System.out.println("\nCurrent outfielders:");
 					for (int p = 7; p < 10; p++) {
@@ -1816,13 +1900,13 @@ public class BaseballSimulator {
 						gameState.setInfieldIn(true);
 					}
 					return false;
-				case "PITCHERSTATUS":
+				case "PITCHERCHECK":
 					System.out.println("CURRENT PITCHER STATUS: " + currentPitcher.getFirstLastName() + " BF:" + currentPitcher.getMlbPitchingStats().getPitchingStats().getBattersFaced() +
 						" ER: " + currentPitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunsAllowed());
 					return false;
 				case "?":
 					System.out.println("COMMANDS - SIM, AUTO<inning#>, STEAL<#>, PITCHERS, SUBP <id#>, BATTERS, SUBB <id#>, OUTFIELDERS, "
-						+ "INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, INFIELDIN, PITCHERSTATUS, LINEUP <HOME|VIS>, DOUBLESTEAL, DOUBLESWITCH");
+						+ "INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, INFIELDIN, PITCHERCHECK, LINEUP <HOME|VIS>, DOUBLESTEAL, DOUBLESWITCH <pitcherId#> <batterId#> <lineupPos#>");
 					return false;
 				default:
 					System.out.println("UNKNOWN COMMAND!");
@@ -1831,7 +1915,7 @@ public class BaseballSimulator {
 		}
 	}
 	
-	private static PitchingStats changePitcher(MLBPlayer newPitcher, int top) {
+	private static PitchingStats changePitcher(MLBPlayer newPitcher, int top, Integer dsLineupPos) {
 		if (newPitcher != null) {
 			boolean enteredWithSaveOppty = gameState.getSaveOppty(top);
 			int scoreDiff = boxScores[top].getScore(gameState.getInning()) - boxScores[top==0?1:0].getScore(gameState.getInning());
@@ -1845,7 +1929,8 @@ public class BaseballSimulator {
 			gameState.setCurrentPitcher(newPitcher, top);
 			int bo = previousPitcher != null ? getBattingOrderForPlayer(previousPitcher.getMlbPlayerId(), top) : NUM_OF_PLAYERS_IN_LINEUP; // Check if pitcher needs to go into batting order (assumes end of order for P)
 			if (!useDH) {
-				boxScores[top].getBatters().get(bo - 1).add(newPitcher);
+				int lineupPos = dsLineupPos == null ? bo : dsLineupPos;
+				boxScores[top].getBatters().get(lineupPos - 1).add(newPitcher);
 			}
 			if (enteredWithSaveOppty && previousPitcher.getMlbPitchingStats().getPitchingStats().getOuts() > 0) {
 				previousPitcher.getMlbPitchingStats().getPitchingStats().setHolds(1);
