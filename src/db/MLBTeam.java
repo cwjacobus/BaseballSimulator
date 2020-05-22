@@ -7,13 +7,17 @@ public class MLBTeam {
 	private String fullTeamName;
 	private String shortTeamName;
 	private String league;
+	private Integer firstYearPlayed;
+	private Integer lastYearPlayed;
 
-	public MLBTeam(Integer teamId, Integer mlbFranchiseId, String fullTeamName, String shortTeamName, String league) {
+	public MLBTeam(Integer teamId, Integer mlbFranchiseId, String fullTeamName, String shortTeamName, String league, Integer firstYearPlayed, Integer lastYearPlayed) {
 		this.teamId = teamId;
 		this.mlbFranchiseId = mlbFranchiseId;
 		this.fullTeamName = fullTeamName;
 		this.shortTeamName = shortTeamName;
 		this.league = league;
+		this.firstYearPlayed = firstYearPlayed;
+		this.lastYearPlayed = lastYearPlayed;
 	}
 
 	public Integer getMlbTeamId() {
@@ -62,6 +66,22 @@ public class MLBTeam {
 
 	public void setMlbFranchiseId(Integer mlbFranchiseId) {
 		this.mlbFranchiseId = mlbFranchiseId;
+	}
+
+	public Integer getFirstYearPlayed() {
+		return firstYearPlayed;
+	}
+
+	public void setFirstYearPlayed(Integer firstYearPlayed) {
+		this.firstYearPlayed = firstYearPlayed;
+	}
+
+	public Integer getLastYearPlayed() {
+		return lastYearPlayed;
+	}
+
+	public void setLastYearPlayed(Integer lastYearPlayed) {
+		this.lastYearPlayed = lastYearPlayed;
 	}
 
 }

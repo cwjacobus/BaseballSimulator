@@ -8,7 +8,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.json.JSONArray;
@@ -29,17 +34,16 @@ public class DBImport {
 
 	public static void main(String[] args) {
 		Integer year = null;
-		Integer teamId = 0;
-		boolean allTeams = false;
 		boolean allYears = false;
-		HashMap<?, ?> franchisesMap;
+		ArrayList<MLBTeam> allTeamsList;
+		ArrayList<MLBTeam> teamsForYearList;
 		
 		if (args.length < 2) {
 			System.out.println("INVALID ARGS");
 			return;
 		}
 		DAO.setConnection();
-		franchisesMap = DAO.getDataMap("MLB_FRANCHISE");
+		allTeamsList = DAO.getAllTeamsList();
 		String fn = args[0];
 		if (!args[1].equalsIgnoreCase("ALL")) {
 			year = Integer.parseInt(args[1]);
@@ -52,15 +56,14 @@ public class DBImport {
 		}
 		else if (fn.equals("PLAYER")) {
 			if (!args[2].equalsIgnoreCase("ALL")) {
-				teamId = (Integer)franchisesMap.get(args[2]);
-				System.out.println(args[2] + " " + teamId);
+				teamsForYearList = getTeamsByYear(year, args[2], allTeamsList);
 			}
 			else {
-				allTeams = true;
+				teamsForYearList = getTeamsByYear(year, null, allTeamsList);
 			}
-			HashMap<Integer, MLBPlayer> hittersMap = importMlbPlayers(year, allTeams, teamId, true, franchisesMap); // import batters
+			HashMap<Integer, MLBPlayer> hittersMap = importMlbPlayers(year, true, teamsForYearList); // import batters
 			HashMap<Integer, MLBPlayer> filteredHittersMap = new HashMap<Integer, MLBPlayer>();
-			HashMap<Integer, MLBPlayer> pitchersMap = importMlbPlayers(year, allTeams, teamId, false, franchisesMap); // import pitchers
+			HashMap<Integer, MLBPlayer> pitchersMap = importMlbPlayers(year, false, teamsForYearList); // import pitchers
 			HashMap<Integer, MLBPlayer> filteredPitchersMap = new HashMap<Integer, MLBPlayer>();
 			//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
 			ArrayList<Object> battingStatsList = importBattingStats(hittersMap, year, filteredHittersMap);
@@ -98,15 +101,21 @@ public class DBImport {
 					JSONArray allTeams = new JSONArray(queryResults.getString("row"));
 					for (int i = 0; i < allTeams.length(); i++) {
 						JSONObject teamJson = allTeams.getJSONObject(i);
-						if (teamJson.getString("mlb_org_id").length() > 0) { // Filter out non-franchise teams
+						// Note: expansion teams appear a year or two before they start playing with no league assigned
+						if (teamJson.getString("mlb_org_id").length() > 0 && teamJson.getString("league").length() > 0) { // Filter out non-franchise teams (like all star teams) 
 							if (allFranchisesMap.get(Integer.parseInt(teamJson.getString("mlb_org_id"))) == null) {
 								allFranchisesMap.put(Integer.parseInt(teamJson.getString("mlb_org_id")), new MLBFranchise(Integer.parseInt(teamJson.getString("mlb_org_id")),
-										teamJson.getString("mlb_org"), teamJson.getString("mlb_org_abbrev"), Integer.parseInt(teamJson.getString("first_year_of_play"))));
+									teamJson.getString("mlb_org"), teamJson.getString("mlb_org_abbrev"), Integer.parseInt(teamJson.getString("first_year_of_play"))));
 							}
-							if (allTeamsMap.get((teamJson.getString("name_display_full") + ":" + teamJson.getString("mlb_org_id"))) == null) {
+							if (allTeamsMap.get((teamJson.getString("name_display_full") + ":" + teamJson.getString("mlb_org_id") + ":" + teamJson.getString("league"))) == null) {
 								MLBTeam t = new MLBTeam(Integer.parseInt(teamJson.getString("team_id")), Integer.parseInt(teamJson.getString("mlb_org_id")), 
-								teamJson.getString("name_display_full"), teamJson.getString("name_abbrev"), teamJson.getString("league"));
-								allTeamsMap.put((teamJson.getString("name_display_full") + ":" + teamJson.getString("mlb_org_id")), t);
+									teamJson.getString("name_display_full"), teamJson.getString("name_abbrev"), teamJson.getString("league"), y, y);
+								allTeamsMap.put((teamJson.getString("name_display_full") + ":" + teamJson.getString("mlb_org_id") + ":" + teamJson.getString("league")), t);
+							}
+							else {
+								MLBTeam t = allTeamsMap.get((teamJson.getString("name_display_full") + ":" + teamJson.getString("mlb_org_id") + ":" + teamJson.getString("league")));
+								t.setLastYearPlayed(y==currentYear?null:y); // Set a present team to null for last year played
+								allTeamsMap.put((teamJson.getString("name_display_full") + ":" + teamJson.getString("mlb_org_id") + ":" + teamJson.getString("league")), t);
 							}
 						}
 					}
@@ -122,28 +131,40 @@ public class DBImport {
 				e.printStackTrace();
 			}
 		}
+		
+		// Special logic for LAA
+		// 1961-195 and returned with same name, org and league in 2005 so need to be 2 separate teams
+		MLBTeam oldLAA = allTeamsMap.get("Los Angeles Angels:108:AL");
+		oldLAA.setLastYearPlayed(1965);
+		allTeamsMap.put("Los Angeles Angels:108:AL", oldLAA);
+		allTeamsMap.put("Los Angeles Angels of Anaheim:108:AL", new MLBTeam(108, 108, "Los Angeles Angels of Anaheim", "LAA", "AL", 2005, null));
+		allTeamsMap = sortHashMapByName(allTeamsMap);
+		
 		System.out.println("FRANCHISES");
 		for (Map.Entry<Integer, MLBFranchise> entry : allFranchisesMap.entrySet()) {
 			System.out.println(entry.getValue().getFullTeamName() + " " + entry.getValue().getMlbFranchiseId() + " " + entry.getValue().getShortTeamName() + " " + entry.getValue().getFirstYearPlayed());
 		}
 		System.out.println("TEAMS");
 		for (Map.Entry<String, MLBTeam> entry : allTeamsMap.entrySet()) {
-			System.out.println(entry.getValue().getFullTeamName() + " " + entry.getValue().getTeamId() + " " + entry.getValue().getShortTeamName() +
-			    " " + entry.getValue().getLeague());
+			System.out.print(entry.getValue().getFullTeamName() + " " + entry.getValue().getTeamId() + " " + entry.getValue().getShortTeamName() +
+			    " " + entry.getValue().getLeague() + " " + entry.getValue().getFirstYearPlayed() + " to " + entry.getValue().getLastYearPlayed());
+			if (entry.getValue().getLeague() == null || entry.getValue().getLeague().length() == 0) {
+				System.out.print(" NO LEAGUE!");
+			}
+			System.out.println();
 		}
 		
 		DAO.createBatchDataFromMap(allFranchisesMap);
 		DAO.createBatchDataFromMap(allTeamsMap);
 	}
 	
-	public static HashMap<Integer, MLBPlayer> importMlbPlayers(Integer year, boolean allTeams, Integer teamId, boolean hitters, HashMap<?, ?> franchisesMap) {
+	public static HashMap<Integer, MLBPlayer> importMlbPlayers(Integer year, boolean hitters, ArrayList<MLBTeam> teamsList) {
 		HashMap<Integer, MLBPlayer> allPlayersMap = new HashMap<Integer, MLBPlayer>();
-		for (Map.Entry<?, ?> entry : franchisesMap.entrySet()) {
-			teamId = allTeams ? (Integer)entry.getValue() : teamId;
+		for (MLBTeam t : teamsList) {
 			try { 
-				System.out.println("Import players from " + teamId);
+				System.out.println("Import players from " + t.getTeamId());
 				String getPlayersAPI = "http://lookup-service-prod.mlb.com/json/named.roster_team_alltime.bam?start_season=%27" + year + "%27" + 
-				"&end_season=%27" + year + "%27" + "&team_id=%27" + teamId + "%27";
+				"&end_season=%27" + year + "%27" + "&team_id=%27" + t.getTeamId() + "%27";
 				URL obj = new URL(getPlayersAPI);
 				HttpURLConnection con = (HttpURLConnection)obj.openConnection();
 				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream())); 
@@ -177,9 +198,6 @@ public class DBImport {
 			}
 			catch (IOException e) { 
 				e.printStackTrace();
-			}
-			if (!allTeams) {
-				break;
 			}
 		}
 		for (Map.Entry<Integer, MLBPlayer> entry : allPlayersMap.entrySet()) {
@@ -434,5 +452,35 @@ public class DBImport {
 		}
 		return mbs;
 	}
-
+	
+	private static HashMap<String, MLBTeam> sortHashMapByName(HashMap<String, MLBTeam> mlbTeams) { 
+        // Create a list from elements of HashMap 
+        List<Map.Entry<String, MLBTeam>> list = new LinkedList<Map.Entry<String, MLBTeam>>(mlbTeams.entrySet()); 
+        Collections.sort(list, new Comparator<Map.Entry<String, MLBTeam>>() { 
+            public int compare(Map.Entry<String, MLBTeam> o1,  
+                               Map.Entry<String, MLBTeam> o2) { 
+            	return (o1.getValue().getFullTeamName().compareTo(o2.getValue().getFullTeamName())); 
+            } 
+        });  
+        // put data from sorted list to hashmap  
+        HashMap<String, MLBTeam> temp = new LinkedHashMap<String, MLBTeam>(); 
+        for (Map.Entry<String, MLBTeam> aa : list) { 
+            temp.put(aa.getKey(), aa.getValue()); 
+        } 
+        return temp; 
+    }
+	
+	private static ArrayList<MLBTeam> getTeamsByYear(Integer year, String shortName, ArrayList<MLBTeam> allTeams) {
+		ArrayList<MLBTeam> teamsByYear = new ArrayList<MLBTeam>();
+		for (MLBTeam team : allTeams) {
+			// Null last year means active in current year
+			int lastYear = (team.getLastYearPlayed() == null || team.getLastYearPlayed() == 0) ? Calendar.getInstance().get(Calendar.YEAR) : team.getLastYearPlayed();
+			if (team.getFirstYearPlayed() <= year && lastYear >= year) {
+				if (shortName == null || (shortName != null && team.getShortTeamName().equalsIgnoreCase(shortName))) {
+					teamsByYear.add(team);
+				}
+			}
+		}
+		return teamsByYear;
+	}
 }

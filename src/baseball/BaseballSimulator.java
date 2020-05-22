@@ -9,6 +9,7 @@ import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import db.MLBBattingStats;
 import db.MLBFieldingStats;
 import db.MLBPitchingStats;
 import db.MLBPlayer;
+import db.MLBTeam;
 
 public class BaseballSimulator {
 	
@@ -47,7 +49,8 @@ public class BaseballSimulator {
 	static DecimalFormat df = new DecimalFormat(".000");
 	static DecimalFormat eraDf = new DecimalFormat("0.00");
 	static List<String> randoLog = new ArrayList<String>();
-	static HashMap<?, ?> franchisesMap;
+	//static HashMap<?, ?> franchisesMap;
+	static ArrayList<MLBTeam> allMlbTeamsList;
 	static boolean useDH = true;
 	
 	
@@ -125,23 +128,28 @@ public class BaseballSimulator {
 		}
 		DAO.setConnection();
 		rosters  = new Roster[2];
-		franchisesMap = DAO.getDataMap("MLB_FRANCHISE");
+		//franchisesMap = DAO.getDataMap("MLB_FRANCHISE");
+		allMlbTeamsList = DAO.getAllTeamsList();
 		int years[] = {Integer.parseInt(args[0]), Integer.parseInt(args[2])};
 		String[] teamNames = {args[1].toUpperCase(), args[3].toUpperCase()};
+		MLBTeam[] teams = {null, null};
 		useDH = !Arrays.asList(nationalLeagueTeams).contains(teamNames[1]) && years[1] >= 1973;
 		BoxScore[][] seriesBoxScores = new BoxScore[seriesLength][2];
 		SeriesStats[] seriesStats = new SeriesStats[2];
 		for (int t = 0; t < 2; t++) {
 			rosters[t] = new Roster();
-			if (franchisesMap.get(teamNames[t]) == null) {
-				System.out.println("Invalid team name: " + teamNames[t]);
+			teams[t] = getTeamByYearAndShortName(years[t], teamNames[t], allMlbTeamsList);
+			if (teams[t] == null) {
+				System.out.println("Invalid team: " + teamNames[t] + " " + years[t]);
 				return;
 			}
-			rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear((Integer)franchisesMap.get(teamNames[t]), years[t]));
-			rosters[t].setBatters(DAO.getBattersMapByTeamAndYear((Integer)franchisesMap.get(teamNames[t]), years[t]));
+			rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
+			rosters[t].setBatters(DAO.getBattersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
 			if (rosters[t].getBatters().size() == 0 || rosters[t].getPitchers().size() == 0) {
 				System.out.println("Players for " + years[t] + " " + teamNames[t] + " not found in database.  Import player stats from API.");
-				importTeam(years[t], teamNames[t], t);
+				ArrayList<MLBTeam> teamList = new ArrayList<MLBTeam>();
+				teamList.add(teams[t]);
+				importTeam(years[t], t, teamList);
 			}
 			closers[t] = getPitcher(t, "SV", 0, null);
 			if (years[t] >= 1999) {
@@ -161,6 +169,7 @@ public class BaseballSimulator {
 				boxScores[t].setYear(years[t]);
 				boxScores[t].setTeamName(teamNames[t]);
 				boxScores[t].setBatters(lineupBatters.get(t));
+				gameState.setTeams(teams);
 				clearPlayerGameData(boxScores[t]);
 				MLBPlayer startingPitcher = getPitcher(t, "GS", seriesLength == 1 ? getRandomNumberInRange(0, 4) : s % 5, null);
 				gameState.setCurrentPitcher(startingPitcher, t);
@@ -881,9 +890,7 @@ public class BaseballSimulator {
 	}
 	
 	private static void fieldersChoice(String groundBallRecipientPosition, MLBPlayer currentBatter) {
-		if (gameState.getCurrentBasesSituation() == GameState.BASES_EMPTY || gameState.getOuts() == 2 /*|| 
-		   (!gameState.isHitAndRun() && (gameState.getCurrentBasesSituation() == GameState.MAN_ON_THIRD || 
-		   gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND_AND_THIRD || gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND))*/) {
+		if (gameState.getCurrentBasesSituation() == GameState.BASES_EMPTY || gameState.getOuts() == 2) {
 				return; // No FC
 		}
 		else {
@@ -1126,7 +1133,7 @@ public class BaseballSimulator {
 			}
 			batters.get(t).add(new ArrayList<MLBPlayer>()); // For DH/P in 9
 			if (useDH) { // DH always bats ninth 
-				player =  getMlbPlayerWithMostPlateAppearances((Integer)franchisesMap.get(teams[t]), years[t], playersInLineupList, t);
+				player =  getMlbPlayerWithMostPlateAppearances(gameState.getTeams()[t].getTeamId(), years[t], playersInLineupList, t);
 				player.setPrimaryPosition("DH");
 				batters.get(t).get(8).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), player.getPrimaryPosition(), player.getArmThrows(), player.getBats(), player.getJerseyNumber()));
 			}
@@ -1359,7 +1366,10 @@ public class BaseballSimulator {
 					pitcherNameString += " (H)";
 				}
 				System.out.print(pitcherNameString);
-				System.out.print("\t\t");
+				System.out.print("\t");
+				if (pitcherNameString.length() < 24) {
+					System.out.print("\t");
+				}
 				if (pitcherNameString.length() < 16) {
 					System.out.print("\t");
 				}
@@ -1588,8 +1598,7 @@ public class BaseballSimulator {
 				System.out.print("INVALID COMMAND!\n");
 				return false;
 			}
-			int top = commandArray[1].equalsIgnoreCase("HOME") ||  commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
-			ArrayList<ArrayList<MLBPlayer>> gameBatters = boxScores[top].getBatters();
+			int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
 			HashMap<Integer, MLBPlayer> rosterBatters = rosters[top].getBatters();
 			System.out.println("\nEligible Pinch hitters:");
 			System.out.println("Name\t\t\t\tID      AVG  SR HR");
@@ -1619,7 +1628,7 @@ public class BaseballSimulator {
 				System.out.print("INVALID COMMAND!\n");
 				return false;
 			}
-			int top = commandArray[1].equalsIgnoreCase("HOME") ||  commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
+			int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
 			HashMap<Integer, MLBPlayer> gamePitchers = boxScores[top].getPitchers();
 			HashMap<Integer, MLBPlayer> rosterPitchers = rosters[top].getPitchers();
 			System.out.println("\nEligible Pitchers:");
@@ -1652,7 +1661,7 @@ public class BaseballSimulator {
 				System.out.print("INVALID COMMAND!\n");
 				return false;
 			}
-			int top = commandArray[1].equalsIgnoreCase("HOME") ||  commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
+			int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
 			ArrayList<ArrayList<MLBPlayer>> gameBatters = boxScores[top].getBatters();
 			System.out.println(boxScores[top].getTeamAndYearDisplay());
 			for (ArrayList<MLBPlayer> lineup : gameBatters) {
@@ -1905,7 +1914,7 @@ public class BaseballSimulator {
 						" ER: " + currentPitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunsAllowed());
 					return false;
 				case "?":
-					System.out.println("COMMANDS - SIM, AUTO<inning#>, STEAL<#>, PITCHERS, SUBP <id#>, BATTERS, SUBB <id#>, OUTFIELDERS, "
+					System.out.println("COMMANDS - SIM, AUTO<ing#>, STEAL<base#>, PITCHERS <HOME|VIS>, SUBP <id#>, BATTERS <HOME|VIS>, SUBB <id#>, OUTFIELDERS, "
 						+ "INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, INFIELDIN, PITCHERCHECK, LINEUP <HOME|VIS>, DOUBLESTEAL, DOUBLESWITCH <pitcherId#> <batterId#> <lineupPos#>");
 					return false;
 				default:
@@ -1944,82 +1953,10 @@ public class BaseballSimulator {
 		}
 	}
 	
-	// Get batting stats from API
-	/*private static void getBattingStatsFromAPI() {
-		  //String getStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_hitting_tm.bam?league_list_id='mlb'&game_type='R'&season='2019'&player_id='592450'";	
-	      //String searchAPI = "http://lookup-service-prod.mlb.com/json/named.search_player_all.bam?sport_code='mlb'&active_sw='Y'&name_part='Aaron Judge'";
-	        try {
-	        	
-	        	BattingStats battingStats;
-	        	for (int top = 0; top < 2; top++) {
-	    			for (int p = 0; p < Game.NUM_OF_PLAYERS_IN_LINEUP; p++) {
-	    				String searchAPI = "http://lookup-service-prod.mlb.com/json/named.search_player_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&name_part=";
-	    				String getStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_hitting_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + year + "%27&player_id=";
-	    				battingStats = new BattingStats();
-	    				String playerName = gameResults.getLineup()[top][p].getName();
-	    				System.out.print(playerName + " ");
-	    				searchAPI += ("%27" + playerName.replace(" ", "%20") + "%27");
-	    				URL obj = new URL(searchAPI);
-	    				HttpURLConnection con = (HttpURLConnection)obj.openConnection();
-	    				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream())); 
-	    				JSONObject row = null;
-	    				try {
-	    					JSONObject player = new JSONObject(in.readLine());
-	    					JSONObject searchAll = new JSONObject(player.getString("search_player_all"));
-	    					JSONObject queryResults = new JSONObject(searchAll.getString("queryResults"));
-	    					row = new JSONObject(queryResults.getString("row"));
-	    					String playerId = row.getString("player_id");
-	        				gameResults.getLineup()[top][p].setId(Integer.parseInt(playerId));
-	        				System.out.print(playerId + " ");
-	        				getStatsAPI += ("%27" + playerId + "%27");
-	    				}
-	    				catch (JSONException e) {
-	    			        System.out.println("PLAYER NOT FOUND!");
-	    			        continue;
-	    				}
-	    				in.close();
-	    				obj = new URL(getStatsAPI);
-			        	con = (HttpURLConnection)obj.openConnection();
-			        	in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-			        	try {	
-			        		JSONObject playerStats = new JSONObject(in.readLine());
-			        		JSONObject sportHittingTm = new JSONObject(playerStats.getString("sport_hitting_tm"));
-			        		JSONObject queryResults = new JSONObject(sportHittingTm.getString("queryResults"));
-			        		row = new JSONObject(queryResults.getString("row"));
-			        		battingStats.setHomeRuns(Integer.parseInt(row.getString("hr")));
-			        		battingStats.setDoubles(Integer.parseInt(row.getString("d")));
-			        		battingStats.setTriples(Integer.parseInt(row.getString("t")));
-			        		battingStats.setAtBats(Integer.parseInt(row.getString("ab")));
-			        		battingStats.setPlateAppearances(Integer.parseInt(row.getString("tpa")));
-			        		battingStats.setHits(Integer.parseInt(row.getString("h")));
-			        		battingStats.setHitByPitch(Integer.parseInt(row.getString("hbp")));
-			        		battingStats.setWalks(Integer.parseInt(row.getString("bb")));
-			        		battingStats.setStolenBases(Integer.parseInt(row.getString("sb")));
-			        		battingStats.setCaughtStealing(Integer.parseInt(row.getString("cs")));
-			        		battingStatsMap.put(gameResults.getLineup()[top][p].getMlbPlayerId(), battingStats);
-				        	System.out.println(" SR: " + battingStats.getSpeedRating());
-			        	}
-	    				catch (JSONException e) {
-	    			        System.out.println("STATS NOT FOUND!");
-	    			        continue;
-	    				}
-			        	in.close();	
-	    			}
-	    		}
-	        	
-	        }
-	        catch (MalformedURLException e) { 	
-	        	e.printStackTrace();
-	        }
-	        catch (IOException e) { 
-	        	e.printStackTrace();
-	        }     		
-		}*/
-	
-	private static void importTeam(Integer year, String teamName, int top) {
-		HashMap<Integer, MLBPlayer> battersMap = DBImport.importMlbPlayers(year, false, (Integer)franchisesMap.get(teamName), true, franchisesMap); // import batters
+	private static void importTeam(Integer year, int top, ArrayList<MLBTeam> mlbTeamsList) {
+		HashMap<Integer, MLBPlayer> battersMap = DBImport.importMlbPlayers(year, true, mlbTeamsList); // import batters
 		HashMap<Integer, MLBPlayer> filteredBattersMap = new HashMap<Integer, MLBPlayer>();
-		HashMap<Integer, MLBPlayer> pitchersMap = DBImport.importMlbPlayers(year, false, (Integer)franchisesMap.get(teamName), false, franchisesMap); // import pitchers
+		HashMap<Integer, MLBPlayer> pitchersMap = DBImport.importMlbPlayers(year, false, mlbTeamsList); // import pitchers
 		HashMap<Integer, MLBPlayer> filteredPitchersMap = new HashMap<Integer, MLBPlayer>();
 		//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
 		ArrayList<Object> battingStatsList = DBImport.importBattingStats(battersMap, year, filteredBattersMap);
@@ -2028,7 +1965,7 @@ public class BaseballSimulator {
 			MLBBattingStats mlbBattingStats;
 			for (Object o : battingStatsList) {
 				mlbBattingStats = (MLBBattingStats)o;
-				if (mlbBattingStats.getMlbPlayerId() == entry.getKey() && mlbBattingStats.getMlbTeamId() == ((Integer)franchisesMap.get(teamName)).intValue()) {
+				if (mlbBattingStats.getMlbPlayerId() == entry.getKey() && mlbBattingStats.getMlbTeamId() == mlbTeamsList.get(0).getTeamId()) {
 					entry.getValue().setMlbBattingStats(mlbBattingStats);
 					break;
 				}
@@ -2038,7 +1975,7 @@ public class BaseballSimulator {
 			MLBPitchingStats mlbPitchingStats;
 			for (Object o : pitchingStatsList) {
 				mlbPitchingStats = (MLBPitchingStats)o;
-				if (mlbPitchingStats.getMlbPlayerId() == entry.getKey() && mlbPitchingStats.getMlbTeamId() == ((Integer)franchisesMap.get(teamName)).intValue()) {
+				if (mlbPitchingStats.getMlbPlayerId() == entry.getKey() && mlbPitchingStats.getMlbTeamId() == mlbTeamsList.get(0).getTeamId()) {
 					entry.getValue().setMlbPitchingStats(mlbPitchingStats);
 					break;
 				}
@@ -2057,7 +1994,6 @@ public class BaseballSimulator {
 	
 	private static MLBPlayer getPitcher(int top, String sortBy, int index, ArrayList<Integer> excludingPitchers) {
 		MLBPlayer rosterPitcher = null;
-		//HashMap<Integer, MLBPlayer> excludingPitchers = boxScores != null ? boxScores[top].getPitchers() : null;
 		rosters[top].setPitchers(sortHashMapByValue(rosters[top].getPitchers(), sortBy));
 		int skipIndex = 0;
 		if (excludingPitchers != null && excludingPitchers.size() > 0) {
@@ -2105,6 +2041,18 @@ public class BaseballSimulator {
 	}
 	
 	private static String displayTeamName(int top) {
+		// If playing same team/different years, include year in team name display
 		return boxScores[0].getTeamName().equals(boxScores[1].getTeamName()) ? boxScores[top].getTeamAndYearDisplay() : boxScores[top].getTeamName();
+	}
+	
+	private static MLBTeam getTeamByYearAndShortName(Integer year, String shortName, ArrayList<MLBTeam> allTeams) {
+		for (MLBTeam team : allTeams) {
+			// Null last year means active in current year
+			int lastYear = (team.getLastYearPlayed() == null || team.getLastYearPlayed() == 0) ? Calendar.getInstance().get(Calendar.YEAR) : team.getLastYearPlayed();
+			if (team.getFirstYearPlayed() <= year && lastYear >= year && team.getShortTeamName().equalsIgnoreCase(shortName)) {
+				return team;
+			}
+		}
+		return null;
 	}
 }

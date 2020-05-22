@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import db.MLBPlayer;
+import db.MLBTeam;
 
 public class GameState {
 	int outs = 0;
@@ -13,6 +14,7 @@ public class GameState {
 	BaseRunner[] baseRunners = new BaseRunner[3];
 	int[] battingOrder = {1, 1};
 	MLBPlayer[] currentPitchers = {null, null};
+	MLBTeam[] teams = {null, null};
 	boolean intentionalWalk = false;
 	boolean hitAndRun = false;
 	boolean buntAttempt = false;
@@ -133,6 +135,14 @@ public class GameState {
 
 	public void setCurrentPitcher(MLBPlayer currentPitcher, int top) {
 		this.currentPitchers[top] = currentPitcher;
+	}
+
+	public MLBTeam[] getTeams() {
+		return teams;
+	}
+
+	public void setTeams(MLBTeam[] teams) {
+		this.teams = teams;
 	}
 
 	public boolean isIntentionalWalk() {

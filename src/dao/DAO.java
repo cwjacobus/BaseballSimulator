@@ -96,8 +96,9 @@ public class DAO {
 				String insertSQL = "";
 				if (entry.getValue() instanceof MLBTeam) {
 					MLBTeam t = (MLBTeam)entry.getValue();
-					insertSQL = "INSERT IGNORE INTO MLB_TEAM (TEAM_ID, MLB_FRANCHISE_ID, FULL_NAME, SHORT_NAME, LEAGUE) VALUES (" + 
-						t.getTeamId() + " ," + t.getMlbFranchiseId() + ", '" + t.getFullTeamName().replace("'", "") + "', '" + t.getShortTeamName() + "', '" + t.getLeague() + "');";
+					insertSQL = "INSERT IGNORE INTO MLB_TEAM (TEAM_ID, MLB_FRANCHISE_ID, FULL_NAME, SHORT_NAME, LEAGUE, FIRST_YEAR_PLAYED, LAST_YEAR_PLAYED) VALUES (" + 
+						t.getTeamId() + " ," + t.getMlbFranchiseId() + ", '" + t.getFullTeamName().replace("'", "") + "', '" + t.getShortTeamName() + 
+							"', '" + t.getLeague() + "'," + t.getFirstYearPlayed() + "," + t.getLastYearPlayed() + ");";
 				}
 				else if (entry.getValue() instanceof MLBFranchise) {
 					MLBFranchise mlf = (MLBFranchise)entry.getValue();
@@ -109,12 +110,6 @@ public class DAO {
 					insertSQL = "INSERT IGNORE INTO MLB_PLAYER (MLB_PLAYER_ID, FULL_NAME, PRIMARY_POSITION, ARM_THROWS, BATS, JERSEY_NUMBER) VALUES (" + 
 						mlbPlayer.getMlbPlayerId() + ", '" + mlbPlayer.getFullName().replace("'", "") + "', '" + mlbPlayer.getPrimaryPosition() +
 						"', '" + mlbPlayer.getArmThrows() +"', '" + mlbPlayer.getBats() + "', " + mlbPlayer.getJerseyNumber() + ");";;
-				}
-				else if (entry.getValue() instanceof TeamPlayer) {
-					TeamPlayer teamPlayer = (TeamPlayer)entry.getValue();
-					insertSQL = "INSERT IGNORE INTO TEAM_PLAYER (TEAM_PLAYER_ID, MLB_TEAM_ID, MLB_PLAYER_ID, YEAR) VALUES (" + 
-						teamPlayer.getTeamPlayerId() + ", " + teamPlayer.getMlbTeamId() + ", " + teamPlayer.getMlbPlayerId() +
-						", " + teamPlayer.getYear() + ");";
 				}
 				else if (entry.getValue() instanceof MLBFieldingStats) {
 					MLBFieldingStats mfs = (MLBFieldingStats)entry.getValue();
@@ -172,7 +167,7 @@ public class DAO {
 					dataMap.put(rs.getString("SHORT_NAME"), rs.getInt("MLB_FRANCHISE_ID"));
 				}
 				else if (table.equals("MLB_TEAM")) {
-					MLBTeam team = new MLBTeam(rs.getInt("TEAM_ID"), rs.getInt("MLB_FRANCHISE_ID"), rs.getString("FULL_NAME"), rs.getString("SHORT_NAME"), rs.getString("LEAGUE"));
+					MLBTeam team = new MLBTeam(rs.getInt("TEAM_ID"), rs.getInt("MLB_FRANCHISE_ID"), rs.getString("FULL_NAME"), rs.getString("SHORT_NAME"), rs.getString("LEAGUE"), rs.getInt("FIRST_YEAR_PLAYED"), rs.getInt("LAST_YEAR_PLAYED"));
 					dataMap.put(team.getTeamId(), team);
 				}
 				else if (table.equals("MLB_PLAYER")) {
@@ -194,6 +189,24 @@ public class DAO {
 			e.printStackTrace();
 		}
 		return dataMap; 
+	}
+	
+	public static ArrayList<MLBTeam> getAllTeamsList() {
+		ArrayList<MLBTeam> allTeams = new ArrayList<MLBTeam>();
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "SELECT * FROM MLB_TEAM";
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				MLBTeam team = new MLBTeam(rs.getInt("TEAM_ID"), rs.getInt("MLB_FRANCHISE_ID"), rs.getString("FULL_NAME"), rs.getString("SHORT_NAME"), 
+					rs.getString("LEAGUE"), rs.getInt("FIRST_YEAR_PLAYED"), rs.getInt("LAST_YEAR_PLAYED"));
+				allTeams.add(team);
+			}
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return allTeams;
 	}
 	
 	public static HashMap<Integer, Object> getPlayerStatsMapForMultipleTeams(Integer year, boolean pitchers) {
