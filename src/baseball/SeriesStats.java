@@ -3,6 +3,7 @@ package baseball;
 import java.util.HashMap;
 
 import db.MLBPlayer;
+import db.MLBTeam;
 
 public class SeriesStats {
 	int hits = 0;
@@ -10,12 +11,12 @@ public class SeriesStats {
 	int runsScored = 0;
 	HashMap<Integer, MLBPlayer> pitchers = new HashMap<Integer, MLBPlayer>();
 	HashMap<Integer, MLBPlayer> batters = new HashMap<Integer, MLBPlayer>();
-	String teamName;
+	MLBTeam team;
 	int year = 2019;
 	int seriesLength;
 	
-	public SeriesStats(String teamName, int year, int seriesLength) {
-		this.teamName = teamName;
+	public SeriesStats(MLBTeam team, int year, int seriesLength) {
+		this.team = team;
 		this.year = year;
 		this.seriesLength = seriesLength;
 	}
@@ -60,12 +61,12 @@ public class SeriesStats {
 		this.batters = batters;
 	}
 
-	public String getTeamName() {
-		return teamName;
+	public MLBTeam getTeam() {
+		return team;
 	}
 
-	public void setTeamName(String teamName) {
-		this.teamName = teamName;
+	public void setTeam(MLBTeam team) {
+		this.team = team;
 	}
 
 	public int getYear() {

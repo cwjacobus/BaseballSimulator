@@ -167,6 +167,10 @@ public class BattingStats {
 	public void setStolenBases(int stolenBases) {
 		this.stolenBases = stolenBases;
 	}
+	
+	public void incrementStolenBases() {
+		this.stolenBases++;
+	}
 
 	public int getPlateAppearances() {
 		return plateAppearances;
@@ -186,6 +190,10 @@ public class BattingStats {
 
 	public void setCaughtStealing(int caughtStealing) {
 		this.caughtStealing = caughtStealing;
+	}
+	
+	public void incrementCaughtStealing() {
+		this.caughtStealing++;
 	}
 
 	public int getSpeedRating() {

@@ -18,7 +18,6 @@ import db.MLBFranchise;
 import db.MLBPitchingStats;
 import db.MLBPlayer;
 import db.MLBTeam;
-import db.TeamPlayer;
 
 public class DAO {
 	
@@ -137,14 +136,6 @@ public class DAO {
 		catch (SQLException e) {
 			e.printStackTrace();
 		}
-	}
-	
-	public static HashMap<Object, Object> getDataMap(String table) {
-		return getDataMap(table, null, null, null);
-	}
-	
-	public static HashMap<Object, Object> getDataMap(String table, Integer mlbTeamId, Integer year) {
-		return getDataMap(table, mlbTeamId, year, null);
 	}
 	
 	public static HashMap<Object, Object> getDataMap(String table, Integer mlbTeamId, Integer year, Boolean pitchers) {

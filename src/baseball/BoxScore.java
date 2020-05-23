@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 import db.MLBPlayer;
+import db.MLBTeam;
 
 public class BoxScore {
 	public static final int NUM_OF_PLAYERS_IN_LINEUP = 9;
@@ -13,7 +14,7 @@ public class BoxScore {
 	boolean walkOff = false;
 	ArrayList<ArrayList<MLBPlayer>> batters = new ArrayList<ArrayList<MLBPlayer>>();
 	LinkedHashMap<Integer, MLBPlayer> pitchers = new LinkedHashMap<Integer, MLBPlayer>();
-	String teamName;
+	MLBTeam team;
 	int year = 2019;
 	
 	public BoxScore() {
@@ -90,12 +91,12 @@ public class BoxScore {
 		this.pitchers = pitchers;
 	}
 
-	public String getTeamName() {
-		return teamName;
+	public MLBTeam getTeam() {
+		return team;
 	}
 
-	public void setTeamName(String teamName) {
-		this.teamName = teamName;
+	public void setTeam(MLBTeam team) {
+		this.team = team;
 	}
 
 	public int getYear() {
@@ -107,6 +108,6 @@ public class BoxScore {
 	}
 	
 	public String getTeamAndYearDisplay() {
-		return teamName + "(" + year + ")";
+		return team.getShortTeamName() + "(" + year + ")";
 	}
 }
