@@ -52,15 +52,12 @@ public class BaseballSimulator {
 	static ArrayList<MLBTeam> allMlbTeamsList;
 	static boolean useDH = true;
 	
-	
 	static final int STRUCK_OUT = 0;
 	static final int GROUNDED_OUT = 1;
 	static final int FLEW_OUT = 2;
 	static final int FLEW_OUT_DEEP = 3;
 	static final int LINED_OUT = 4;
 	static final int POPPED_OUT = 5;
-	
-	static final String[] nationalLeagueTeams = {"ARI","CHC","LAD","WSH","NYM","PIT","SD","SF","STL","PHI","ATL","MIA","MIL","COL","CIN"};
 	
 	static Map<Integer, String> positions  = new HashMap<Integer, String>() {
 		private static final long serialVersionUID = 1L;
@@ -131,7 +128,6 @@ public class BaseballSimulator {
 		int years[] = {Integer.parseInt(args[0]), Integer.parseInt(args[2])};
 		String[] teamNames = {args[1].toUpperCase(), args[3].toUpperCase()};
 		MLBTeam[] teams = {null, null};
-		useDH = !Arrays.asList(nationalLeagueTeams).contains(teamNames[1]) && years[1] >= 1973;
 		BoxScore[][] seriesBoxScores = new BoxScore[seriesLength][2];
 		SeriesStats[] seriesStats = new SeriesStats[2];
 		for (int t = 0; t < 2; t++) {
@@ -159,7 +155,8 @@ public class BaseballSimulator {
 				setupMen[t] = getPitcher(t, "HD", 0, null);
 			}
 			seriesStats[t] = new SeriesStats(teams[t], years[t], seriesLength);
-		}	
+		}
+		useDH = !teams[1].getLeague().equalsIgnoreCase("NL") && years[1] >= 1973;
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalLineup(teams, years);
 		if (lineupBatters == null) {
 			return;
@@ -176,7 +173,7 @@ public class BaseballSimulator {
 				MLBPlayer startingPitcher = getPitcher(t, "GS", seriesLength == 1 ? getRandomNumberInRange(0, 4) : s % 5, null);
 				gameState.setCurrentPitcher(startingPitcher, t);
 				boxScores[t].getPitchers().put(startingPitcher.getMlbPlayerId(), startingPitcher);
-				if (Arrays.asList(nationalLeagueTeams).contains(teamNames[1]) || years[1] < 1973) {
+				if (!useDH) {
 					boxScores[t].getBatters().set(8, new ArrayList<MLBPlayer>());  // Clear out prior games pitcher spots
 					boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
 				}	
@@ -1236,8 +1233,8 @@ public class BaseballSimulator {
 		displayTeamYearString[1] = boxScores[0].getTeam().getShortTeamName().equals(boxScores[1].getTeam().getShortTeamName()) ? boxScores[1].getTeamAndYearDisplay() : boxScores[1].getTeam().getShortTeamName();
 		if (!series) {
 			int winner = boxScores[0].getFinalScore() > boxScores[1].getFinalScore() ? 0 : 1;
-			System.out.println("\n" + boxScores[winner].getTeam().getFullTeamName() + " " + boxScores[winner].getFinalScore() + " " + 
-				boxScores[winner==0?1:0].getTeam().getFullTeamName() + " " + boxScores[winner==0?1:0].getFinalScore());
+			System.out.println("\n" + boxScores[winner].getYear() + " " + boxScores[winner].getTeam().getFullTeamName() + " " + boxScores[winner].getFinalScore() + " " + 
+				boxScores[winner==0?1:0].getYear() + " " + boxScores[winner==0?1:0].getTeam().getFullTeamName() + " " + boxScores[winner==0?1:0].getFinalScore());
 			for (int top = 0; top < 2; top++) {
 				boxScore = boxScores[top];
 				String team = (top == 0) ? "\n" + displayTeamYearString[top] : displayTeamYearString[top];
@@ -1570,22 +1567,33 @@ public class BaseballSimulator {
 		}
 		command = command.toUpperCase();
 		MLBPlayer currentPitcher = gameState.getCurrentPitchers()[gameState.getTop()==0?1:0];
+		boolean doubleSteal = command.toUpperCase().indexOf("DOUBLESTEAL") != -1;
 		if (command.toUpperCase().indexOf("STEAL") != -1) {
 			String[] commandArray = command.split(" ");
-			if (commandArray.length < 2) {
+			if (commandArray.length < 2 && !doubleSteal) {
 				System.out.print("INVALID COMMAND!\n");
 				return false;
 			}
-			int baseToSteal = 0;
-			try {
-				baseToSteal = Integer.parseInt(commandArray[1]);
+			int baseToSteal = 3;
+			if (!doubleSteal) {
+				try {
+					baseToSteal = Integer.parseInt(commandArray[1]);
+				}
+				catch (Exception e) {
+					baseToSteal = 0;
+				}
 			}
-			catch (Exception e) {
+			else {
+				if (gameState.getCurrentBasesSituation() != GameState.MAN_ON_FIRST_AND_SECOND) {
+					System.out.print("CAN ONLY DOUBLE STEAL WITH MAN ON FIRST AND SECOND!\n");
+					return false;
+				}
 			}
 			if ((baseToSteal < 2 || baseToSteal > 4 ) ||
 			   ((baseToSteal == 2 || baseToSteal == 3) && (!gameState.isBaseOccupied(baseToSteal-1) || gameState.isBaseOccupied(baseToSteal))) ||
 			    (baseToSteal == 4 && !gameState.isBaseOccupied(baseToSteal-1))) {
 					System.out.print(baseToSteal + " INVALID BASE TO STEAL!\n");
+					return false;
 			}
 			else {
 				int sbOuts = stealBase(baseToSteal);
@@ -1593,6 +1601,14 @@ public class BaseballSimulator {
 					currentPitcherGameStats.incrementInningsPitchedBy(1);
 					gameState.setOuts(gameState.getOuts() + sbOuts);
 				}
+			}
+			if (doubleSteal) {
+				System.out.print("DOUBLE STEAL\n");
+				MLBPlayer runnerStealing2Player = getPlayerFromId(gameState.getBaseRunnerId(1));
+				BattingStats boxScoreRunnerStats = getBoxScoreBatterFromId(runnerStealing2Player.getMlbPlayerId()).getMlbBattingStats().getBattingStats();
+				boxScoreRunnerStats.incrementStolenBases();
+				gameState.setBaseRunner(2, gameState.getBaseRunner(1));  // 1->2
+				gameState.setBaseRunner(1, new BaseRunner());
 			}
 			return false;
 		}
