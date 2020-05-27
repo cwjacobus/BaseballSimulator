@@ -376,8 +376,9 @@ public class BaseballSimulator {
 						myObj = new Scanner(System.in);
 						System.out.print("PITCH: ");
 					    String command = myObj.nextLine();
-					    if (currentPitcherGameStats == null && command.toUpperCase().indexOf("SUBP") == -1 && !command.equalsIgnoreCase("PITCHERS")) {
-					    	System.out.print("PITCHER MUST BE CHANGED! (SUBP)");
+					    if (currentPitcherGameStats == null && command.toUpperCase().indexOf("SUBP") == -1 && command.toUpperCase().indexOf("PITCH") == -1 && 
+					    		command.toUpperCase().indexOf("LINEUP") == -1) { // Allow PITCHERS, PITCHCHECK, LINEUP and SUBP commands
+					    	System.out.print("PITCHER MUST BE CHANGED! (SUBP)\n");
 					    	continue;
 					    }
 					    if (!processCommand(command, currentPitcherGameStats, currentBatter)) {
