@@ -599,6 +599,7 @@ public class BaseballSimulator {
 									if (updateBasesSituationTagUp(base, runnerOnAdvancing, deep, outfielderPosition, currentBatter) == 1) {
 										outsRecorded++;
 									}
+									break; // only allow 1 tag up per fly ball
 								}
 						}
 					}
@@ -817,13 +818,20 @@ public class BaseballSimulator {
 				gameState.setBaseRunner(3, new BaseRunner());
 			}
 		}
-		else if (gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND && gameState.isHitAndRun()) { // 2
-			// Runner advances 2->3 for H+R or GB to right
-			if (gameState.isHitAndRun() || (groundBallRecipientPosition.equals("2B") || groundBallRecipientPosition.equals("1B"))) {
+		else if (gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND) { // 2
+			// Runner advances 2->3 for GB to right and batter out at 1
+			if (groundBallRecipientPosition.equals("2B") || groundBallRecipientPosition.equals("1B")) {
 				gameState.setBaseRunner(3, gameState.getBaseRunner(2));
+				gameState.setBaseRunner(2, new BaseRunner());
+			}
+			// GB to left and hit and run - batter safe and runner out at 3
+			else if (gameState.isHitAndRun() && (groundBallRecipientPosition.equals("3B") || groundBallRecipientPosition.equals("SS"))) {
+				System.out.println(getPlayerNameFromId(gameState.getBaseRunnerId(2)) + " OUT AT THIRD!");
+				gameState.setBaseRunner(1, new BaseRunner(currentBatter.getMlbPlayerId(), currentPitcher.getMlbPlayerId()));
+				gameState.setBaseRunner(2, new BaseRunner());
 			}
 		}
-		else if (gameState.getCurrentBasesSituation() == GameState.MAN_ON_FIRST_AND_THIRD) { // 13 (H+R assumes only runner on 1 is going)
+		else if (gameState.getCurrentBasesSituation() == GameState.MAN_ON_FIRST_AND_THIRD) { // 13 (H+R assumes only runner on 1 is running)
 			if (gameState.isHitAndRun()) {
 				System.out.println(getPlayerNameFromId(currentBatter.getMlbPlayerId()) + " OUT AT FIRST!");
 				gameState.setBaseRunner(2, gameState.getBaseRunner(1));
