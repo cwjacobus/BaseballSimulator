@@ -289,8 +289,11 @@ public class BaseballSimulator {
 				gameState.setOuts(0);
 				gameState.setVirtualErrorOuts(0);
 				gameState.setBaseRunnersReachedByError(new ArrayList<Integer>());
-				System.out.println((top == 0 ? "\n***TOP " : "***BOTTOM ") + " INN: " + inning + " ***");
-				System.out.println("SCORE - " + displayTeamName(0) + ": " + boxScores[0].getScore(gameState.getInning())  + " " + displayTeamName(1) + ": " + boxScores[1].getScore(gameState.getInning()));
+				if (top == 0) {
+					System.out.print("\n\n*** INNING " + inning + " ***\n");
+				}
+				System.out.print("\n*** " + displayTeamName(top) + " BATTING IN " + (top == 0 ? "TOP " : "BOTTOM ") + "INN: " + inning + " : ");
+				System.out.println("SCORE - " + displayTeamName(0) + ": " + boxScores[0].getScore(gameState.getInning())  + " " + displayTeamName(1) + ": " + boxScores[1].getScore(gameState.getInning()) + " ***");
 				boolean gameTiedStartOfAB;
 				Arrays.fill(gameState.getBaseRunners(), new BaseRunner());
 				if (top == 0 && gameState.getInning() == 6) { // Set winning pitcher after 5 innings
@@ -557,6 +560,11 @@ public class BaseballSimulator {
 				int baseToSteal = gameState.isBaseOccupied(2) ? 3 : 2;
 				if (stealBase(baseToSteal) == 1) {
 					outsRecorded++;
+				}
+				// If less than 3 outs and 12 then 1 -> 2 trailing the attempted steal
+				if ((gameState.getOuts() + outsRecorded) < 3 && gameState.getCurrentBasesSituation() == GameState.MAN_ON_FIRST_AND_SECOND) {
+					gameState.setBaseRunner(2, gameState.getBaseRunner(1));
+					gameState.setBaseRunner(1, new BaseRunner());
 				}
 			}
 		}
@@ -825,7 +833,7 @@ public class BaseballSimulator {
 				gameState.setBaseRunner(2, new BaseRunner());
 			}
 			// GB to left and hit and run - batter safe and runner out at 3
-			else if (gameState.isHitAndRun() && (groundBallRecipientPosition.equals("3B") || groundBallRecipientPosition.equals("SS"))) {
+			else if (gameState.isHitAndRun() && (groundBallRecipientPosition.equals("3B") || groundBallRecipientPosition.equals("SS") || groundBallRecipientPosition.equals("P"))) {
 				System.out.println(getPlayerNameFromId(gameState.getBaseRunnerId(2)) + " OUT AT THIRD!");
 				gameState.setBaseRunner(1, new BaseRunner(currentBatter.getMlbPlayerId(), currentPitcher.getMlbPlayerId()));
 				gameState.setBaseRunner(2, new BaseRunner());
