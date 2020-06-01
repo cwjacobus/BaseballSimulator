@@ -440,12 +440,7 @@ public class BaseballSimulator {
 								noOutResult = 1;
 							}
 							if (noOutResult == 1 && (getRandomNumberInRange(0, 5) + currentBatterGameStats.getSpeedRating()) > 4) { // infield single/error?
-								if (gameState.getOuts() != 2) {  // less than 2 outs runners hold
-									updateBasesSituationNoRunnersAdvance(currentBatter);
-								}
-								else {
-									updateBasesSituationRunnersAdvance(noOutResult, currentBatter, reachedByError);
-								}
+								updateBasesSituationNoRunnersAdvance(currentBatter);
 								System.out.println("STAYED IN INFIELD");
 							}
 							else {
