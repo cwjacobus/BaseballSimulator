@@ -403,7 +403,7 @@ public class BaseballSimulator {
 						break;
 					}
 					int rando = getRandomNumberInRange(1, 1000);
-					if (processOtherAction(currentBatter)) {
+					if (processOtherAction(currentBatter)) { // for bunt and int walk
 						gameState.incrementBattingOrder(top);
 						continue;
 					}
@@ -440,11 +440,17 @@ public class BaseballSimulator {
 								noOutResult = 1;
 							}
 							if (noOutResult == 1 && (getRandomNumberInRange(0, 5) + currentBatterGameStats.getSpeedRating()) > 4) { // infield single/error?
-								updateBasesSituationNoRunnersAdvance(currentBatter);
+								// Man on 2  with h + r or 2 outs, runner 2->3, otherwise same as a walk
+								if ((gameState.isHitAndRun() || gameState.getOuts() == 2) && gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND) {
+									updateBasesSituationRunnersAdvance(noOutResult, currentBatter, reachedByError, true);
+								}
+								else {
+									updateBasesSituationNoRunnersAdvance(currentBatter);
+								}
 								System.out.println("STAYED IN INFIELD");
 							}
-							else {
-								updateBasesSituationRunnersAdvance(noOutResult, currentBatter, reachedByError);
+							else {  // hit into outfield
+								updateBasesSituationRunnersAdvance(noOutResult, currentBatter, reachedByError, false);
 							}
 							currentBatterGameStats.incrementAtBats();
 							if (!reachedByError) {
@@ -638,13 +644,13 @@ public class BaseballSimulator {
 		return actionProcessed;
 	}
 	
-	private static void updateBasesSituationRunnersAdvance(int event, MLBPlayer currentBatter, boolean error) {
+	private static void updateBasesSituationRunnersAdvance(int event, MLBPlayer currentBatter, boolean error, boolean infieldSingle) {
 	  /*int basesSituation = (currentBasesSituation << event) + (int)Math.pow(2, (event - 1));
 		if (basesSituation > 7) {
 			basesSituation = basesSituation % 8;
 		}*/
 		// if hit and run and !3 and !4 and not bases empty treat like +1
-		if (gameState.isHitAndRun() && gameState.getCurrentBasesSituation() != GameState.BASES_EMPTY && event < 3) {
+		if (gameState.isHitAndRun() && gameState.getCurrentBasesSituation() != GameState.BASES_EMPTY && event < 3 && !infieldSingle) {
 			event++;
 		}
 		MLBPlayer currentPitcher = gameState.getCurrentPitchers()[gameState.getTop()==0?1:0];
@@ -667,7 +673,7 @@ public class BaseballSimulator {
 			}
 		}
 		// Backup base runner for hit and run
-		if (gameState.isHitAndRun() && gameState.getCurrentBasesSituation() != GameState.BASES_EMPTY && event < 4) {
+		if (gameState.isHitAndRun() && gameState.getCurrentBasesSituation() != GameState.BASES_EMPTY && event < 4 && !infieldSingle) {
 			gameState.setBaseRunner(event - 1, gameState.getBaseRunner(event));
 			gameState.setBaseRunner(event, new BaseRunner());
 		}
@@ -1936,21 +1942,25 @@ public class BaseballSimulator {
 				case "HITRUN":
 					if (!gameState.isValidHitAnRunScenario()) {
 						System.out.println("NOT A VALID HIT AND RUN SCENARIO WITH " + gameState.getOuts() + " OUTS AND " + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()));
+						return false;
 					}
 					else {
 						System.out.println("HIT AND RUN");
 						gameState.setHitAndRun(true);
+						return true;
 					}
-					return false;
+					//return false;
 				case "INFIELDIN":
 					if (!gameState.isBaseOccupied(3) || gameState.getOuts() >= 2) {
 						System.out.println("NOT A VALID SITUATION FOR INFIELD TO BE IN WITH " + gameState.getOuts() + " OUTS AND " + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()));
+						return false;
 					}
 					else {
 						System.out.println("INFIELD IN");
 						gameState.setInfieldIn(true);
+						return true;
 					}
-					return false;
+					//return false;
 				case "PITCHERCHECK":
 					System.out.println("CURRENT PITCHER STATUS: " + currentPitcher.getFirstLastName() + " BF:" + currentPitcher.getMlbPitchingStats().getPitchingStats().getBattersFaced() +
 						" ER: " + currentPitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunsAllowed());
