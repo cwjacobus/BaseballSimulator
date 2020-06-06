@@ -13,9 +13,7 @@ public class GameState {
 	BaseRunner[] baseRunners = new BaseRunner[3];
 	int[] battingOrder = {1, 1};
 	MLBPlayer[] currentPitchers = {null, null};
-	boolean intentionalWalk = false;
 	boolean hitAndRun = false;
-	boolean buntAttempt = false;
 	boolean infieldIn = false;
 	int virtualErrorOuts = 0; // Used to determine earned runs
 	ArrayList<Integer> baseRunnersReachedByError = new ArrayList<Integer>(); // Used to determine earned runs
@@ -135,28 +133,12 @@ public class GameState {
 		this.currentPitchers[top] = currentPitcher;
 	}
 
-	public boolean isIntentionalWalk() {
-		return intentionalWalk;
-	}
-
-	public void setIntentionalWalk(boolean intentionalWalk) {
-		this.intentionalWalk = intentionalWalk;
-	}
-
 	public boolean isHitAndRun() {
 		return hitAndRun;
 	}
 
 	public void setHitAndRun(boolean hitAndRun) {
 		this.hitAndRun = hitAndRun;
-	}
-
-	public boolean isBuntAttempt() {
-		return buntAttempt;
-	}
-
-	public void setBuntAttempt(boolean buntAttempt) {
-		this.buntAttempt = buntAttempt;
 	}
 	
 	public boolean isInfieldIn() {

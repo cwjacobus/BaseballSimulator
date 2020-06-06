@@ -403,10 +403,6 @@ public class BaseballSimulator {
 						break;
 					}
 					int rando = getRandomNumberInRange(1, 1000);
-					if (processOtherAction(currentBatter)) { // for bunt and int walk
-						gameState.incrementBattingOrder(top);
-						continue;
-					}
 					gameTiedStartOfAB = boxScores[1].getScore(inning) == boxScores[0].getScore(inning);
 					long onBaseEndPoint = 1000 - Math.round(((currentBatterSeasonStats.getOnBasePercentage() + currentPitcherSeasonStats.getOnBasePercentage())/2.0)*1000);
 					onBaseEndPoint -= currentPitcherGameStats.getBattersFaced(); // pitcher fatigue
@@ -417,6 +413,12 @@ public class BaseballSimulator {
 						gameState.setOuts(gameState.getOuts() + outResult);
 						currentBatterGameStats.incrementAtBats();
 						currentPitcherGameStats.incrementInningsPitchedBy(outResult);
+						// Did game end as result of a tag up or fielders choice?
+						if (inning >= 9 && boxScores[1].getScore(inning) > boxScores[0].getScore(inning) && gameTiedStartOfAB) {
+							boxScore.setWalkOff(true);
+							System.out.println("WALKOFF ");
+							break;
+						}
 					}
 					else {
 						long bbEndPoint = Math.round(((currentBatterSeasonStats.getWalkRate() + currentPitcherSeasonStats.getWalkRate())/2.0)*(1000 - onBaseEndPoint));
@@ -625,23 +627,6 @@ public class BaseballSimulator {
 			System.out.println(outTypes.get(POPPED_OUT) + " TO " + positions.get(getRandomNumberInRange(1, 6))); // POPPED OUT
 		}
 		return outsRecorded;
-	}
-	
-	private static boolean processOtherAction (MLBPlayer currentBatter) {
-		boolean actionProcessed = false;
-		if (gameState.isBuntAttempt()) {
-			System.out.println(currentBatter.getFirstLastName() + " attempted a bunt");
-			updateBasesSituationSacBunt(currentBatter);
-			gameState.setBuntAttempt(false);
-			actionProcessed = true;
-		}
-		else if (gameState.isIntentionalWalk()) {
-			System.out.println(currentBatter.getFirstLastName() + " was intentionally walked");
-			updateBasesSituationNoRunnersAdvance(currentBatter);
-			gameState.setIntentionalWalk(false);
-			actionProcessed = true;
-		}
-		return actionProcessed;
 	}
 	
 	private static void updateBasesSituationRunnersAdvance(int event, MLBPlayer currentBatter, boolean error, boolean infieldSingle) {
@@ -1580,7 +1565,7 @@ public class BaseballSimulator {
 	
 	// For play mode
 	private static boolean processCommand(String command, PitchingStats currentPitcherGameStats, MLBPlayer currentBatter) {
-		if (command == null || command.length() == 0) { // NOOP (if CR entered)
+		if (command == null || command.length() == 0 || command.equalsIgnoreCase("SWING")) { // Swing at pitch (same if just CR entered)
 			return true;
 		}
 		command = command.toUpperCase();
@@ -1629,7 +1614,7 @@ public class BaseballSimulator {
 				gameState.setBaseRunner(1, new BaseRunner());
 			}
 			return false;
-		}
+		} // END STEAL
 		else if (command.toUpperCase().indexOf("AUTO") != -1) {
 			try {
 				autoBeforeInning = Integer.parseInt(command.substring(command.length()-1));
@@ -1780,7 +1765,7 @@ public class BaseballSimulator {
 			gameBatters.get(pitchBo - 1).add(newBatter);
 			System.out.println("DOUBLE SWITCH: Batter changed to: " + newBatterFromRoster.getFirstLastName() + " at lineup position: " + lineUpPos + "\n");
 			return false;
-		}
+		} // End DOUBLESWITCH
 		else if (command.toUpperCase().indexOf("SUBP") != -1) {
 			String[] commandArray = command.split(" ");
 			if (commandArray.length < 2) {
@@ -1907,8 +1892,8 @@ public class BaseballSimulator {
 			gameState.setBaseRunner(base, new BaseRunner(pinchRunner.getMlbPlayerId(), currentPitcher.getMlbPlayerId()));
 			System.out.println("Pinch running at " + base + " : " + pinchRunner.getFirstLastName() + "\n");
 			return false;
-		}
-		else {
+		} // End SUBR
+		else {  // Commands without parameters
 			switch (command) {
 				case "SIM":
 					simulationMode = true;
@@ -1926,19 +1911,26 @@ public class BaseballSimulator {
 					System.out.println();
 					return false;
 				case "INTBB":
-					gameState.setIntentionalWalk(true);
-					return true;
+					System.out.println(currentBatter.getFirstLastName() + " was intentionally walked");
+					updateBasesSituationNoRunnersAdvance(currentBatter);
+					gameState.incrementBattingOrder(gameState.getTop());
+					gameState.setHitAndRun(false);  // clear hit and run, if on
+					gameState.setInfieldIn(false);  // clear infield in, if on
+					return false;
 				case "SACBUNT":
 					if (gameState.getCurrentBasesSituation() == GameState.BASES_LOADED || gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND_AND_THIRD || 
 							gameState.getCurrentBasesSituation() == GameState.MAN_ON_THIRD || gameState.getCurrentBasesSituation() == GameState.BASES_EMPTY ||
 							gameState.getOuts() >= 2) {
 						System.out.println("CAN NOT SACIFICE BUNT IN THIS SITUATION!");
-						return false;
 					}
 					else {
-						gameState.setBuntAttempt(true);
+						System.out.println(currentBatter.getFirstLastName() + " attempted a bunt");
+						updateBasesSituationSacBunt(currentBatter);
+						gameState.incrementBattingOrder(gameState.getTop());
+						gameState.setHitAndRun(false);  // clear hit and run, if on
+						gameState.setInfieldIn(false);  // clear infield in, if on
 					}
-					return true;
+					return false;
 				case "HITRUN":
 					if (!gameState.isValidHitAnRunScenario()) {
 						System.out.println("NOT A VALID HIT AND RUN SCENARIO WITH " + gameState.getOuts() + " OUTS AND " + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()));
@@ -1949,7 +1941,6 @@ public class BaseballSimulator {
 						gameState.setHitAndRun(true);
 						return true;
 					}
-					//return false;
 				case "INFIELDIN":
 					if (!gameState.isBaseOccupied(3) || gameState.getOuts() >= 2) {
 						System.out.println("NOT A VALID SITUATION FOR INFIELD TO BE IN WITH " + gameState.getOuts() + " OUTS AND " + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()));
@@ -1960,7 +1951,6 @@ public class BaseballSimulator {
 						gameState.setInfieldIn(true);
 						return true;
 					}
-					//return false;
 				case "PITCHERCHECK":
 					System.out.println("CURRENT PITCHER STATUS: " + currentPitcher.getFirstLastName() + " BF:" + currentPitcher.getMlbPitchingStats().getPitchingStats().getBattersFaced() +
 						" ER: " + currentPitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunsAllowed());
