@@ -724,6 +724,49 @@ public class BaseballSimulator {
 		currentPitcherGameStats.incrementInningsPitchedBy(1);
 	}
 	
+	private static void updateBasesSituationSqueezeBunt(MLBPlayer currentBatter, boolean suicide) {
+		PitchingStats currentPitcherGameStats = boxScores[gameState.getTop()==0?1:0].getPitchers().get(gameState.getCurrentPitchers()[gameState.getTop()==0?1:0].getMlbPlayerId()).getMlbPitchingStats().getPitchingStats();
+		int buntRando = getRandomNumberInRange(0, 100);
+		int successEndPoint = suicide ? 65 : 60;
+		int unsuccessEndPoint = suicide ? 85 : 100;
+		if (buntRando <= successEndPoint) { 
+			System.out.println("SUCCESSFUL SQUEEZE BUNT!");
+			runScores(true);
+			if (gameState.isBaseOccupied(2)) { // Runner on 23
+				gameState.setBaseRunner(3, gameState.getBaseRunner(2));
+				gameState.setBaseRunner(2, new BaseRunner());
+			}
+			else { // Runner on 3
+				gameState.setBaseRunner(3, new BaseRunner());
+			}
+		}
+		else if (buntRando > successEndPoint && buntRando <= unsuccessEndPoint) { 
+			System.out.println("UNSUCCESSFUL SQUEEZE!"); 
+			fieldersChoice("P", currentBatter);
+			currentBatter.getMlbBattingStats().getBattingStats().incrementAtBats();
+		}
+		else { // No DP for safety squeeze
+			System.out.print("UNSUCCESSFUL SQUEEZE!");
+			if (gameState.isBaseOccupied(2)) { // Runner on 23
+				System.out.println(" DOUBLE PLAY!");
+				
+				//updateBasesSituationDoublePlayGround(); // TBD Replace
+				
+				gameState.incrementOuts();
+				currentPitcherGameStats.incrementInningsPitchedBy(1);
+			}
+			else { // Runner on 3
+				System.out.println();
+				
+				//fieldersChoice("P", currentBatter); // TBD Replace
+				
+			}
+			currentBatter.getMlbBattingStats().getBattingStats().incrementAtBats();
+		}
+		gameState.incrementOuts();
+		currentPitcherGameStats.incrementInningsPitchedBy(1);
+	}
+	
 	private static int updateBasesSituationTagUp(int fromBase, MLBPlayer runnerAdvancing, boolean deep, String outfielderPosition, MLBPlayer currentBatter) {
 		int outAdvancing = 0;
 		MLBPlayer outfielder = null;
@@ -1931,8 +1974,23 @@ public class BaseballSimulator {
 						System.out.println("CAN NOT SACIFICE BUNT IN THIS SITUATION!");
 					}
 					else {
-						System.out.println(currentBatter.getFirstLastName() + " attempted a bunt");
+						System.out.println(currentBatter.getFirstLastName() + " attempted a sacrifice bunt");
 						updateBasesSituationSacBunt(currentBatter);
+						gameState.incrementBattingOrder(gameState.getTop());
+						gameState.setHitAndRun(false);  // clear hit and run, if on
+						gameState.setInfieldIn(false);  // clear infield in, if on
+					}
+					return false;
+				case "SUICIDESQUEEZE":
+				case "SAFETYSQUEEZE":
+					boolean suicide = command.equalsIgnoreCase("SUICIDESQUEEZE");
+					if (!(gameState.getCurrentBasesSituation() == GameState.MAN_ON_THIRD || gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND_AND_THIRD) ||
+							gameState.getOuts() >= 2) {
+						System.out.println("CAN NOT SQUEEZE BUNT IN THIS SITUATION!");
+					}
+					else {
+						System.out.println(currentBatter.getFirstLastName() + " attempted a squeeze bunt");
+						updateBasesSituationSqueezeBunt(currentBatter, suicide);
 						gameState.incrementBattingOrder(gameState.getTop());
 						gameState.setHitAndRun(false);  // clear hit and run, if on
 						gameState.setInfieldIn(false);  // clear infield in, if on
@@ -1964,7 +2022,8 @@ public class BaseballSimulator {
 					return false;
 				case "?":
 					System.out.println("COMMANDS - SIM, AUTO<ing#>, STEAL<base#>, PITCHERS <HOME|VIS>, SUBP <id#>, BATTERS <HOME|VIS>, SUBB <id#>, OUTFIELDERS, "
-						+ "INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, INFIELDIN, PITCHERCHECK, LINEUP <HOME|VIS>, DOUBLESTEAL, DOUBLESWITCH <pitcherId#> <batterId#> <lineupPos#>");
+						+ "INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, INFIELDIN, PITCHERCHECK, LINEUP <HOME|VIS>, DOUBLESTEAL, "
+						+ "SUICIDESQUEEZE SAFETYSQUEEZE DOUBLESWITCH <pitcherId#> <batterId#> <lineupPos#>");
 					return false;
 				default:
 					System.out.println("UNKNOWN COMMAND!");
