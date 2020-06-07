@@ -688,7 +688,13 @@ public class BaseballSimulator {
 			System.out.println("SUCCESSFUL BUNT!");
 			if (gameState.isBaseOccupied(2)) { // Runner on 2 or 12
 				gameState.setBaseRunner(3, gameState.getBaseRunner(2));
-				gameState.setBaseRunner(2, new BaseRunner());
+				if (gameState.isBaseOccupied(1)) {  // If 12, 1->2
+					gameState.setBaseRunner(2, gameState.getBaseRunner(1));
+					gameState.setBaseRunner(1, new BaseRunner());
+				}
+				else {
+					gameState.setBaseRunner(2, new BaseRunner()); // If 2, 2 is now empty
+				}
 			}
 			else if (gameState.isBaseOccupied(1)) { // Runner on 1 or 13
 				gameState.setBaseRunner(2, gameState.getBaseRunner(1));
@@ -709,6 +715,7 @@ public class BaseballSimulator {
 				currentPitcherGameStats.incrementInningsPitchedBy(1);
 			}
 			else {
+				System.out.println();
 				fieldersChoice("P", currentBatter);
 			}
 			currentBatter.getMlbBattingStats().getBattingStats().incrementAtBats();
