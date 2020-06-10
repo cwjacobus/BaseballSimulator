@@ -725,7 +725,8 @@ public class BaseballSimulator {
 	}
 	
 	private static void updateBasesSituationSqueezeBunt(MLBPlayer currentBatter, boolean suicide) {
-		PitchingStats currentPitcherGameStats = boxScores[gameState.getTop()==0?1:0].getPitchers().get(gameState.getCurrentPitchers()[gameState.getTop()==0?1:0].getMlbPlayerId()).getMlbPitchingStats().getPitchingStats();
+		MLBPlayer currentPitcher = gameState.getCurrentPitchers()[gameState.getTop()==0?1:0];
+		PitchingStats currentPitcherGameStats = boxScores[gameState.getTop()==0?1:0].getPitchers().get(currentPitcher.getMlbPlayerId()).getMlbPitchingStats().getPitchingStats();
 		int buntRando = getRandomNumberInRange(0, 100);
 		int successEndPoint = suicide ? 65 : 60;
 		int unsuccessEndPoint = suicide ? 85 : 100;
@@ -739,32 +740,29 @@ public class BaseballSimulator {
 			else { // Runner on 3
 				gameState.setBaseRunner(3, new BaseRunner());
 			}
+			gameState.setBaseRunner(1, new BaseRunner(currentBatter.getMlbPlayerId(), currentPitcher.getMlbPlayerId()));
 		}
 		else if (buntRando > successEndPoint && buntRando <= unsuccessEndPoint) { 
 			System.out.println("UNSUCCESSFUL SQUEEZE!"); 
 			fieldersChoice("P", currentBatter);
 			currentBatter.getMlbBattingStats().getBattingStats().incrementAtBats();
+			gameState.incrementOuts();
+			currentPitcherGameStats.incrementInningsPitchedBy(1);
 		}
 		else { // No DP for safety squeeze
-			System.out.print("UNSUCCESSFUL SQUEEZE!");
-			if (gameState.isBaseOccupied(2)) { // Runner on 23
-				System.out.println(" DOUBLE PLAY!");
-				
-				//updateBasesSituationDoublePlayGround(); // TBD Replace
-				
-				gameState.incrementOuts();
-				currentPitcherGameStats.incrementInningsPitchedBy(1);
+			System.out.println("UNSUCCESSFUL SQUEEZE! DOUBLE PLAY!");
+			System.out.println(getPlayerNameFromId(gameState.getBaseRunnerId(3)) + " OUT AT THE PLATE!");
+			if (gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND_AND_THIRD) {
+				gameState.setBaseRunner(3, gameState.getBaseRunner(2)); // 2->3
+				gameState.setBaseRunner(2, new BaseRunner()); 
 			}
-			else { // Runner on 3
-				System.out.println();
-				
-				//fieldersChoice("P", currentBatter); // TBD Replace
-				
-			}
+			else if (gameState.getCurrentBasesSituation() == GameState.MAN_ON_THIRD){
+				gameState.setBaseRunner(3, new BaseRunner());
+			}	
+			gameState.setOuts(gameState.getOuts() + 2);
+			currentPitcherGameStats.incrementInningsPitchedBy(2);
 			currentBatter.getMlbBattingStats().getBattingStats().incrementAtBats();
 		}
-		gameState.incrementOuts();
-		currentPitcherGameStats.incrementInningsPitchedBy(1);
 	}
 	
 	private static int updateBasesSituationTagUp(int fromBase, MLBPlayer runnerAdvancing, boolean deep, String outfielderPosition, MLBPlayer currentBatter) {
