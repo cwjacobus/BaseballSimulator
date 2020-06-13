@@ -367,14 +367,14 @@ public class BaseballSimulator {
 						}
 					}
 					PitchingStats currentPitcherSeasonStats = currentPitcher != null ? getPitchersSeasonPitchingStats(rosters[top==0?1:0], currentPitcher.getMlbPlayerId()) : null;
-					String runnerOnFirst = gameState.getBaseRunnerId(1) == 0 ? "<>" : getPlayerFromId(gameState.getBaseRunnerId(1)).getFirstLastName() + 
-						"(" + getPlayerFromId(gameState.getBaseRunnerId(1)).getMlbBattingStats().getBattingStats().getSpeedRating() + ")";
-					String runnerOnSecond = gameState.getBaseRunnerId(2) == 0 ? "<>" : getPlayerFromId(gameState.getBaseRunnerId(2)).getFirstLastName() + 
-							"(" + getPlayerFromId(gameState.getBaseRunnerId(2)).getMlbBattingStats().getBattingStats().getSpeedRating() + ")";
-					String runnerOnThird = gameState.getBaseRunnerId(3) == 0 ? "<>" : getPlayerFromId(gameState.getBaseRunnerId(3)).getFirstLastName() + 
-							"(" + getPlayerFromId(gameState.getBaseRunnerId(3)).getMlbBattingStats().getBattingStats().getSpeedRating() + ")";
+					String runnerOnFirst = "1B:" + (gameState.getBaseRunnerId(1) == 0 ? "<>" : getPlayerFromId(gameState.getBaseRunnerId(1)).getFirstLastName() + 
+						"(" + getPlayerFromId(gameState.getBaseRunnerId(1)).getMlbBattingStats().getBattingStats().getSpeedRating() + ")");
+					String runnerOnSecond = "2B:" + (gameState.getBaseRunnerId(2) == 0 ? "<>" : getPlayerFromId(gameState.getBaseRunnerId(2)).getFirstLastName() + 
+							"(" + getPlayerFromId(gameState.getBaseRunnerId(2)).getMlbBattingStats().getBattingStats().getSpeedRating() + ")");
+					String runnerOnThird = "3B:" + (gameState.getBaseRunnerId(3) == 0 ? "<>" : getPlayerFromId(gameState.getBaseRunnerId(3)).getFirstLastName() + 
+							"(" + getPlayerFromId(gameState.getBaseRunnerId(3)).getMlbBattingStats().getBattingStats().getSpeedRating() + ")");
 					System.out.println(currentBatter.getFirstLastName() + " UP OUTS: " + gameState.getOuts() + " "  + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()) + 
-						" (" + runnerOnFirst + ":" + runnerOnSecond + ":" + runnerOnThird + ")");	
+						" (" + runnerOnFirst + " " + runnerOnSecond + " " + runnerOnThird + ")");	
 					if (gameMode || (autoBeforeMode && inning >= autoBeforeInning)) {
 						myObj = new Scanner(System.in);
 						System.out.print("PITCH: ");
@@ -728,10 +728,10 @@ public class BaseballSimulator {
 		MLBPlayer currentPitcher = gameState.getCurrentPitchers()[gameState.getTop()==0?1:0];
 		PitchingStats currentPitcherGameStats = boxScores[gameState.getTop()==0?1:0].getPitchers().get(currentPitcher.getMlbPlayerId()).getMlbPitchingStats().getPitchingStats();
 		int buntRando = getRandomNumberInRange(0, 100);
-		int successEndPoint = suicide ? 65 : 60;
-		int unsuccessEndPoint = suicide ? 85 : 100;
+		int successEndPoint = suicide ? 55 : 45;  // Prob a little less for safety, but no DP risk
+		successEndPoint += currentBatter.getMlbBattingStats().getBattingStats().getSpeedRating()*4;
 		if (buntRando <= successEndPoint) { 
-			System.out.println("SUCCESSFUL SQUEEZE BUNT!");
+			System.out.println("SUCCESSFUL SQUEEZE BUNT! " + buntRando);
 			runScores(true);
 			if (gameState.isBaseOccupied(2)) { // Runner on 23
 				gameState.setBaseRunner(3, gameState.getBaseRunner(2));
@@ -742,26 +742,33 @@ public class BaseballSimulator {
 			}
 			gameState.setBaseRunner(1, new BaseRunner(currentBatter.getMlbPlayerId(), currentPitcher.getMlbPlayerId()));
 		}
-		else if (buntRando > successEndPoint && buntRando <= unsuccessEndPoint) { 
-			System.out.println("UNSUCCESSFUL SQUEEZE!"); 
-			fieldersChoice("P", currentBatter);
+		else if (buntRando > successEndPoint) { 
+			System.out.println("UNSUCCESSFUL SQUEEZE! " + buntRando); 
+			if (suicide) {
+				System.out.println(getPlayerNameFromId(gameState.getBaseRunnerId(3)) + " OUT AT THE PLATE!");
+				if (gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND_AND_THIRD) {
+					gameState.setBaseRunner(3, gameState.getBaseRunner(2)); // 2->3
+					gameState.setBaseRunner(2, new BaseRunner()); 
+				}
+				else if (gameState.getCurrentBasesSituation() == GameState.MAN_ON_THIRD){
+					gameState.setBaseRunner(3, new BaseRunner());
+				}
+				if (buntRando > 85) {  // strike out double play
+					System.out.println(currentBatter.getFirstLastName() + " STRUCK OUT! DOUBLE PLAY!");
+					currentBatter.getMlbBattingStats().getBattingStats().incremenStrikeOuts();
+					currentPitcherGameStats.incrementStrikeouts();
+					gameState.incrementOuts();
+					currentPitcherGameStats.incrementInningsPitchedBy(1);
+				}
+				else { // Batter safe at first
+					gameState.setBaseRunner(1, new BaseRunner(currentBatter.getMlbPlayerId(), currentPitcher.getMlbPlayerId()));
+				}
+			} else { // safety
+				updateBasesSituationFieldersChoice(currentBatter, "P");
+			}
 			currentBatter.getMlbBattingStats().getBattingStats().incrementAtBats();
 			gameState.incrementOuts();
 			currentPitcherGameStats.incrementInningsPitchedBy(1);
-		}
-		else { // No DP for safety squeeze
-			System.out.println("UNSUCCESSFUL SQUEEZE! DOUBLE PLAY!");
-			System.out.println(getPlayerNameFromId(gameState.getBaseRunnerId(3)) + " OUT AT THE PLATE!");
-			if (gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND_AND_THIRD) {
-				gameState.setBaseRunner(3, gameState.getBaseRunner(2)); // 2->3
-				gameState.setBaseRunner(2, new BaseRunner()); 
-			}
-			else if (gameState.getCurrentBasesSituation() == GameState.MAN_ON_THIRD){
-				gameState.setBaseRunner(3, new BaseRunner());
-			}	
-			gameState.setOuts(gameState.getOuts() + 2);
-			currentPitcherGameStats.incrementInningsPitchedBy(2);
-			currentBatter.getMlbBattingStats().getBattingStats().incrementAtBats();
 		}
 	}
 	
