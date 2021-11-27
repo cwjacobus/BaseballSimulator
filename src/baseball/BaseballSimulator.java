@@ -1131,7 +1131,7 @@ public class BaseballSimulator {
 	// Lineup is home/vis->batting order (1-9) -> List of Players
 	private static ArrayList<ArrayList<ArrayList<MLBPlayer>>> setOptimalLineup(MLBTeam[] teams, int[] years) {
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> batters = new ArrayList<ArrayList<ArrayList<MLBPlayer>>>();
-		ArrayList<Integer> playersInLineupList = new ArrayList<Integer>();
+		ArrayList<Integer> playersInLineupList;
 		HashMap<Integer, MLBPlayer> battingStatsSortedByStatMap;
 		List<Map.Entry<Integer, MLBPlayer>> list;
 		ArrayList<String> positionsUsed;
@@ -1141,6 +1141,7 @@ public class BaseballSimulator {
 			int nextOFPositionNeededIndex = 7;
 			int ofCount = 0;
 			positionsUsed = new ArrayList<String>();
+			playersInLineupList = new ArrayList<Integer>();
 			batters.add(new ArrayList<ArrayList<MLBPlayer>>());
 			// Get random starter 1-5
 			for (int i = 1 ; i <= NUM_OF_PLAYERS_IN_LINEUP - 1; i++) {  // 1 - 8
