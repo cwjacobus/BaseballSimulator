@@ -407,12 +407,15 @@ public class DBImport {
 	static MLBBattingStats createMLBBattingStats(Integer mlbPlayerId, JSONObject battingStatsJson, Integer year) {
 		MLBBattingStats mbs = null;
 		try {
+			int cs = battingStatsJson.getString("cs").length() == 0 ? 0 : Integer.parseInt(battingStatsJson.getString("cs"));
+			int hbp = battingStatsJson.getString("hbp").length() == 0 ? 0 : Integer.parseInt(battingStatsJson.getString("hbp"));
+			int so = battingStatsJson.getString("so").length() == 0 ? 0 : Integer.parseInt(battingStatsJson.getString("so"));
 			mbs = new MLBBattingStats(mlbPlayerId, Integer.parseInt(battingStatsJson.getString("team_id")), year,
 				new BattingStats(Integer.parseInt(battingStatsJson.getString("ab")), Integer.parseInt(battingStatsJson.getString("h")), Integer.parseInt(battingStatsJson.getString("d")), 
 					Integer.parseInt(battingStatsJson.getString("t")), Integer.parseInt(battingStatsJson.getString("hr")), Integer.parseInt(battingStatsJson.getString("bb")), 
-					Integer.parseInt(battingStatsJson.getString("so")), Integer.parseInt(battingStatsJson.getString("hbp")), Integer.parseInt(battingStatsJson.getString("r")), 
+					so, hbp, Integer.parseInt(battingStatsJson.getString("r")), 
 					Integer.parseInt(battingStatsJson.getString("rbi")), Integer.parseInt(battingStatsJson.getString("sb")), Integer.parseInt(battingStatsJson.getString("tpa")), 
-					Integer.parseInt(battingStatsJson.getString("cs"))));
+					cs));
 		}
 		catch (JSONException e) {
 			e.printStackTrace();
