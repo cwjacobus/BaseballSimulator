@@ -413,9 +413,8 @@ public class DBImport {
 			mbs = new MLBBattingStats(mlbPlayerId, Integer.parseInt(battingStatsJson.getString("team_id")), year,
 				new BattingStats(Integer.parseInt(battingStatsJson.getString("ab")), Integer.parseInt(battingStatsJson.getString("h")), Integer.parseInt(battingStatsJson.getString("d")), 
 					Integer.parseInt(battingStatsJson.getString("t")), Integer.parseInt(battingStatsJson.getString("hr")), Integer.parseInt(battingStatsJson.getString("bb")), 
-					so, hbp, Integer.parseInt(battingStatsJson.getString("r")), 
-					Integer.parseInt(battingStatsJson.getString("rbi")), Integer.parseInt(battingStatsJson.getString("sb")), Integer.parseInt(battingStatsJson.getString("tpa")), 
-					cs));
+					so, hbp, Integer.parseInt(battingStatsJson.getString("r")), Integer.parseInt(battingStatsJson.getString("rbi")), Integer.parseInt(battingStatsJson.getString("sb")), 
+					Integer.parseInt(battingStatsJson.getString("tpa")), cs));
 		}
 		catch (JSONException e) {
 			e.printStackTrace();
