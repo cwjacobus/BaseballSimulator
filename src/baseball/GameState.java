@@ -7,6 +7,7 @@ import java.util.Map;
 import db.MLBPlayer;
 
 public class GameState {
+	boolean gameStarted = false;
 	int outs = 0;
 	Integer inning = 1;
 	int top = 0;
@@ -268,5 +269,13 @@ public class GameState {
 	
 	public void setPitcherOfRecord(String winLoss, int pitcherId) {
 		this.pitchersOfRecord.put(winLoss, pitcherId);
+	}
+
+	public boolean isGameStarted() {
+		return gameStarted;
+	}
+
+	public void setGameStarted(boolean gameStarted) {
+		this.gameStarted = gameStarted;
 	}
 }
