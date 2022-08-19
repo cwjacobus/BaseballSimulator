@@ -158,8 +158,9 @@ public class BaseballSimulator {
 			seriesStats[t] = new SeriesStats(teams[t], years[t], seriesLength);
 		}
 		useDH = !teams[1].getLeague().equalsIgnoreCase("NL") && years[1] >= 1973; // TBD redo logic for NL using DH in 2020 and 2022 and after, as well as interleague games between 1997 and 2021 with AL home team
-		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalLineup(teams, years);
-		if (lineupBatters == null) {
+		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalBattingLineup(teams, years);
+		if (lineupBatters.get(0).size() != NUM_OF_PLAYERS_IN_LINEUP || lineupBatters.get(1).size() != NUM_OF_PLAYERS_IN_LINEUP) {
+			System.out.println("Call handleIncompleteLineup");
 			return;
 		}
 		for (int s = 0; s < seriesLength; s++) {
@@ -1127,7 +1128,7 @@ public class BaseballSimulator {
     }
 	
 	// Lineup is home/vis->batting order (1-9) -> List of Players
-	private static ArrayList<ArrayList<ArrayList<MLBPlayer>>> setOptimalLineup(MLBTeam[] teams, int[] years) {
+	private static ArrayList<ArrayList<ArrayList<MLBPlayer>>> setOptimalBattingLineup(MLBTeam[] teams, int[] years) {
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> batters = new ArrayList<ArrayList<ArrayList<MLBPlayer>>>();
 		ArrayList<Integer> playersInLineupList;
 		HashMap<Integer, MLBPlayer> battingStatsSortedByStatMap;
@@ -1165,7 +1166,7 @@ public class BaseballSimulator {
 						for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
 							System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPosition());
 						}
-						return null;
+						return batters;
 					}
 					player = rosters[t].getBatters().get(list.get(index).getKey());
 					if (player.getPrimaryPosition().equals("DH")/* || (years[t] > 2010 && player.getPrimaryPosition().equals("OF"))*/) {

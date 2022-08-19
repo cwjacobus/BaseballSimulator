@@ -183,7 +183,14 @@ public class DBImport {
 								continue;
 						}
 						Integer playerId = Integer.parseInt(playerJson.getString("player_id"));
-						Integer jerseyNumber = playerJson.getString("jersey_number").length() > 0 ? Integer.parseInt(playerJson.getString("jersey_number")) : null;
+						Integer jerseyNumber = null;
+						if (playerJson.getString("jersey_number").length() > 0) {
+							try {
+								jerseyNumber = Integer.parseInt(playerJson.getString("jersey_number"));
+							}
+							catch (NumberFormatException e) {
+							}
+						}
 						MLBPlayer p = new MLBPlayer(playerId, playerJson.getString("name_last_first"), playerJson.getString("primary_position"), 
 								playerJson.getString("throws"), playerJson.getString("bats"), jerseyNumber);
 						allPlayersMap.put(playerId, p);
