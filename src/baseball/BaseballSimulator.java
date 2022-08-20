@@ -1717,37 +1717,7 @@ public class BaseballSimulator {
 			return false;
 		}
 		else if (command.toUpperCase().indexOf("PITCHERS") != -1) {
-			commandArray = command.split(" ");
-			if (commandArray.length < 2) {
-				System.out.print("INVALID COMMAND!\n");
-				return false;
-			}
-			int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
-			HashMap<Integer, MLBPlayer> gamePitchers = boxScores[top].getPitchers();
-			HashMap<Integer, MLBPlayer> rosterPitchers = rosters[top].getPitchers();
-			System.out.println("\nEligible Pitchers:");
-			System.out.println("Name\t\t\tID      ERA   GS  H   S   BS  HRA");
-			for (Map.Entry<Integer, MLBPlayer> entry : rosterPitchers.entrySet()) {
-				MLBPlayer pitcher = entry.getValue();
-				if (gamePitchers.get(pitcher.getMlbPlayerId()) == null) {
-					System.out.print(pitcher.getFirstLastName());
-					for (int tab = 24; tab >= 8; tab-=8) {
-						if (pitcher.getFirstLastName().length() < tab) {
-							System.out.print("\t");
-						}
-					}
-					System.out.print(pitcher.getMlbPlayerId() + "  ");
-					System.out.print(eraDf.format(pitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunAverage()) + "  ");
-					System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getGamesStarted() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getGamesStarted()));
-					System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getHolds() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getHolds()));
-					System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getSaves() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getSaves()));
-					System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getBlownSaves() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getBlownSaves()));
-					System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getHomeRunsAllowed() + "  ");
-					System.out.println();
-				}
-			}
-			System.out.println();
-			return false;
+			return handlePitchersCommand(command);
 		}
 		else if (command.toUpperCase().indexOf("LINEUP") != -1) {
 			commandArray = command.split(" ");
@@ -1955,92 +1925,7 @@ public class BaseballSimulator {
 			return false;
 		} // End SUBR
 		else if (command.toUpperCase().indexOf("IMPORT") != -1) {
-			commandArray = command.split(" ");
-			if (commandArray.length < 3) {
-				System.out.print("INVALID COMMAND!\n");
-				return false;
-			}
-			if (gameState.isGameStarted()) {
-				System.out.print("Lineup can not be imported if game has already started!\n");
-				return false;
-			}
-			int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
-			String lineupFileName = commandArray[2];
-			try {
-				@SuppressWarnings("resource")
-				BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\cjaco\\Documents\\Sports\\BBSim\\" + lineupFileName));
-				String line = reader.readLine();
-				String id = null;
-				String lineupPos = null;
-				ArrayList<String> positionsUsed = new ArrayList<String>();
-				int lineupCount = 0;
-				MLBPlayer importPitcher = null;
-				ArrayList<MLBPlayer> importBatters = new ArrayList<>();
-				while (line != null) {
-					lineupCount++;
-					if (lineupCount > 10) {
-						break;
-					}
-					if (line.contains("<") && line.contains(">")) {
-						id = line.substring(line.indexOf("<") + 1, line.indexOf(">")).trim();
-						lineupPos = line.substring(line.indexOf(">") + 1, line.length()).trim();
-					}
-					System.out.println(line);
-					line = reader.readLine();
-					MLBPlayer player;
-					try {
-						player = getPlayerFromId(Integer.parseInt(id));
-					}
-					catch (NumberFormatException e) {
-						System.out.println("Invalid player ID: " + id + ".  Import failed!");
-						return false;
-					}
-					if (player == null) {
-						System.out.println("Player " + id + " not found in " + boxScores[top].getTeamAndYearDisplay() + " roster.  Import failed!");
-						return false;
-					}
-					if (!positions.containsValue(lineupPos)) {
-						System.out.println("Position: " + lineupPos + " not valid.  Import failed!");
-						return false;
-						
-					}
-					if (positionsUsed.contains(lineupPos)) {
-						System.out.println("Position: " + lineupPos + " is already used.  Import failed!");
-						return false;
-					}
-					if (lineupCount < 10) {
-						MLBPlayer importBatter = new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), lineupPos, player.getArmThrows(), 
-							player.getBats(), player.getJerseyNumber());
-						importBatters.add(importBatter);	
-					}
-					else {
-						importPitcher = new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), lineupPos, 
-							player.getArmThrows(), player.getBats(), player.getJerseyNumber());
-						
-					}
-					positionsUsed.add(lineupPos);
-				}
-				if (lineupCount != 10) {
-					System.out.println("Must have 10 players in lineup! (9 batters and 1 pitcher).  Import failed!");
-					return false;
-				}
-				// Add imported players only if file was valid and we have a complete lineup
-				lineupCount = 0;
-				for (MLBPlayer importBatter : importBatters) {
-					lineupCount++;
-					boxScores[top].getBatters().get(lineupCount-1).remove(0);
-					boxScores[top].getBatters().get(lineupCount-1).add(importBatter);
-				}
-				boxScores[top].getPitchers().remove(gameState.getCurrentPitchers()[top].getMlbPlayerId());
-				boxScores[top].getPitchers().put(importPitcher.getMlbPlayerId(), importPitcher);
-				gameState.setCurrentPitcher(importPitcher, top);
-				System.out.println("\nLineup imported for: " + boxScores[top].getTeamAndYearDisplay() + "\n");
-				reader.close();
-			}
-			catch (IOException e) {
-				System.out.println("Lineup file not found.  Import failed!");
-			}	
-			return false;
+			return handleImportLineupCommand(command);
 		} // End IMPORT
 		else {  // Commands without parameters
 			switch (command) {
@@ -2132,6 +2017,130 @@ public class BaseballSimulator {
 			}
 		}
 	}
+	
+    private static boolean handleImportLineupCommand(String command) {
+    	String[] commandArray = command.split(" ");
+		if (commandArray.length < 3) {
+			System.out.print("INVALID COMMAND!\n");
+			return false;
+		}
+		if (gameState.isGameStarted()) {
+			System.out.print("Lineup can not be imported if game has already started!\n");
+			return false;
+		}
+		int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
+		String lineupFileName = commandArray[2];
+		try {
+			@SuppressWarnings("resource")
+			BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\cjaco\\Documents\\Sports\\BBSim\\" + lineupFileName));
+			String line = reader.readLine();
+			String id = null;
+			String lineupPos = null;
+			ArrayList<String> positionsUsed = new ArrayList<String>();
+			int lineupCount = 0;
+			MLBPlayer importPitcher = null;
+			ArrayList<MLBPlayer> importBatters = new ArrayList<>();
+			while (line != null) {
+				lineupCount++;
+				if (lineupCount > 10) {
+					break;
+				}
+				if (line.contains("<") && line.contains(">")) {
+					id = line.substring(line.indexOf("<") + 1, line.indexOf(">")).trim();
+					lineupPos = line.substring(line.indexOf(">") + 1, line.length()).trim();
+				}
+				System.out.println(line);
+				line = reader.readLine();
+				MLBPlayer player;
+				try {
+					player = getPlayerFromId(Integer.parseInt(id));
+				}
+				catch (NumberFormatException e) {
+					System.out.println("Invalid player ID: " + id + ".  Import failed!");
+					return false;
+				}
+				if (player == null) {
+					System.out.println("Player " + id + " not found in " + boxScores[top].getTeamAndYearDisplay() + " roster.  Import failed!");
+					return false;
+				}
+				if (!positions.containsValue(lineupPos)) {
+					System.out.println("Position: " + lineupPos + " not valid.  Import failed!");
+					return false;
+					
+				}
+				if (positionsUsed.contains(lineupPos)) {
+					System.out.println("Position: " + lineupPos + " is already used.  Import failed!");
+					return false;
+				}
+				if (lineupCount < 10) {
+					MLBPlayer importBatter = new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), lineupPos, player.getArmThrows(), 
+						player.getBats(), player.getJerseyNumber());
+					importBatters.add(importBatter);	
+				}
+				else {
+					importPitcher = new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), lineupPos, 
+						player.getArmThrows(), player.getBats(), player.getJerseyNumber());
+					
+				}
+				positionsUsed.add(lineupPos);
+			}
+			if (lineupCount != 10) {
+				System.out.println("Must have 10 players in lineup! (9 batters and 1 pitcher).  Import failed!");
+				return false;
+			}
+			// Add imported players only if file was valid and we have a complete lineup
+			lineupCount = 0;
+			for (MLBPlayer importBatter : importBatters) {
+				lineupCount++;
+				boxScores[top].getBatters().get(lineupCount-1).remove(0);
+				boxScores[top].getBatters().get(lineupCount-1).add(importBatter);
+			}
+			boxScores[top].getPitchers().remove(gameState.getCurrentPitchers()[top].getMlbPlayerId());
+			boxScores[top].getPitchers().put(importPitcher.getMlbPlayerId(), importPitcher);
+			gameState.setCurrentPitcher(importPitcher, top);
+			System.out.println("\nLineup imported for: " + boxScores[top].getTeamAndYearDisplay() + "\n");
+			reader.close();
+		}
+		catch (IOException e) {
+			System.out.println("Lineup file not found.  Import failed!");
+		}	
+		return false;
+    }
+    
+    private static boolean handlePitchersCommand(String command) {
+    	String[] commandArray = command.split(" ");
+		if (commandArray.length < 2) {
+			System.out.print("INVALID COMMAND!\n");
+			return false;
+		}
+		boolean allPitchers = commandArray.length > 2 && (commandArray[2].toUpperCase().equals("ALL") || commandArray[2].toUpperCase().equals("A"));
+		int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
+		HashMap<Integer, MLBPlayer> gamePitchers = boxScores[top].getPitchers();
+		HashMap<Integer, MLBPlayer> rosterPitchers = rosters[top].getPitchers();
+		System.out.println(!allPitchers ? "\nEligible Pitchers:" : "\nAll Pitchers:");
+		System.out.println("Name\t\t\tID      ERA   GS  H   S   BS  HRA");
+		for (Map.Entry<Integer, MLBPlayer> entry : rosterPitchers.entrySet()) {
+			MLBPlayer pitcher = entry.getValue();
+			if (gamePitchers.get(pitcher.getMlbPlayerId()) == null || allPitchers) {
+				System.out.print(pitcher.getFirstLastName());
+				for (int tab = 24; tab >= 8; tab-=8) {
+					if (pitcher.getFirstLastName().length() < tab) {
+						System.out.print("\t");
+					}
+				}
+				System.out.print(pitcher.getMlbPlayerId() + "  ");
+				System.out.print(eraDf.format(pitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunAverage()) + "  ");
+				System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getGamesStarted() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getGamesStarted()));
+				System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getHolds() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getHolds()));
+				System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getSaves() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getSaves()));
+				System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getBlownSaves() + padSpaces(" ", pitcher.getMlbPitchingStats().getPitchingStats().getBlownSaves()));
+				System.out.print(pitcher.getMlbPitchingStats().getPitchingStats().getHomeRunsAllowed() + "  ");
+				System.out.println();
+			}
+		}
+		System.out.println();
+		return false; 
+    }
 	
 	private static PitchingStats changePitcher(MLBPlayer newPitcher, int top, Integer dsLineupPos) {
 		if (newPitcher != null) {
