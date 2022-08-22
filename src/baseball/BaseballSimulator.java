@@ -160,8 +160,7 @@ public class BaseballSimulator {
 		useDH = !teams[1].getLeague().equalsIgnoreCase("NL") && years[1] >= 1973; // TBD redo logic for NL using DH in 2020 and 2022 and after, as well as interleague games between 1997 and 2021 with AL home team
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalBattingLineup(teams, years);
 		if (lineupBatters.get(0).size() != NUM_OF_PLAYERS_IN_LINEUP || lineupBatters.get(1).size() != NUM_OF_PLAYERS_IN_LINEUP) {
-			System.out.println("Call handleIncompleteLineup");
-			return;
+			handleIncompleteLineup();
 		}
 		for (int s = 0; s < seriesLength; s++) {
 			gameState = new GameState();
@@ -179,6 +178,9 @@ public class BaseballSimulator {
 					boxScores[t].getBatters().set(8, new ArrayList<MLBPlayer>());  // Clear out prior games pitcher spots
 					boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
 				}	
+			}
+			if (simulationMode = true) { // Set game started for SIM mode
+				gameState.setGameStarted(true);
 			}
 			playBall(gameState, boxScores, s + 1);
 			seriesBoxScores[s] = boxScores;
@@ -273,7 +275,7 @@ public class BaseballSimulator {
 		}
 	}
 	
-	private static void playBall (GameState gameState, BoxScore[] boxScores, int gameNumber) {
+	private static void playBall(GameState gameState, BoxScore[] boxScores, int gameNumber) {
 		System.out.println("\nStarting pitchers for Game #" + gameNumber +  " " + boxScores[0].getTeam().getShortTeamName() + ": " + 
 			gameState.getCurrentPitchers()[0].getFirstLastName() + " v " + boxScores[1].getTeam().getShortTeamName() + ": " + gameState.getCurrentPitchers()[1].getFirstLastName());
 		while (gameState.getInning() <= INNINGS_PER_GAME || boxScores[0].getScore(gameState.getInning()) == boxScores[1].getScore(gameState.getInning())) {
@@ -2115,13 +2117,13 @@ public class BaseballSimulator {
 		}
 		boolean allPitchers = commandArray.length > 2 && (commandArray[2].toUpperCase().equals("ALL") || commandArray[2].toUpperCase().equals("A"));
 		int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
-		HashMap<Integer, MLBPlayer> gamePitchers = boxScores[top].getPitchers();
+		HashMap<Integer, MLBPlayer> gamePitchers = boxScores != null ? boxScores[top].getPitchers() : null;
 		HashMap<Integer, MLBPlayer> rosterPitchers = rosters[top].getPitchers();
 		System.out.println(!allPitchers ? "\nEligible Pitchers:" : "\nAll Pitchers:");
 		System.out.println("Name\t\t\tID      ERA   GS  H   S   BS  HRA");
 		for (Map.Entry<Integer, MLBPlayer> entry : rosterPitchers.entrySet()) {
 			MLBPlayer pitcher = entry.getValue();
-			if (gamePitchers.get(pitcher.getMlbPlayerId()) == null || allPitchers) {
+			if ((gamePitchers != null && gamePitchers.get(pitcher.getMlbPlayerId()) == null) || allPitchers) {
 				System.out.print(pitcher.getFirstLastName());
 				for (int tab = 24; tab >= 8; tab-=8) {
 					if (pitcher.getFirstLastName().length() < tab) {
@@ -2141,6 +2143,34 @@ public class BaseballSimulator {
 		System.out.println();
 		return false; 
     }
+    
+    private static void handleIncompleteLineup() {
+    Scanner myObj;
+		while(true) {
+			myObj = new Scanner(System.in);
+			System.out.print("INCOMPLETE LINEUP: ");
+			String command = myObj.nextLine();
+			if (command.toUpperCase().indexOf("PITCHERS") != -1) {
+				handlePitchersCommand(command);
+				continue;
+			}
+			else if (command.toUpperCase().indexOf("IMPORT") != -1) {
+				handleImportLineupCommand(command);
+				boolean validLineup = false;
+				if (validLineup) {
+					break;
+				}
+				else {
+					
+				}
+		
+			}
+			else {
+				System.out.println("INVALID COMMAND!");  
+			}
+		}
+		myObj.close();
+   }
 	
 	private static PitchingStats changePitcher(MLBPlayer newPitcher, int top, Integer dsLineupPos) {
 		if (newPitcher != null) {
@@ -2182,12 +2212,18 @@ public class BaseballSimulator {
 		//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
 		ArrayList<Object> battingStatsList = DBImport.importBattingStats(battersMap, year, filteredBattersMap);
 		ArrayList<Object> pitchingStatsList = DBImport.importPitchingStats(pitchersMap, year, filteredPitchersMap);
+		ArrayList<Integer> inelligibleBatters = new ArrayList<>();
+		ArrayList<Integer> inelligiblePitchers = new ArrayList<>();
 		for (Map.Entry<Integer, MLBPlayer> entry : filteredBattersMap.entrySet()) {
 			MLBBattingStats mlbBattingStats;
 			for (Object o : battingStatsList) {
 				mlbBattingStats = (MLBBattingStats)o;
 				if (mlbBattingStats.getMlbPlayerId() == entry.getKey() && mlbBattingStats.getMlbTeamId() == mlbTeamsList.get(0).getTeamId()) {
 					entry.getValue().setMlbBattingStats(mlbBattingStats);
+					break;
+				}
+			else if (mlbBattingStats.getMlbPlayerId() == entry.getKey() && mlbBattingStats.getMlbTeamId() != mlbTeamsList.get(0).getTeamId()) { // Stats dont belong to this team so remove from roster
+					inelligibleBatters.add(entry.getKey());
 					break;
 				}
 			}
@@ -2200,17 +2236,21 @@ public class BaseballSimulator {
 					entry.getValue().setMlbPitchingStats(mlbPitchingStats);
 					break;
 				}
+				else if (mlbPitchingStats.getMlbPlayerId() == entry.getKey() && mlbPitchingStats.getMlbTeamId() != mlbTeamsList.get(0).getTeamId()) { // Stats dont belong to this team so remove from roster
+					inelligiblePitchers.add(entry.getKey());
+					break;
+				}
 			}
+		}
+		// Before adding to rosters, remove players that moved to other teams
+		for (Integer playerId : inelligibleBatters) {
+			filteredBattersMap.remove(playerId);
+		}
+		for (Integer playerId : inelligiblePitchers) {
+			filteredPitchersMap.remove(playerId);	
 		}
 		rosters[top].setPitchers(sortHashMapByValue(filteredPitchersMap, "GS"));
 		rosters[top].setBatters(filteredBattersMap);
-		
-		/*for (Map.Entry<Integer, MLBPlayer> entry : filteredBattersMap.entrySet()) {
-			System.out.println(entry.getValue().getFirstLastName() + " " + entry.getValue().getMlbBattingStats().getBattingStats().getHomeRuns());
-		}
-		for (Map.Entry<Integer, MLBPlayer> entry : filteredPitchersMap.entrySet()) {
-			System.out.println(entry.getValue().getFirstLastName() + " " + entry.getValue().getMlbPitchingStats().getPitchingStats().getStrikeouts());
-		}*/
 	}
 	
 	private static MLBPlayer getPitcher(int top, String sortBy, int index, ArrayList<Integer> excludingPitchers) {
