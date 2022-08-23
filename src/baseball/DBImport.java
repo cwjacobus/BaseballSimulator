@@ -78,6 +78,7 @@ public class DBImport {
 				}
 			}
 			for (int year = startYear; year <= endYear; year++) {
+				System.out.println("Import players for: " + year);
 				if (!args[3].equalsIgnoreCase("ALL")) {
 					teamsForYearList = getTeamsByYear(year, args[3], allTeamsList);
 				}
@@ -230,11 +231,11 @@ public class DBImport {
 			catch (IOException e) { 
 				e.printStackTrace();
 			}
-		}
+		}/*
 		for (Map.Entry<Integer, MLBPlayer> entry : allPlayersMap.entrySet()) {
 			System.out.println(entry.getValue().getMlbPlayerId() + " " + entry.getValue().getFirstLastName() + " " + entry.getValue().getPrimaryPosition() +
 			    " " + entry.getValue().getArmThrows() + " " + entry.getValue().getBats() + " " + entry.getValue().getJerseyNumber());
-		}
+		}*/
 		return allPlayersMap;
 	}
 	
