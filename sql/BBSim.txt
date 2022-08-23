@@ -146,3 +146,6 @@ select p.full_name, t.short_name, year, p.mlb_player_id, saves, holds, innings_p
 
 // Get franchise from team short name and year
 select t.*, f.FIRST_YEAR_PLAYED from mlb_team t, mlb_franchise f where t.MLB_FRANCHISE_ID = f.MLB_FRANCHISE_ID and t.short_name = 'MON' and f.FIRST_YEAR_PLAYED <= 1970 order by (1970 - f.FIRST_YEAR_PLAYED) limit 1;
+
+// Get database sizes
+SELECT table_schema AS "Database", SUM(data_length + index_length) / 1024 / 1024 AS "Size (MB)" FROM information_schema.TABLES GROUP BY table_schema;

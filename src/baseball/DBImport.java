@@ -33,48 +33,72 @@ public class DBImport {
 	static int currentYear = Calendar.getInstance().get(Calendar.YEAR);
 
 	public static void main(String[] args) {
-		Integer year = null;
+		//Integer year = null;
+		int startYear = 0;
+		int endYear = -1;
 		boolean allYears = false;
 		ArrayList<MLBTeam> allTeamsList;
 		ArrayList<MLBTeam> teamsForYearList;
 		
-		if (args.length < 2) {
+		if (args.length < 3) {
 			System.out.println("INVALID ARGS");
 			return;
 		}
 		DAO.setConnection();
 		allTeamsList = DAO.getAllTeamsList();
 		String fn = args[0];
+		
 		if (!args[1].equalsIgnoreCase("ALL")) {
-			year = Integer.parseInt(args[1]);
+			try {
+				startYear = Integer.parseInt(args[1]);
+			}
+			catch (NumberFormatException e) {
+				System.out.println("INVALID YEAR: " + args[1]);
+				return;
+			}
 		}
 		else {
 			allYears = true;
 		}
 		if (fn.equals("TEAM")) {
-			importFranchisesAndTeams(year, allYears);
+			importFranchisesAndTeams(startYear, allYears);
 		}
 		else if (fn.equals("PLAYER")) {
+			if (args.length < 4) {
+				System.out.println("INVALID ARGS");
+				return;
+			}
 			if (!args[2].equalsIgnoreCase("ALL")) {
-				teamsForYearList = getTeamsByYear(year, args[2], allTeamsList);
+				try {
+					endYear = Integer.parseInt(args[2]);
+				}
+				catch (NumberFormatException e) {
+					System.out.println("INVALID YEAR:" + args[2]);
+					return;
+				}
 			}
-			else {
-				teamsForYearList = getTeamsByYear(year, null, allTeamsList);
+			for (int year = startYear; year <= endYear; year++) {
+				if (!args[3].equalsIgnoreCase("ALL")) {
+					teamsForYearList = getTeamsByYear(year, args[3], allTeamsList);
+				}
+				else {
+					teamsForYearList = getTeamsByYear(year, null, allTeamsList);
+				}
+				HashMap<Integer, MLBPlayer> hittersMap = importMlbPlayers(year, true, teamsForYearList); // import batters
+				HashMap<Integer, MLBPlayer> filteredHittersMap = new HashMap<Integer, MLBPlayer>();
+				HashMap<Integer, MLBPlayer> pitchersMap = importMlbPlayers(year, false, teamsForYearList); // import pitchers
+				HashMap<Integer, MLBPlayer> filteredPitchersMap = new HashMap<Integer, MLBPlayer>();
+				//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
+				ArrayList<Object> battingStatsList = importBattingStats(hittersMap, year, filteredHittersMap);
+				ArrayList<Object> pitchingStatsList = importPitchingStats(pitchersMap, year, filteredPitchersMap);
+				//importFieldingStats(hittersMap, year, fieldingStatsMap);  // hitters fielding
+				//importFieldingStats(pitchersMap, year, fieldingStatsMap); // pitchers fielding
+				DAO.createBatchDataFromMap(filteredHittersMap);
+				DAO.createBatchDataFromMap(filteredPitchersMap);
+				DAO.createBatchDataFromList(battingStatsList);
+				DAO.createBatchDataFromList(pitchingStatsList);
+				//DAO.createBatchDataFromMap(fieldingStatsMap);
 			}
-			HashMap<Integer, MLBPlayer> hittersMap = importMlbPlayers(year, true, teamsForYearList); // import batters
-			HashMap<Integer, MLBPlayer> filteredHittersMap = new HashMap<Integer, MLBPlayer>();
-			HashMap<Integer, MLBPlayer> pitchersMap = importMlbPlayers(year, false, teamsForYearList); // import pitchers
-			HashMap<Integer, MLBPlayer> filteredPitchersMap = new HashMap<Integer, MLBPlayer>();
-			//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
-			ArrayList<Object> battingStatsList = importBattingStats(hittersMap, year, filteredHittersMap);
-			ArrayList<Object> pitchingStatsList = importPitchingStats(pitchersMap, year, filteredPitchersMap);
-			//importFieldingStats(hittersMap, year, fieldingStatsMap);  // hitters fielding
-			//importFieldingStats(pitchersMap, year, fieldingStatsMap); // pitchers fielding
-			DAO.createBatchDataFromMap(filteredHittersMap);
-			DAO.createBatchDataFromMap(filteredPitchersMap);
-			DAO.createBatchDataFromList(battingStatsList);
-			DAO.createBatchDataFromList(pitchingStatsList);
-			//DAO.createBatchDataFromMap(fieldingStatsMap);
 		}
 		else {
 			System.out.println("INVALID FUNCTION");
