@@ -242,6 +242,14 @@ public class DBImport {
 	public static ArrayList<Object> importBattingStats(HashMap<Integer, MLBPlayer> hittersMap, int year, HashMap<Integer, MLBPlayer> filteredHittersMap) {
 		ArrayList<Object> battingStatsList = new ArrayList<Object>();
 		int index = 1;
+		int qualifyingPlateAppearances = 100;
+		if (year == 2020) { // pandemic year
+			qualifyingPlateAppearances = 38;
+			
+		}
+		else if (year == 1994) { // strike year
+			qualifyingPlateAppearances = 71;
+		}
 		try {   
 			for (Map.Entry<Integer, MLBPlayer> entry : hittersMap.entrySet()) {
 				String getBattingStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_hitting_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + 
@@ -262,7 +270,7 @@ public class DBImport {
 						JSONArray multipleTeamStats = new JSONArray(queryResults.getString("row"));
 						for (int i = 0; i < multipleTeamStats.length(); i++) {
 							battingStatsJson = multipleTeamStats.getJSONObject(i);
-							if (Integer.parseInt(battingStatsJson.getString("tpa")) > 100) { // only import if p app > 100
+							if (Integer.parseInt(battingStatsJson.getString("tpa")) > qualifyingPlateAppearances) { // only import if p app > 100
 								System.out.print(index + " ");
 								if (index % 50 == 0) {
 									System.out.println();
@@ -276,7 +284,7 @@ public class DBImport {
 					}
 					else {
 						battingStatsJson = new JSONObject(queryResults.getString("row"));
-						if (Integer.parseInt(battingStatsJson.getString("tpa")) > 100) { // only import if p app > 100
+						if (Integer.parseInt(battingStatsJson.getString("tpa")) > qualifyingPlateAppearances) { // only import if p app > 100
 							System.out.print(index + " ");
 							if (index % 50 == 0) {
 								System.out.println();
@@ -307,6 +315,14 @@ public class DBImport {
 	public static ArrayList<Object> importPitchingStats(HashMap<Integer, MLBPlayer> pitchersMap, int year, HashMap<Integer, MLBPlayer> filteredPitchersMap) {
 		ArrayList<Object> pitchingStatsList = new ArrayList<Object>();
 		int index = 1;
+		int qualifyingGamesPitched = 20;
+		if (year == 2020) { // pandemic year
+			qualifyingGamesPitched = 8;
+			
+		}
+		else if (year == 1994) { // strike year
+			qualifyingGamesPitched = 14;
+		}
 		try {   
 			for (Map.Entry<Integer, MLBPlayer> entry : pitchersMap.entrySet()) {
 				String getPitchingStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_pitching_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + 
@@ -327,7 +343,7 @@ public class DBImport {
 						JSONArray multipleTeamStats = new JSONArray(queryResults.getString("row"));
 						for (int i = 0; i < multipleTeamStats.length(); i++) {
 							pitchingStatsJson = multipleTeamStats.getJSONObject(i);
-							if (Integer.parseInt(pitchingStatsJson.getString("g")) > 20) { // only import if games > 20
+							if (Integer.parseInt(pitchingStatsJson.getString("g")) > qualifyingGamesPitched) { // only import if games > 20
 								System.out.print(index + " ");
 								if (index % 50 == 0) {
 									System.out.println();
@@ -341,7 +357,7 @@ public class DBImport {
 					}
 					else {
 						pitchingStatsJson = new JSONObject(queryResults.getString("row"));
-						if (Integer.parseInt(pitchingStatsJson.getString("g")) > 20) { // only import if games > 20
+						if (Integer.parseInt(pitchingStatsJson.getString("g")) > qualifyingGamesPitched) { // only import if games > 20
 							System.out.print(index + " ");
 							if (index % 50 == 0) {
 								System.out.println();
