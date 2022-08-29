@@ -42,8 +42,8 @@ public class BaseballSimulator {
 	static boolean autoBeforeMode = false;
 	static boolean gameMode = false;
 	static int autoBeforeInning = 1000;
-	static GameState gameState;
-	static BoxScore[] boxScores;
+	static GameState gameState = new GameState();
+	static BoxScore[] boxScores = new BoxScore[2];
 	static Roster[] rosters;
 	static MLBPlayer[] setupMen = new MLBPlayer[2];
 	static MLBPlayer[] closers = new MLBPlayer[2];
@@ -133,7 +133,9 @@ public class BaseballSimulator {
 		SeriesStats[] seriesStats = new SeriesStats[2];
 		for (int t = 0; t < 2; t++) {
 			rosters[t] = new Roster();
+			boxScores[t] = new BoxScore();
 			teams[t] = getTeamByYearAndShortName(years[t], teamNames[t], allMlbTeamsList);
+			boxScores[t].setTeam(teams[t]);
 			if (teams[t] == null) {
 				System.out.println("Invalid team: " + teamNames[t] + " " + years[t]);
 				System.out.println("\nValid teams: ");
@@ -159,8 +161,17 @@ public class BaseballSimulator {
 		}
 		useDH = !teams[1].getLeague().equalsIgnoreCase("NL") && years[1] >= 1973; // TBD redo logic for NL using DH in 2020 and 2022 and after, as well as interleague games between 1997 and 2021 with AL home team
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalBattingLineup(teams, years);
+		MLBPlayer[] importedPitchers = new MLBPlayer[2];
+		boolean importedLineup = false;
 		if (lineupBatters.get(0).size() != NUM_OF_PLAYERS_IN_LINEUP || lineupBatters.get(1).size() != NUM_OF_PLAYERS_IN_LINEUP) {
 			handleIncompleteLineup();
+			ArrayList<ArrayList<MLBPlayer>> lineupBattersVis = boxScores[0].getBatters();
+			ArrayList<ArrayList<MLBPlayer>> lineupBattersHome = boxScores[1].getBatters();
+			lineupBatters.set(0, lineupBattersVis);
+			lineupBatters.set(1, lineupBattersHome);
+			importedPitchers[0] = gameState.getCurrentPitchers()[0];
+			importedPitchers[1] = gameState.getCurrentPitchers()[1];
+			importedLineup = true;
 		}
 		for (int s = 0; s < seriesLength; s++) {
 			gameState = new GameState();
@@ -171,7 +182,14 @@ public class BaseballSimulator {
 				boxScores[t].setBatters(lineupBatters.get(t));
 				boxScores[t].setTeam(teams[t]);
 				clearPlayerGameData(boxScores[t]);
-				MLBPlayer startingPitcher = getPitcher(t, "GS", seriesLength == 1 ? getRandomNumberInRange(0, 4) : s % 5, null);
+				MLBPlayer startingPitcher;
+				if (s == 0 &&  importedLineup) {
+					startingPitcher = importedPitchers[t];	
+				}
+				else {
+					int rotationRange = rosters[t].getPitchers().size() < 5 ? rosters[t].getPitchers().size() - 1 : 4; // In case team has less than 5 starters
+					startingPitcher = getPitcher(t, "GS", seriesLength == 1 ? getRandomNumberInRange(0, rotationRange) : s % 5, null);
+				}
 				gameState.setCurrentPitcher(startingPitcher, t);
 				boxScores[t].getPitchers().put(startingPitcher.getMlbPlayerId(), startingPitcher);
 				if (!useDH) {
@@ -1927,7 +1945,7 @@ public class BaseballSimulator {
 			return false;
 		} // End SUBR
 		else if (command.toUpperCase().indexOf("IMPORT") != -1) {
-			return handleImportLineupCommand(command);
+			return handleImportLineupCommand(command, false);
 		} // End IMPORT
 		else {  // Commands without parameters
 			switch (command) {
@@ -2020,13 +2038,13 @@ public class BaseballSimulator {
 		}
 	}
 	
-    private static boolean handleImportLineupCommand(String command) {
+    private static boolean handleImportLineupCommand(String command, boolean fromIncompleteLineup) {
     	String[] commandArray = command.split(" ");
 		if (commandArray.length < 3) {
 			System.out.print("INVALID COMMAND!\n");
 			return false;
 		}
-		if (gameState.isGameStarted()) {
+		if (gameState != null && gameState.isGameStarted()) {
 			System.out.print("Lineup can not be imported if game has already started!\n");
 			return false;
 		}
@@ -2070,7 +2088,7 @@ public class BaseballSimulator {
 					return false;
 					
 				}
-				if (positionsUsed.contains(lineupPos)) {
+				if (positionsUsed.contains(lineupPos) && lineupCount != 10) {
 					System.out.println("Position: " + lineupPos + " is already used.  Import failed!");
 					return false;
 				}
@@ -2094,10 +2112,14 @@ public class BaseballSimulator {
 			lineupCount = 0;
 			for (MLBPlayer importBatter : importBatters) {
 				lineupCount++;
-				boxScores[top].getBatters().get(lineupCount-1).remove(0);
+				if (boxScores[top].getBatters() != null && boxScores[top].getBatters().size() == 0) { // Only remove if lineup has already been created
+					boxScores[top].getBatters().get(lineupCount-1).remove(0);
+				}
 				boxScores[top].getBatters().get(lineupCount-1).add(importBatter);
 			}
-			boxScores[top].getPitchers().remove(gameState.getCurrentPitchers()[top].getMlbPlayerId());
+			if (gameState.getCurrentPitchers()[top] != null) { // Only remove if lineup has already been created
+				boxScores[top].getPitchers().remove(gameState.getCurrentPitchers()[top].getMlbPlayerId());
+			}
 			boxScores[top].getPitchers().put(importPitcher.getMlbPlayerId(), importPitcher);
 			gameState.setCurrentPitcher(importPitcher, top);
 			System.out.println("\nLineup imported for: " + boxScores[top].getTeamAndYearDisplay() + "\n");
@@ -2106,7 +2128,7 @@ public class BaseballSimulator {
 		catch (IOException e) {
 			System.out.println("Lineup file not found.  Import failed!");
 		}	
-		return false;
+		return fromIncompleteLineup ? true : false;
     }
     
     private static boolean handlePitchersCommand(String command) {
@@ -2155,15 +2177,10 @@ public class BaseballSimulator {
 				continue;
 			}
 			else if (command.toUpperCase().indexOf("IMPORT") != -1) {
-				handleImportLineupCommand(command);
-				boolean validLineup = false;
+				boolean validLineup = handleImportLineupCommand(command, true);
 				if (validLineup) {
 					break;
 				}
-				else {
-					
-				}
-		
 			}
 			else {
 				System.out.println("INVALID COMMAND!");  
