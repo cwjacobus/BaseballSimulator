@@ -161,17 +161,19 @@ public class BaseballSimulator {
 		}
 		useDH = !teams[1].getLeague().equalsIgnoreCase("NL") && years[1] >= 1973; // TBD redo logic for NL using DH in 2020 and 2022 and after, as well as interleague games between 1997 and 2021 with AL home team
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalBattingLineup(teams, years);
+		boxScores[0].setBatters(lineupBatters.get(0));
+		boxScores[1].setBatters(lineupBatters.get(1));
 		MLBPlayer[] importedPitchers = new MLBPlayer[2];
 		boolean importedLineup = false;
-		if (lineupBatters.get(0).size() != NUM_OF_PLAYERS_IN_LINEUP || lineupBatters.get(1).size() != NUM_OF_PLAYERS_IN_LINEUP) {
+		boolean incompleteLineups = areLineupsIncomplete(lineupBatters);
+		while (incompleteLineups) {
 			handleIncompleteLineup();
-			ArrayList<ArrayList<MLBPlayer>> lineupBattersVis = boxScores[0].getBatters();
-			ArrayList<ArrayList<MLBPlayer>> lineupBattersHome = boxScores[1].getBatters();
-			lineupBatters.set(0, lineupBattersVis);
-			lineupBatters.set(1, lineupBattersHome);
+			lineupBatters.set(0, boxScores[0].getBatters());
+			lineupBatters.set(1, boxScores[1].getBatters());
 			importedPitchers[0] = gameState.getCurrentPitchers()[0];
 			importedPitchers[1] = gameState.getCurrentPitchers()[1];
 			importedLineup = true;
+			incompleteLineups = areLineupsIncomplete(lineupBatters);
 		}
 		for (int s = 0; s < seriesLength; s++) {
 			gameState = new GameState();
@@ -183,7 +185,7 @@ public class BaseballSimulator {
 				boxScores[t].setTeam(teams[t]);
 				clearPlayerGameData(boxScores[t]);
 				MLBPlayer startingPitcher;
-				if (s == 0 &&  importedLineup) {
+				if (s == 0 && importedLineup && importedPitchers[t] != null) {
 					startingPitcher = importedPitchers[t];	
 				}
 				else {
@@ -197,7 +199,7 @@ public class BaseballSimulator {
 					boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
 				}	
 			}
-			if (simulationMode = true) { // Set game started for SIM mode
+			if (simulationMode == true) { // Set game started for SIM mode
 				gameState.setGameStarted(true);
 			}
 			playBall(gameState, boxScores, s + 1);
@@ -1186,7 +1188,8 @@ public class BaseballSimulator {
 						for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
 							System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPosition());
 						}
-						return batters;
+						//return batters;
+						break;
 					}
 					player = rosters[t].getBatters().get(list.get(index).getKey());
 					if (player.getPrimaryPosition().equals("DH")/* || (years[t] > 2010 && player.getPrimaryPosition().equals("OF"))*/) {
@@ -2112,7 +2115,7 @@ public class BaseballSimulator {
 			lineupCount = 0;
 			for (MLBPlayer importBatter : importBatters) {
 				lineupCount++;
-				if (boxScores[top].getBatters() != null && boxScores[top].getBatters().size() == 0) { // Only remove if lineup has already been created
+				if (boxScores[top].getBatters() != null && boxScores[top].getBatters().get(lineupCount-1).size() > 0) { // Only remove if lineup has already been created
 					boxScores[top].getBatters().get(lineupCount-1).remove(0);
 				}
 				boxScores[top].getBatters().get(lineupCount-1).add(importBatter);
@@ -2127,6 +2130,7 @@ public class BaseballSimulator {
 		}
 		catch (IOException e) {
 			System.out.println("Lineup file not found.  Import failed!");
+			return false;
 		}	
 		return fromIncompleteLineup ? true : false;
     }
@@ -2187,9 +2191,21 @@ public class BaseballSimulator {
 			}
 		}
 		myObj.close();
-   }
+    }
+    
+    private static boolean areLineupsIncomplete(ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineups) {
+    	for (int top = 0; top < 2; top++) {
+    		ArrayList<ArrayList<MLBPlayer>> lineup = lineups.get(top);
+    		for (int bo = 0 ; bo <= NUM_OF_PLAYERS_IN_LINEUP - 2; bo++) { // only check 1-8 for now
+    			if (lineup.get(bo) == null || lineup.get(bo).size() == 0) {
+    				return true;
+    			}
+    		}
+    	}
+    	return false;
+    }
 	
-	private static PitchingStats changePitcher(MLBPlayer newPitcher, int top, Integer dsLineupPos) {
+    private static PitchingStats changePitcher(MLBPlayer newPitcher, int top, Integer dsLineupPos) {
 		if (newPitcher != null) {
 			boolean enteredWithSaveOppty = gameState.getSaveOppty(top);
 			int scoreDiff = boxScores[top].getScore(gameState.getInning()) - boxScores[top==0?1:0].getScore(gameState.getInning());
