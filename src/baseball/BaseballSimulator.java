@@ -159,7 +159,8 @@ public class BaseballSimulator {
 			}
 			seriesStats[t] = new SeriesStats(teams[t], years[t], seriesLength);
 		}
-		useDH = !teams[1].getLeague().equalsIgnoreCase("NL") && years[1] >= 1973; // TBD redo logic for NL using DH in 2020 and 2022 and after, as well as interleague games between 1997 and 2021 with AL home team
+		// Home team determines using DH
+		useDH = (teams[1].getLeague().equalsIgnoreCase("AL") && years[1] >= 1973) || (teams[1].getLeague().equalsIgnoreCase("NL") && (years[1] == 2020 || years[1] >= 2022));
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalBattingLineup(teams, years);
 		boxScores[0].setBatters(lineupBatters.get(0));
 		boxScores[1].setBatters(lineupBatters.get(1));
@@ -1765,7 +1766,7 @@ public class BaseballSimulator {
 				return false;
 			}
 			if (useDH) {
-				System.out.print("Double switch can only be done with NL rules!\n");
+				System.out.print("Double switch can only be done without DH!\n");
 				return false;
 			}
 			int newPitcherId = 0;
@@ -2063,6 +2064,7 @@ public class BaseballSimulator {
 			int lineupCount = 0;
 			MLBPlayer importPitcher = null;
 			ArrayList<MLBPlayer> importBatters = new ArrayList<>();
+			boolean DHFoundInLineup = false;
 			while (line != null) {
 				lineupCount++;
 				if (lineupCount > 10) {
@@ -2071,6 +2073,9 @@ public class BaseballSimulator {
 				if (line.contains("<") && line.contains(">")) {
 					id = line.substring(line.indexOf("<") + 1, line.indexOf(">")).trim();
 					lineupPos = line.substring(line.indexOf(">") + 1, line.length()).trim();
+					if (lineupPos.equalsIgnoreCase("DH")) {
+						DHFoundInLineup = true;
+					}
 				}
 				System.out.println(line);
 				line = reader.readLine();
@@ -2109,6 +2114,14 @@ public class BaseballSimulator {
 			}
 			if (lineupCount != 10) {
 				System.out.println("Must have 10 players in lineup! (9 batters and 1 pitcher).  Import failed!");
+				return false;
+			}
+			if (useDH && !DHFoundInLineup) {
+				System.out.println("Must provide a DH when playing " + boxScores[1].getTeamAndYearDisplay() + ".  Import failed!");
+				return false;
+			}
+			if (!useDH && DHFoundInLineup) {
+				System.out.println("Can't use a DH when playing " + boxScores[1].getTeamAndYearDisplay() + ".  Import failed!");
 				return false;
 			}
 			// Add imported players only if file was valid and we have a complete lineup
