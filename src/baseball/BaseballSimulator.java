@@ -41,6 +41,7 @@ public class BaseballSimulator {
 	static boolean simulationMode = true;
 	static boolean autoBeforeMode = false;
 	static boolean gameMode = false;
+	static boolean seasonSimulationMode = false;
 	static int autoBeforeInning = 1000;
 	static GameState gameState = new GameState();
 	static BoxScore[] boxScores = new BoxScore[2];
@@ -88,11 +89,17 @@ public class BaseballSimulator {
 
 	public static void main(String[] args) {
 		int seriesLength = 1;
-		if (args == null || args.length < 4) {
-			System.out.println("Invalid args - expecting <visYear> <vis> <homeYear> <homeYear> <MODE>[SIM|GAME|AUTO] <AUTO_AFTER>|<SERIES_LENGTH> - ex. 2019 HOU 2019 NYY SIM 7 or 2019 HOU 2019 NYY AUTO 9");
-			return;
+		int seasonSimYear = 0;
+		if (args == null || args.length < 2 || args.length == 3 || args.length == 4 ||
+		   (args.length == 2 && !args[0].equalsIgnoreCase("SEASON")) || 
+		   (args.length == 5 && !args[4].equalsIgnoreCase("GAME")) ||
+		   (args.length == 6 && !(args[4].equalsIgnoreCase("SIM") || args[4].equalsIgnoreCase("AUTO")))) {
+				System.out.println("Invalid args - expecting <visYear> <vis> <homeYear> <homeYear> <MODE>[SIM|GAME|AUTO] <AUTO_AFTER>|<SERIES_LENGTH> - ex. 2019 HOU 2019 NYY SIM 7 or 2019 HOU 2019 NYY AUTO 9");
+				return;
 		}
-		// Process arguments
+		DAO.setConnection();
+		rosters  = new Roster[2];
+		allMlbTeamsList = DAO.getAllTeamsList();
 		if (args.length > 4 && args[4] != null) {
 			if (args[4].equalsIgnoreCase("GAME")) {
 				autoBeforeInning = 0;
@@ -123,9 +130,17 @@ public class BaseballSimulator {
 				}
 			}
 		}
-		DAO.setConnection();
-		rosters  = new Roster[2];
-		allMlbTeamsList = DAO.getAllTeamsList();
+		else { // Season sim mode
+			simulationMode = true;
+			seasonSimulationMode = true;
+			autoBeforeMode = false;
+			gameMode = false;
+			if (args.length > 1 && args[1] != null) {
+				seasonSimYear = Integer.parseInt(args[1]);
+			}
+			createSchedule(seasonSimYear);
+			return;
+		}
 		int years[] = {Integer.parseInt(args[0]), Integer.parseInt(args[2])};
 		String[] teamNames = {args[1].toUpperCase(), args[3].toUpperCase()};
 		MLBTeam[] teams = {null, null};
@@ -200,7 +215,7 @@ public class BaseballSimulator {
 					boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
 				}	
 			}
-			if (simulationMode == true) { // Set game started for SIM mode
+			if (simulationMode == true || autoBeforeMode == true) { // Set game started for SIM mode
 				gameState.setGameStarted(true);
 			}
 			playBall(gameState, boxScores, s + 1);
@@ -1322,7 +1337,10 @@ public class BaseballSimulator {
 				boxScores[winner==0?1:0].getYear() + " " + boxScores[winner==0?1:0].getTeam().getFullTeamName() + " " + boxScores[winner==0?1:0].getFinalScore());
 			for (int top = 0; top < 2; top++) {
 				boxScore = boxScores[top];
-				String team = (top == 0) ? "\n" + displayTeamYearString[top] : displayTeamYearString[top];
+				if (top == 0)  {
+					System.out.println();	
+				}
+				String team = displayTeamYearString[top];
 				team += team.length() < 3 ? " " : "";
 				System.out.print(team + " ");
 				for (int i = 1; i < gameLength; i++) {
@@ -2361,5 +2379,64 @@ public class BaseballSimulator {
 			}
 		}
 		return null;
+	}
+	
+	private static void createSchedule(Integer schedYear) {
+		Map<Integer, ArrayList<Integer>> seasonSched  = new HashMap<>();
+		// Divisions 2013-2022
+		Integer[] alEast = {110, 111, 147, 139, 141};
+		Integer[] alCentral = {145, 114, 116, 142, 118};
+		Integer[] alWest = {117, 108, 133, 136, 140};	
+		Integer[] nlEast = {144, 146, 121, 143, 120};
+		Integer[] nlCentral = {112, 113, 158, 134, 138};
+		Integer[] nlWest = {115, 119, 135, 137, 109};
+		Integer[][] mlbDivisions = {alEast, alCentral, alWest, nlEast, nlCentral, nlWest};
+		
+		int division = 0;
+		for (MLBTeam team : allMlbTeamsList) { // 8 4 3 2 
+			ArrayList<Integer> teamSched = new ArrayList<>();
+			if (team.getLastYearPlayed() != null && team.getLastYearPlayed() != 0) {  //active team
+				continue;
+			}
+			for (int i = 0; i < 6; i++) {
+				if (Arrays.asList(mlbDivisions[i]).contains(team.getTeamId())) {
+					division = i;
+					for (int j = 0; j < mlbDivisions[i].length; j++) {
+						if (mlbDivisions[i][j] != team.getTeamId()) {
+							for (int k = 0; k < 8; k++) {
+								teamSched.add(mlbDivisions[i][j]);  // 8 x per div opponent
+							}
+						}
+					}
+				}
+			}
+			for (MLBTeam team2 : allMlbTeamsList) {
+				if (team2.getLastYearPlayed() != null && team2.getLastYearPlayed() != 0) {  //active team
+					continue;
+				}
+				if (team2.getLeague().equals(team.getLeague()) && !Arrays.asList(mlbDivisions[division]).contains(team2.getTeamId())) {
+					for (int j = 0; j < 4; j++) {
+						teamSched.add(team2.getTeamId());  // 4 x per league opponent
+					}
+				}
+			}
+			Integer[] interleagueOpponents = team.getLeague().equals("AL") ? mlbDivisions[division+3] : mlbDivisions[division-3];
+			for (int i = 0; i < interleagueOpponents.length; i++) {
+				for (int j = 0; j < 2; j++) {
+					teamSched.add(interleagueOpponents[i]);  // 2 x per interleague opponent
+				}
+			}
+			seasonSched.put(team.getTeamId(), teamSched);
+			
+		}
+		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) { 
+			Integer teamId = team.getKey();
+			ArrayList<Integer> teamSched = team.getValue();
+			System.out.print("Sched for " + teamId + ": ");
+			for (int i = 0; i < teamSched.size(); i++) {
+				System.out.print(teamSched.get(i) + " ");
+			}
+			System.out.println();
+        } 
 	}
 }
