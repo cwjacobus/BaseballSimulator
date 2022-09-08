@@ -53,6 +53,7 @@ public class BaseballSimulator {
 	static List<String> randoLog = new ArrayList<String>();
 	static ArrayList<MLBTeam> allMlbTeamsList;
 	static boolean useDH = true;
+	static Map<Integer, ArrayList<Integer>> seasonSched  = new HashMap<>();
 	
 	static final int STRUCK_OUT = 0;
 	static final int GROUNDED_OUT = 1;
@@ -100,6 +101,8 @@ public class BaseballSimulator {
 		DAO.setConnection();
 		rosters  = new Roster[2];
 		allMlbTeamsList = DAO.getAllTeamsList();
+		int years[] = {0, 0};
+		MLBTeam[] teams = {null, null};
 		if (args.length > 4 && args[4] != null) {
 			if (args[4].equalsIgnoreCase("GAME")) {
 				autoBeforeInning = 0;
@@ -129,6 +132,24 @@ public class BaseballSimulator {
 					}
 				}
 			}
+			String[] teamNames = {args[1].toUpperCase(), args[3].toUpperCase()};
+			years[0] = Integer.parseInt(args[0]);
+			years[1] = Integer.parseInt(args[2]);
+			for (int t = 0; t < 2; t++) {
+				teams[t] = getTeamByYearAndShortName(years[t], teamNames[t], allMlbTeamsList);
+				if (teams[t] == null) {
+					System.out.println("Invalid team: " + teamNames[t] + " " + years[t]);
+					System.out.println("\nValid teams: ");
+					for (MLBTeam team : allMlbTeamsList) {
+						int lastYear = (team.getLastYearPlayed() == null || team.getLastYearPlayed() == 0) ? Calendar.getInstance().get(Calendar.YEAR) : team.getLastYearPlayed();
+						System.out.println(team.getFullTeamName() + "(" + team.getShortTeamName() + ") " + team.getFirstYearPlayed() + "-" + lastYear);
+					}
+					return;
+				}
+			}
+			ArrayList<Integer> teamSched = new ArrayList<>();
+			teamSched.add(new Integer(teams[0].getTeamId()));
+			seasonSched.put(teams[1].getTeamId(), teamSched); // Schedule with one game
 		}
 		else { // Season sim mode
 			simulationMode = true;
@@ -139,88 +160,86 @@ public class BaseballSimulator {
 				seasonSimYear = Integer.parseInt(args[1]);
 			}
 			createSchedule(seasonSimYear);
-			return;
+			years[0] = years[1] = Integer.parseInt(args[1]);
 		}
-		int years[] = {Integer.parseInt(args[0]), Integer.parseInt(args[2])};
-		String[] teamNames = {args[1].toUpperCase(), args[3].toUpperCase()};
-		MLBTeam[] teams = {null, null};
 		BoxScore[][] seriesBoxScores = new BoxScore[seriesLength][2];
 		SeriesStats[] seriesStats = new SeriesStats[2];
-		for (int t = 0; t < 2; t++) {
-			rosters[t] = new Roster();
-			boxScores[t] = new BoxScore();
-			teams[t] = getTeamByYearAndShortName(years[t], teamNames[t], allMlbTeamsList);
-			boxScores[t].setTeam(teams[t]);
-			if (teams[t] == null) {
-				System.out.println("Invalid team: " + teamNames[t] + " " + years[t]);
-				System.out.println("\nValid teams: ");
-				for (MLBTeam team : allMlbTeamsList) {
-					int lastYear = (team.getLastYearPlayed() == null || team.getLastYearPlayed() == 0) ? Calendar.getInstance().get(Calendar.YEAR) : team.getLastYearPlayed();
-					System.out.println(team.getFullTeamName() + "(" + team.getShortTeamName() + ") " + team.getFirstYearPlayed() + "-" + lastYear);
+		
+		int gameNumber = 0;
+		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) {
+			for (Integer opp : team.getValue()) {
+				if (seasonSimulationMode) {
+					teams[0] = getTeamByYearAndTeamId(years[0], opp, allMlbTeamsList);
+					teams[1] = getTeamByYearAndTeamId(years[1], team.getKey(), allMlbTeamsList);
+					gameNumber++;
 				}
-				return;
-			}
-			rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
-			rosters[t].setBatters(DAO.getBattersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
-			if (rosters[t].getBatters().size() == 0 || rosters[t].getPitchers().size() == 0) {
-				System.out.println("Players for " + years[t] + " " + teamNames[t] + " not found in database.  Import player stats from API.");
-				ArrayList<MLBTeam> teamList = new ArrayList<MLBTeam>();
-				teamList.add(teams[t]);
-				importTeam(years[t], t, teamList);
-			}
-			closers[t] = getPitcher(t, "SV", 0, null);
-			if (years[t] >= 1999) {
-				setupMen[t] = getPitcher(t, "HD", 0, null);
-			}
-			seriesStats[t] = new SeriesStats(teams[t], years[t], seriesLength);
-		}
-		// Home team determines using DH
-		useDH = (teams[1].getLeague().equalsIgnoreCase("AL") && years[1] >= 1973) || (teams[1].getLeague().equalsIgnoreCase("NL") && (years[1] == 2020 || years[1] >= 2022));
-		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalBattingLineup(teams, years);
-		boxScores[0].setBatters(lineupBatters.get(0));
-		boxScores[1].setBatters(lineupBatters.get(1));
-		MLBPlayer[] importedPitchers = new MLBPlayer[2];
-		boolean importedLineup = false;
-		boolean incompleteLineups = areLineupsIncomplete(lineupBatters);
-		while (incompleteLineups) {
-			handleIncompleteLineup();
-			lineupBatters.set(0, boxScores[0].getBatters());
-			lineupBatters.set(1, boxScores[1].getBatters());
-			importedPitchers[0] = gameState.getCurrentPitchers()[0];
-			importedPitchers[1] = gameState.getCurrentPitchers()[1];
-			importedLineup = true;
-			incompleteLineups = areLineupsIncomplete(lineupBatters);
-		}
-		for (int s = 0; s < seriesLength; s++) {
-			gameState = new GameState();
-			boxScores = new BoxScore[2];
-			for (int t = 0; t < 2; t++) {
-				boxScores[t] = new BoxScore();
-				boxScores[t].setYear(years[t]);
-				boxScores[t].setBatters(lineupBatters.get(t));
-				boxScores[t].setTeam(teams[t]);
-				clearPlayerGameData(boxScores[t]);
-				MLBPlayer startingPitcher;
-				if (s == 0 && importedLineup && importedPitchers[t] != null) {
-					startingPitcher = importedPitchers[t];	
+				for (int t = 0; t < 2; t++) {
+					rosters[t] = new Roster();
+					boxScores[t] = new BoxScore();
+					boxScores[t].setTeam(teams[t]);
+					rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
+					rosters[t].setBatters(DAO.getBattersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
+					if (rosters[t].getBatters().size() == 0 || rosters[t].getPitchers().size() == 0) {
+						System.out.println("Players for " + years[t] + " " + teams[t].getFullTeamName() + " not found in database.  Import player stats from API.");
+						ArrayList<MLBTeam> teamList = new ArrayList<MLBTeam>();
+						teamList.add(teams[t]);
+						importTeam(years[t], t, teamList);
+					}
+					closers[t] = getPitcher(t, "SV", 0, null);
+					if (years[t] >= 1999) {
+						setupMen[t] = getPitcher(t, "HD", 0, null);
+					}
+					seriesStats[t] = new SeriesStats(teams[t], years[t], seriesLength);
 				}
-				else {
-					int rotationRange = rosters[t].getPitchers().size() < 5 ? rosters[t].getPitchers().size() - 1 : 4; // In case team has less than 5 starters
-					startingPitcher = getPitcher(t, "GS", seriesLength == 1 ? getRandomNumberInRange(0, rotationRange) : s % 5, null);
+				// Home team determines using DH
+				useDH = (teams[1].getLeague().equalsIgnoreCase("AL") && years[1] >= 1973) || (teams[1].getLeague().equalsIgnoreCase("NL") && (years[1] == 2020 || years[1] >= 2022));
+				ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalBattingLineup(teams, years);
+				boxScores[0].setBatters(lineupBatters.get(0));
+				boxScores[1].setBatters(lineupBatters.get(1));
+				MLBPlayer[] importedPitchers = new MLBPlayer[2];
+				boolean importedLineup = false;
+				boolean incompleteLineups = areLineupsIncomplete(lineupBatters);
+				while (incompleteLineups) {
+					handleIncompleteLineup();
+					lineupBatters.set(0, boxScores[0].getBatters());
+					lineupBatters.set(1, boxScores[1].getBatters());
+					importedPitchers[0] = gameState.getCurrentPitchers()[0];
+					importedPitchers[1] = gameState.getCurrentPitchers()[1];
+					importedLineup = true;
+					incompleteLineups = areLineupsIncomplete(lineupBatters);
 				}
-				gameState.setCurrentPitcher(startingPitcher, t);
-				boxScores[t].getPitchers().put(startingPitcher.getMlbPlayerId(), startingPitcher);
-				if (!useDH) {
-					boxScores[t].getBatters().set(8, new ArrayList<MLBPlayer>());  // Clear out prior games pitcher spots
-					boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
-				}	
+				for (int s = 0; s < seriesLength; s++) {
+					gameState = new GameState();
+					boxScores = new BoxScore[2];
+					for (int t = 0; t < 2; t++) {
+						boxScores[t] = new BoxScore();
+						boxScores[t].setYear(years[t]);
+						boxScores[t].setBatters(lineupBatters.get(t));
+						boxScores[t].setTeam(teams[t]);
+						clearPlayerGameData(boxScores[t]);
+						MLBPlayer startingPitcher;
+						if (s == 0 && importedLineup && importedPitchers[t] != null) {
+							startingPitcher = importedPitchers[t];	
+						}
+						else {
+							int rotationRange = rosters[t].getPitchers().size() < 5 ? rosters[t].getPitchers().size() - 1 : 4; // In case team has less than 5 starters
+							startingPitcher = getPitcher(t, "GS", seriesLength == 1 ? getRandomNumberInRange(0, rotationRange) : s % 5, null);
+						}
+						gameState.setCurrentPitcher(startingPitcher, t);
+						boxScores[t].getPitchers().put(startingPitcher.getMlbPlayerId(), startingPitcher);
+						if (!useDH) {
+							boxScores[t].getBatters().set(8, new ArrayList<MLBPlayer>());  // Clear out prior games pitcher spots
+							boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
+						}	
+					}
+					if (simulationMode == true || autoBeforeMode == true) { // Set game started for SIM mode
+						gameState.setGameStarted(true);
+					}
+					playBall(gameState, boxScores, (gameNumber > 0 ? gameNumber : s + 1));
+					seriesBoxScores[s] = boxScores;
+					updateSeriesStatsFromBoxScores(seriesStats, boxScores, gameState.getPitchersOfRecord());
+				}
 			}
-			if (simulationMode == true || autoBeforeMode == true) { // Set game started for SIM mode
-				gameState.setGameStarted(true);
-			}
-			playBall(gameState, boxScores, s + 1);
-			seriesBoxScores[s] = boxScores;
-			updateSeriesStatsFromBoxScores(seriesStats, boxScores, gameState.getPitchersOfRecord());
 		}
 		if (seriesLength > 1) { // Series results and calculations
 			System.out.println("\nSeries Stats");
@@ -2381,8 +2400,18 @@ public class BaseballSimulator {
 		return null;
 	}
 	
+	private static MLBTeam getTeamByYearAndTeamId(Integer year, Integer teamId, ArrayList<MLBTeam> allTeams) {
+		for (MLBTeam team : allTeams) {
+			// Null last year means active in current year
+			int lastYear = (team.getLastYearPlayed() == null || team.getLastYearPlayed() == 0) ? Calendar.getInstance().get(Calendar.YEAR) : team.getLastYearPlayed();
+			if (team.getFirstYearPlayed() <= year && lastYear >= year && team.getTeamId() == teamId) {
+				return team;
+			}
+		}
+		return null;
+	}
+	
 	private static void createSchedule(Integer schedYear) {
-		Map<Integer, ArrayList<Integer>> seasonSched  = new HashMap<>();
 		// Divisions 2013-2022
 		Integer[] alEast = {110, 111, 147, 139, 141};
 		Integer[] alCentral = {145, 114, 116, 142, 118};
@@ -2427,8 +2456,8 @@ public class BaseballSimulator {
 				}
 			}
 			seasonSched.put(team.getTeamId(), teamSched);
-			
 		}
+		/*
 		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) { 
 			Integer teamId = team.getKey();
 			ArrayList<Integer> teamSched = team.getValue();
@@ -2437,6 +2466,6 @@ public class BaseballSimulator {
 				System.out.print(teamSched.get(i) + " ");
 			}
 			System.out.println();
-        } 
+        }*/ 
 	}
 }
