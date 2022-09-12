@@ -112,6 +112,8 @@ public class BaseballSimulator {
 		allMlbTeamsList = DAO.getAllTeamsList();
 		int years[] = {0, 0};
 		MLBTeam[] teams = {null, null};
+		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allBatters = null;
+		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allPitchers = null;
 		if (args.length > 4 && args[4] != null) {
 			if (args[4].equalsIgnoreCase("GAME")) {
 				autoBeforeInning = 0;
@@ -174,15 +176,21 @@ public class BaseballSimulator {
 			}
 			createSchedule(seasonSimYear);
 			years[0] = years[1] = Integer.parseInt(args[1]);
+			allBatters = DAO.getBattersMapByYear(years[0]);
+			allPitchers = DAO.getPitchersMapByYear(years[0]);
 		}
 		
 		BoxScore[][] seriesBoxScores = new BoxScore[seriesLength][2];
 		SeriesStats[] seriesStats = new SeriesStats[2];
 		int gameNumber = 0;
 		int prevTeams[] = {0, 0};
+		int seasonSeriesGameIndex = 0;
+		rosters[0] = new Roster();
+		rosters[1] = new Roster();
 		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) { // home teams
 			// Get teams division
 			int teamDivision = 0;
+			seasonSeriesGameIndex = 0;
 			if (seasonResults.get(teamDivision) == null) {
 				seasonResults.put(teamDivision, new ArrayList<TeamSeasonResults>());
 			}
@@ -192,14 +200,20 @@ public class BaseballSimulator {
 					teams[1] = getTeamByYearAndTeamId(years[1], team.getKey(), allMlbTeamsList);
 					gameNumber++;
 				}
+				if (teams[0].getTeamId() != prevTeams[0]) {
+					seasonSeriesGameIndex = 0;
+				}
 				for (int t = 0; t < 2; t++) {
-					rosters[t] = new Roster();
 					boxScores[t] = new BoxScore();
 					boxScores[t].setTeam(teams[t]);
-					//if (prevTeams[t] != teams[t].getTeamId()) { // Only get rosters if team changed
+					if (!seasonSimulationMode) {
 						rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
 						rosters[t].setBatters(DAO.getBattersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
-					//}
+					}
+					else {
+						rosters[t].setBatters(allBatters.get(teams[t].getTeamId()));
+						rosters[t].setPitchers(allPitchers.get(teams[t].getTeamId()));
+					}
 					if (rosters[t].getBatters().size() == 0 || rosters[t].getPitchers().size() == 0) {
 						System.out.println("Players for " + years[t] + " " + teams[t].getFullTeamName() + " not found in database.  Import player stats from API.");
 						ArrayList<MLBTeam> teamList = new ArrayList<MLBTeam>();
@@ -243,8 +257,13 @@ public class BaseballSimulator {
 							startingPitcher = importedPitchers[t];	
 						}
 						else {
-							int rotationRange = rosters[t].getPitchers().size() < 5 ? rosters[t].getPitchers().size() - 1 : 4; // In case team has less than 5 starters
-							startingPitcher = getPitcher(t, "GS", seriesLength == 1 ? getRandomNumberInRange(0, rotationRange) : s % 5, null);
+							if (!seasonSimulationMode) {
+								int rotationRange = rosters[t].getPitchers().size() < 5 ? rosters[t].getPitchers().size() - 1 : 4; // In case team has less than 5 starters
+								startingPitcher = getPitcher(t, "GS", (seriesLength > 1 || seasonSimulationMode) ? s % 5 : getRandomNumberInRange(0, rotationRange), null);
+							}
+							else {
+								startingPitcher = getPitcher(t, "GS", seasonSeriesGameIndex, null);
+							}
 						}
 						gameState.setCurrentPitcher(startingPitcher, t);
 						boxScores[t].getPitchers().put(startingPitcher.getMlbPlayerId(), startingPitcher);
@@ -262,6 +281,7 @@ public class BaseballSimulator {
 				}
 				prevTeams[0] = teams[0].getTeamId();
 				prevTeams[1] = teams[1].getTeamId();
+				seasonSeriesGameIndex++;
 			} //away teams
 		} // home teams
 		if (seriesLength > 1) { // Series results and calculations
@@ -578,8 +598,11 @@ public class BaseballSimulator {
 			outputBoxScore(boxScores, false, gameState.getInning(), gameState.getPitchersOfRecord());
 		}
 		else {
-			System.out.println(boxScores[1].getYear() + " Season game #" + gameNumber + " " + boxScores[0].getTeam().getFullTeamName() + 
+			System.out.print(boxScores[1].getYear() + " Season game #" + gameNumber + " " + boxScores[0].getTeam().getFullTeamName() + 
 				" " + boxScores[0].getFinalScore() + " at " + boxScores[1].getTeam().getFullTeamName() + " " + boxScores[1].getFinalScore());
+			MLBPlayer visStarter = boxScores[0].getPitchers().entrySet().iterator().next().getValue();
+			MLBPlayer homeStarter = boxScores[1].getPitchers().entrySet().iterator().next().getValue();
+			System.out.println(" ("  + visStarter.getFullName() + " v " + homeStarter.getFullName() + ")");
 		}
 		 
 	  /*JSONObject bsJSON = new JSONObject(boxScores[0]);
@@ -2452,7 +2475,7 @@ public class BaseballSimulator {
 					division = i;
 					for (int j = 0; j < mlbDivisions[i].length; j++) {
 						if (mlbDivisions[i][j] != team.getTeamId()) {
-							for (int k = 0; k < 1; k++) {
+							for (int k = 0; k < 2; k++) {
 								teamSched.add(mlbDivisions[i][j]);  // 8 x per div opponent
 							}
 						}
@@ -2464,14 +2487,14 @@ public class BaseballSimulator {
 					continue;
 				}
 				if (team2.getLeague().equals(team.getLeague()) && !Arrays.asList(mlbDivisions[division]).contains(team2.getTeamId())) {
-					for (int j = 0; j < 1; j++) {
+					for (int j = 0; j < 2; j++) {
 						teamSched.add(team2.getTeamId());  // 4 x per league opponent
 					}
 				}
 			}
 			Integer[] interleagueOpponents = team.getLeague().equals("AL") ? mlbDivisions[division+3] : mlbDivisions[division-3];
 			for (int i = 0; i < interleagueOpponents.length; i++) {
-				for (int j = 0; j < 1; j++) {
+				for (int j = 0; j < 2; j++) {
 					teamSched.add(interleagueOpponents[i]);  // 2 x per interleague opponent
 				}
 			}

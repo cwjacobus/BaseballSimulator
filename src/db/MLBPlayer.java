@@ -117,4 +117,8 @@ public class MLBPlayer {
 		}
 		return firstLastName;
 	}
+	
+	public String toString () {
+		return fullName;
+	}
 }
