@@ -53,8 +53,8 @@ public class BaseballSimulator {
 	static List<String> randoLog = new ArrayList<String>();
 	static ArrayList<MLBTeam> allMlbTeamsList;
 	static boolean useDH = true;
-	static Map<Integer, ArrayList<Integer>> seasonSched  = new HashMap<>();
-	static Map<Integer, Map<Integer, TeamSeasonResults>> seasonResults  = new HashMap<>();
+	static Map<Integer, MLBPlayer> seasonPitchingStats  = new HashMap<>();
+	static Map<Integer, MLBPlayer> seasonBattingStats  = new HashMap<>();
 	
 	// MLBDivisions 2013-2022
 	static final int AL_EAST = 0;
@@ -124,6 +124,14 @@ public class BaseballSimulator {
 		MLBTeam[] teams = {null, null};
 		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allBatters = null;
 		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allPitchers = null;
+		SeriesStats[] seriesStats = new SeriesStats[2];
+		int gameNumber = 0;
+		HashMap<Integer, Integer> teamSeasonGameIndexMap = new HashMap<>();
+		Map<Integer, ArrayList<Integer>> seasonSched  = new HashMap<>();
+		Map<Integer, Map<Integer, TeamSeasonResults>> seasonResults  = new HashMap<>();
+		
+		rosters[0] = new Roster();
+		rosters[1] = new Roster();
 		if (args.length > 4 && args[4] != null) {
 			if (args[4].equalsIgnoreCase("GAME")) {
 				autoBeforeInning = 0;
@@ -184,18 +192,12 @@ public class BaseballSimulator {
 				System.out.println("Season simulations only years 2013-2021!");
 				return;
 			}
-			createSchedule(seasonSimYear);
+			createSchedule(seasonSimYear, seasonSched);
 			years[0] = years[1] = Integer.parseInt(args[1]);
 			allBatters = DAO.getBattersMapByYear(years[0]);
 			allPitchers = DAO.getPitchersMapByYear(years[0]);
 		}
-		
 		BoxScore[][] seriesBoxScores = new BoxScore[seriesLength][2];
-		SeriesStats[] seriesStats = new SeriesStats[2];
-		int gameNumber = 0;
-		HashMap<Integer, Integer> teamSeasonGameIndexMap = new HashMap<>();
-		rosters[0] = new Roster();
-		rosters[1] = new Roster();
 		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) { // home teams
 			for (Integer opp : team.getValue()) { // away teams
 				if (seasonSimulationMode) {
@@ -292,12 +294,17 @@ public class BaseballSimulator {
 							boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
 						}	
 					}
-					if (simulationMode == true || autoBeforeMode == true) { // Set game started for SIM mode
+					if (simulationMode || autoBeforeMode) { // Set game started for SIM mode
 						gameState.setGameStarted(true);
 					}
 					playBall(gameState, boxScores, (gameNumber > 0 ? gameNumber : s + 1));
-					seriesBoxScores[s] = boxScores;
-					updateSeriesStatsFromBoxScores(seriesStats, boxScores, gameState.getPitchersOfRecord());
+					if (seriesLength > 1) {
+						seriesBoxScores[s] = boxScores;
+						updateSeriesOrSeasonStatsFromBoxScores(seriesStats, boxScores, gameState.getPitchersOfRecord(), false);
+					}
+					else if (seasonSimulationMode) {
+						updateSeriesOrSeasonStatsFromBoxScores(seriesStats, boxScores, gameState.getPitchersOfRecord(), true);
+					}
 				} // series loop
 				if (seasonSimulationMode) {
 					Integer visTeamSeasonGameIndex = teamSeasonGameIndexMap.get(teams[0].getTeamId());
@@ -341,13 +348,13 @@ public class BaseballSimulator {
 		}
 	}
 	
-	private static void updateSeriesStatsFromBoxScores(SeriesStats[] seriesStats,  BoxScore[] boxScores, Map<String, Integer> pitchersOfRecord) {
+	private static void updateSeriesOrSeasonStatsFromBoxScores(SeriesStats[] seriesStats,  BoxScore[] boxScores, Map<String, Integer> pitchersOfRecord, boolean season) {
 		for (int t = 0; t < 2; t++) {
 			Set<Integer> keys = boxScores[t].getPitchers().keySet();
 			ArrayList<ArrayList<MLBPlayer>> batters = boxScores[t].getBatters();
 	        for(Integer k : keys){
 	            MLBPlayer p1 = boxScores[t].getPitchers().get(k);
-	            MLBPlayer p2 = seriesStats[t].getPitchers().get(p1.getMlbPlayerId());
+	            MLBPlayer p2 = !season ? seriesStats[t].getPitchers().get(p1.getMlbPlayerId()) : seasonPitchingStats.get(p1.getMlbPlayerId());
 	            if (p2 == null) {
 	            	p2 = new MLBPlayer(p1.getMlbPlayerId(), p1.getFullName(), p1.getPrimaryPosition());
 	            }
@@ -370,11 +377,16 @@ public class BaseballSimulator {
 	            	ps2.setLosses(ps2.getLosses() + 1);
 	            }
 	            p2.getMlbPitchingStats().setPitchingStats(ps2);
-	            seriesStats[t].getPitchers().put(p1.getMlbPlayerId(), p2);
+	            if (!season) {
+	            	seriesStats[t].getPitchers().put(p1.getMlbPlayerId(), p2);
+	            }
+	            else {
+	            	seasonPitchingStats.put(p1.getMlbPlayerId(), p2);
+	            }
 	        }
 	        for (ArrayList<MLBPlayer>  playerList : batters){
 	        	for (MLBPlayer b1 : playerList) {
-	        		MLBPlayer b2 = seriesStats[t].getBatters().get(b1.getMlbPlayerId());
+	        		MLBPlayer b2 = !season ? seriesStats[t].getBatters().get(b1.getMlbPlayerId()) : seasonBattingStats.get(b1.getMlbPlayerId());
 	        		if (b2 == null) {
 	        			b2 = new MLBPlayer(b1.getMlbPlayerId(), b1.getFullName(), b1.getPrimaryPosition());
 	        		}
@@ -394,13 +406,19 @@ public class BaseballSimulator {
 	        		bs2.setStolenBases(bs1.getStolenBases() + bs2.getStolenBases());
 	        		bs2.setCaughtStealing(bs1.getCaughtStealing() + bs2.getCaughtStealing());
 	        		b2.getMlbBattingStats().setBattingStats(bs2);
-	        		seriesStats[t].getBatters().put(b1.getMlbPlayerId(), b2);
+	        		if (!season) {
+		            	seriesStats[t].getBatters().put(b1.getMlbPlayerId(), b2);
+	        		}
+	        		else {
+	        			seasonBattingStats.put(b1.getMlbPlayerId(), b2);
+	        		}
 	        	}
 	        }
 		}
 	}
 	
 	private static void updateSeasonResults(Map<Integer, Map<Integer, TeamSeasonResults>> seasonResults, BoxScore[] boxScores) {
+		// Update team results
 		int visTeamId = boxScores[0].getTeam().getTeamId();
 		int homeTeamId = boxScores[1].getTeam().getTeamId();
 		for (Map.Entry<Integer, Map<Integer, TeamSeasonResults>> divisionTeams : seasonResults.entrySet()) {
@@ -424,20 +442,38 @@ public class BaseballSimulator {
 				}
 			}
 		}
+		// Update player Results
+		for (int t = 0; t < 2; t++) {
+			
+		}
 	}
 	
 	private static void outputSeasonResults(Map<Integer, Map<Integer, TeamSeasonResults>> seasonResults, Integer seasonSimYear) {
 		int division = 0;
+		int divisionLeaderWins = 0;
+		String divisionName;
 		System.out.println("\n"  + seasonSimYear + " MLB Standings");
 		for (Map.Entry<Integer, Map<Integer, TeamSeasonResults>> divisionTeams : seasonResults.entrySet()) {
-			System.out.println(mlbDivisionNames.get(division));
+			divisionName = mlbDivisionNames.get(division);
+			System.out.println(divisionName + (divisionName.length() <= 8 ? "\t" : "") + "\t\t\tW    L    GB    RF  RA");
 			List<TeamSeasonResults> sortedTeamSeasonResults = new ArrayList<>(divisionTeams.getValue().values());
 			Collections.sort(sortedTeamSeasonResults);
 			for (TeamSeasonResults tsr : sortedTeamSeasonResults) {
-				System.out.println(getTeamByYearAndTeamId(seasonSimYear, tsr.getTeamId(), allMlbTeamsList).getFullTeamName() + " " + tsr.getWins() + " " + tsr.getLosses());
+				divisionLeaderWins = (divisionLeaderWins == 0) ? tsr.getWins() : divisionLeaderWins;
+				String teamName = getTeamByYearAndTeamId(seasonSimYear, tsr.getTeamId(), allMlbTeamsList).getFullTeamName(); 
+				System.out.print(teamName);
+				for (int tab = 32; tab >= 8; tab-=8) {
+					if (teamName.length() < tab) {
+						System.out.print("\t");
+					}
+				}
+				String gb = (divisionLeaderWins - tsr.getWins() != 0) ? divisionLeaderWins - tsr.getWins() + ".0" : "    ";
+				System.out.println(tsr.getWins() + (tsr.getWins() >= 100 ? "  " : "   ") + tsr.getLosses() + (tsr.getLosses() >= 100 ? "  " : "   ") 
+					+ gb + (gb.length() >= 4 ? "  " : "   ") + tsr.getRunsFor() + (tsr.getRunsFor() >= 100 ? "  " : "   ") + tsr.getRunsAgainst());
 			}
 			System.out.println();
 			division++;
+			divisionLeaderWins = 0;
 		}
 	}
 	
@@ -2531,7 +2567,7 @@ public class BaseballSimulator {
 		return null;
 	}
 	
-	private static void createSchedule(Integer schedYear) {
+	private static void createSchedule(Integer schedYear, Map<Integer, ArrayList<Integer>> seasonSched) {
 		int division = 0;
 		for (MLBTeam team : allMlbTeamsList) { // 8 4 3 2 
 			ArrayList<Integer> teamSched = new ArrayList<>();
