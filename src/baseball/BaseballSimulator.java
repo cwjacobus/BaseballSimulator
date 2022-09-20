@@ -53,8 +53,10 @@ public class BaseballSimulator {
 	static List<String> randoLog = new ArrayList<String>();
 	static ArrayList<MLBTeam> allMlbTeamsList;
 	static boolean useDH = true;
-	static Map<Integer, MLBPlayer> seasonPitchingStats  = new HashMap<>();
-	static Map<Integer, MLBPlayer> seasonBattingStats  = new HashMap<>();
+	static HashMap<Integer, MLBPlayer> seasonPitchingStats  = new HashMap<>();
+	static HashMap<Integer, MLBPlayer> seasonBattingStats  = new HashMap<>();
+	static HashMap<Integer, Integer> battersOnMultTeams;
+	static HashMap<Integer, Integer> pitchersOnMultTeams;
 	
 	// MLBDivisions 2013-2022
 	static final int AL_EAST = 0;
@@ -197,6 +199,8 @@ public class BaseballSimulator {
 			allBatters = DAO.getBattersMapByYear(years[0]);
 			allPitchers = DAO.getPitchersMapByYear(years[0]);
 		}
+		battersOnMultTeams = DAO.getBattersOnMultipleTeamsByPrimaryTeam(years);
+		pitchersOnMultTeams = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years);
 		BoxScore[][] seriesBoxScores = new BoxScore[seriesLength][2];
 		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) { // home teams
 			for (Integer opp : team.getValue()) { // away teams
@@ -475,6 +479,10 @@ public class BaseballSimulator {
 			division++;
 			divisionLeaderWins = 0;
 		}
+		Map<Integer, MLBPlayer> sortedSeasonBattingStats =  sortHashMapByValue(seasonBattingStats, "HR");
+		sortedSeasonBattingStats.entrySet().stream().filter(entry -> entry.getValue().getMlbBattingStats().getBattingStats().getHomeRuns() > 35)
+			.forEach(entry -> System.out.println(entry.getValue().getFullName() + " " + entry.getValue().getMlbBattingStats().getBattingStats().getHomeRuns()));
+		
 	}
 	
 	private static void playBall(GameState gameState, BoxScore[] boxScores, int gameNumber) {
@@ -1387,6 +1395,11 @@ public class BaseballSimulator {
 						index++;
 						continue;
 					}
+					// Skip players who were primarily on another team
+					if (battersOnMultTeams.containsKey(player.getMlbPlayerId()) && teams[t].getTeamId() != battersOnMultTeams.get(player.getMlbPlayerId())) {
+						index++;
+						continue;
+					}
 					String playerPosition = player.getPrimaryPosition();
 					if (playerPosition.equals("OF")) {
 						if (ofCount == 3) {
@@ -1410,8 +1423,8 @@ public class BaseballSimulator {
 				}
 			}
 			batters.get(t).add(new ArrayList<MLBPlayer>()); // For DH/P in 9
-			if (useDH) { // DH always bats ninth 
-				player =  getMlbPlayerWithMostPlateAppearances(teams[t].getTeamId(), years[t], playersInLineupList, t);
+			if (useDH) { // DH always bats ninth
+				player =  getMlbPlayerWithMostPlateAppearances(teams[t].getTeamId(), years[t], playersInLineupList, t, battersOnMultTeams);
 				player.setPrimaryPosition("DH");
 				batters.get(t).get(8).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), player.getPrimaryPosition(), player.getArmThrows(), player.getBats(), player.getJerseyNumber()));
 			}
@@ -2499,7 +2512,8 @@ public class BaseballSimulator {
 		if (excludingPitchers != null && excludingPitchers.size() > 0) {
 			for (Map.Entry<Integer, MLBPlayer> rosterEntry : rosters[top].getPitchers().entrySet()) {
 				// Skip pitchers that have been used and starters if you are looking for a mid reliever
-				if (excludingPitchers.contains(rosterEntry.getKey()) || 
+				if (excludingPitchers.contains(rosterEntry.getKey()) ||
+				   (pitchersOnMultTeams.containsKey(rosterEntry.getKey()) && boxScores[top].getTeam().getTeamId() != pitchersOnMultTeams.get(rosterEntry.getKey())) ||
 				   (sortBy.equalsIgnoreCase("IP") && rosterEntry.getValue().getMlbPitchingStats().getPitchingStats().getGamesStarted() > 10)) {
 						continue;
 				}
@@ -2522,13 +2536,15 @@ public class BaseballSimulator {
 		
 	}
 	
-	private static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, ArrayList<Integer> excludingBatters, int top) {
+	private static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, ArrayList<Integer> excludingBatters, int top, HashMap<Integer, Integer> battersOnMultTeams) {
 		MLBPlayer rosterBatter = null;
 		rosters[top].setBatters(sortHashMapByValue(rosters[top].getBatters(), "PA"));
 		if (excludingBatters != null && excludingBatters.size() > 0) {
 			for (Map.Entry<Integer, MLBPlayer> rosterEntry : rosters[top].getBatters().entrySet()) {
-				if (excludingBatters.contains(rosterEntry.getKey())) {
-					continue;
+				// Skip players who are already in lineup or were primarily on another team
+				if (excludingBatters.contains(rosterEntry.getKey()) ||
+					battersOnMultTeams.containsKey(rosterEntry.getKey()) && boxScores[top].getTeam().getTeamId() != battersOnMultTeams.get(rosterEntry.getKey())) {
+						continue;
 				}
 				rosterBatter = rosterEntry.getValue();
 				break;

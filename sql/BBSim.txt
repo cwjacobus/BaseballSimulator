@@ -174,4 +174,13 @@ update mlb_player set PRIMARY_POSITION='CF' where full_name = 'Difo, Wilmer';
 update mlb_player set PRIMARY_POSITION='CF' where full_name = 'Grisham, Trent';
 update mlb_player set PRIMARY_POSITION='RF' where full_name = 'Myers, Wil';
 update mlb_player set PRIMARY_POSITION='3B' where full_name = 'Machado, Manny';
+update mlb_player set PRIMARY_POSITION='SS' where full_name = 'Urias, Luis';
+
+// Get list of batters who played on multiple teams for a year and their primary team
+select p.full_name, mbs.mlb_team_id, max(mbs.PLATE_APPEARANCES) from mlb_batting_stats mbs, mlb_player p where p.mlb_player_id=mbs.mlb_player_id and mbs.year=2021 group by mbs.mlb_player_id 
+having count(*) > 1 order by p.full_name
+
+// Get list of pitchers who played on multiple teams for a year and their primary team
+select p.full_name, mps.mlb_team_id, max(mps.BATTERS_FACED) from mlb_pitching_stats mps, mlb_player p where p.mlb_player_id=mps.mlb_player_id and mps.year=2021 group by mps.mlb_player_id 
+having count(*) > 1 order by p.full_name
 

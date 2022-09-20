@@ -140,7 +140,7 @@ public class DAO {
 	}
 	
 	public static LinkedHashMap<Object, Object> getDataMap(String table, Integer mlbTeamId, Integer year, boolean pitchers) {
-		LinkedHashMap<Object, Object> dataMap = new LinkedHashMap<Object, Object>();
+		LinkedHashMap<Object, Object> dataMap = new LinkedHashMap<>();
 		try {
 			Statement stmt = conn.createStatement();
 			String sql = "";
@@ -185,7 +185,7 @@ public class DAO {
 	}
 	
 	public static ArrayList<MLBTeam> getAllTeamsList() {
-		ArrayList<MLBTeam> allTeams = new ArrayList<MLBTeam>();
+		ArrayList<MLBTeam> allTeams = new ArrayList<>();
 		try {
 			Statement stmt = conn.createStatement();
 			String sql = "SELECT * FROM MLB_TEAM";
@@ -203,7 +203,7 @@ public class DAO {
 	}
 	
 	public static HashMap<Integer, Object> getPlayerStatsMapForMultipleTeams(Integer year, boolean pitchers) {
-		HashMap<Integer, Object> dataMap = new HashMap<Integer, Object>();
+		HashMap<Integer, Object> dataMap = new HashMap<>();
 		try {
 			Statement stmt = conn.createStatement();
 			String sql = "SELECT MLB_PLAYER_ID, ";
@@ -242,7 +242,7 @@ public class DAO {
 	}
 	
 	public static HashMap<Integer, MLBPlayer> getBattersMapByTeamAndYear(Integer mlbTeamId, Integer year) {
-		HashMap<Integer, MLBPlayer> battersMap = new HashMap<Integer, MLBPlayer>();
+		HashMap<Integer, MLBPlayer> battersMap = new HashMap<>();
 		HashMap<Integer, Object> battersForMultipleTeams = getPlayerStatsMapForMultipleTeams(year, false);
 		HashMap<Object, Object> objectMap = getDataMap("MLB_PLAYER", mlbTeamId, year, false);
 		for (Map.Entry<Object, Object> entry : objectMap.entrySet()) {
@@ -262,7 +262,7 @@ public class DAO {
 	}
 	
 	public static LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> getBattersMapByYear(Integer year) {
-		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allBattersMap = new LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>>();
+		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allBattersMap = new LinkedHashMap<>();
 		HashMap<Integer, MLBPlayer> battersMap = null;
 		HashMap<Integer, Object> battersForMultipleTeams = getPlayerStatsMapForMultipleTeams(year, false);
 		HashMap<Object, Object> objectMap = getDataMap("MLB_PLAYER", null, year, false);
@@ -276,7 +276,7 @@ public class DAO {
 				if (battersMap != null) {
 					allBattersMap.put(prevTeamId, battersMap);
 				}
-				battersMap = new HashMap<Integer, MLBPlayer>();
+				battersMap = new HashMap<>();
 			}
 			// Check if player played on multiple teams, if so use their cumulative stats for all teams
 			if (battersForMultipleTeams.get(mlbPlayerId) != null) {
@@ -294,7 +294,7 @@ public class DAO {
 	}
 	
 	public static HashMap<Integer, MLBPlayer> getPitchersMapByTeamAndYear(Integer mlbTeamId, Integer year) {
-		HashMap<Integer, MLBPlayer> pitchersMap = new HashMap<Integer, MLBPlayer>();
+		HashMap<Integer, MLBPlayer> pitchersMap = new HashMap<>();
 		HashMap<Integer, Object> pitchersForMultipleTeams = getPlayerStatsMapForMultipleTeams(year, true);
 		HashMap<Object, Object> objectMap = getDataMap("MLB_PLAYER", mlbTeamId, year, true);
 		for (Map.Entry<Object, Object> entry : objectMap.entrySet()) {
@@ -314,7 +314,7 @@ public class DAO {
 	}
 	
 	public static LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> getPitchersMapByYear(Integer year) {
-		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allPitchersMap = new LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>>();
+		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allPitchersMap = new LinkedHashMap<>();
 		HashMap<Integer, MLBPlayer> pitchersMap = null;
 		HashMap<Integer, Object> pitchersForMultipleTeams = getPlayerStatsMapForMultipleTeams(year, true);
 		HashMap<Object, Object> objectMap = getDataMap("MLB_PLAYER", null, year, true);
@@ -328,7 +328,7 @@ public class DAO {
 				if (pitchersMap != null) {
 					allPitchersMap.put(prevTeamId, pitchersMap);
 				}
-				pitchersMap = new HashMap<Integer, MLBPlayer>();
+				pitchersMap = new HashMap<>();
 			}
 			// Check if player played on multiple teams, if so use their cumulative stats for all teams
 			if (pitchersForMultipleTeams.get(mlbPlayerId) != null) {
@@ -343,6 +343,54 @@ public class DAO {
 		}
 		allPitchersMap.put(prevTeamId, pitchersMap);
 		return allPitchersMap;
+	}
+	
+	public static HashMap<Integer, Integer> getBattersOnMultipleTeamsByPrimaryTeam(int[] years) {
+		HashMap<Integer, Integer> battersMap = new HashMap<>();
+		try {
+			Statement stmt = conn.createStatement();
+			String yearsString = "";
+			for (int y = 0; y < years.length; y++) {
+				yearsString += years[y];
+				if (y < (years.length - 1) ) {
+					yearsString += ",";
+				}
+			}
+			String sql = "SELECT P.MLB_PLAYER_ID, MBS.MLB_TEAM_ID, MAX(MBS.PLATE_APPEARANCES) FROM MLB_BATTING_STATS MBS, MLB_PLAYER P WHERE " +
+				"P.MLB_PLAYER_ID = MBS.MLB_PLAYER_ID AND MBS.YEAR IN (" + yearsString + ") GROUP BY MBS.MLB_PLAYER_ID HAVING COUNT(*) > 1";
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				battersMap.put(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"));
+			}
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return battersMap;
+	}
+	
+	public static HashMap<Integer, Integer> getPitchersOnMultipleTeamsByPrimaryTeam(int[] years) {
+		HashMap<Integer, Integer> battersMap = new HashMap<>();
+		try {
+			Statement stmt = conn.createStatement();
+			String yearsString = "";
+			for (int y = 0; y < years.length; y++) {
+				yearsString += years[y];
+				if (y < (years.length - 1) ) {
+					yearsString += ",";
+				}
+			}
+			String sql = "SELECT P.MLB_PLAYER_ID, MPS.MLB_TEAM_ID, MAX(MPS.BATTERS_FACED) FROM MLB_PITCHING_STATS MPS, MLB_PLAYER P WHERE " +
+				"P.MLB_PLAYER_ID = MPS.MLB_PLAYER_ID AND MPS.YEAR IN (" + yearsString + ") GROUP BY MPS.MLB_PLAYER_ID HAVING COUNT(*) > 1";
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				battersMap.put(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"));
+			}
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return battersMap;
 	}
 	
 	public static void setConnection() {
