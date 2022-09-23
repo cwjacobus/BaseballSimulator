@@ -1,5 +1,7 @@
 package db;
 
+import java.util.ArrayList;
+
 public class MLBPlayer {
 	private Integer mlbPlayerId;
 	private String fullName;
@@ -9,7 +11,7 @@ public class MLBPlayer {
 	private Integer jerseyNumber;
 	private MLBBattingStats mlbBattingStats;
 	private MLBPitchingStats mlbPitchingStats;
-	private MLBFieldingStats mlbFieldingStats;
+	private ArrayList<MLBFieldingStats> mlbFieldingStats;
 	
 	public MLBPlayer() {
 	}
@@ -20,7 +22,7 @@ public class MLBPlayer {
 		this.primaryPosition = primaryPosition;
 		this.mlbBattingStats = new MLBBattingStats();
 		this.mlbPitchingStats = new MLBPitchingStats();
-		this.mlbFieldingStats = new MLBFieldingStats();
+		this.mlbFieldingStats = new ArrayList<>();
 	}
 	
 	
@@ -34,7 +36,7 @@ public class MLBPlayer {
 		this.jerseyNumber = jerseyNumber;
 		this.mlbBattingStats = new MLBBattingStats();
 		this.mlbPitchingStats = new MLBPitchingStats();
-		this.mlbFieldingStats = new MLBFieldingStats();
+		this.mlbFieldingStats = new ArrayList<>();
 	}
 
 	public Integer getMlbPlayerId() {
@@ -101,11 +103,11 @@ public class MLBPlayer {
 		this.mlbPitchingStats = mlbPitchingStats;
 	}
 
-	public MLBFieldingStats getMlbFieldingStats() {
+	public ArrayList<MLBFieldingStats> getMlbFieldingStats() {
 		return mlbFieldingStats;
 	}
 
-	public void setMlbFieldingStats(MLBFieldingStats mlbFieldingStats) {
+	public void setMlbFieldingStats(ArrayList<MLBFieldingStats> mlbFieldingStats) {
 		this.mlbFieldingStats = mlbFieldingStats;
 	}
 
@@ -116,6 +118,14 @@ public class MLBPlayer {
 			firstLastName = flnArray[1].trim() + " " + flnArray[0];
 		}
 		return firstLastName;
+	}
+	
+	public String getPrimaryPositionByFieldingStats() {
+		String primaryPositionByFieldingStats = "DH";
+		if (mlbFieldingStats != null && mlbFieldingStats.size() > 0) {
+			primaryPositionByFieldingStats = mlbFieldingStats.get(0).getPosition();
+		}
+		return primaryPositionByFieldingStats;
 	}
 	
 	public String toString () {

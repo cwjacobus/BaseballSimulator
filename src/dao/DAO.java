@@ -47,6 +47,12 @@ public class DAO {
 						", " + ps.getHomeRunsAllowed() + ", " + ps.getStolenBasesAllowed() + ", " + ps.getHitBatters() + ", " + ps.getHitsAllowed() + ", " + ps.getHolds() + ", " + ps.getSaves() + ", " + ps.getBlownSaves() +
 						", " + ps.getGamesStarted() + ", " + ps.getBalks() + ", " + ps.getWildPitches() + ", " + ps.getSacrificeFlies() + ", " + ps.getBattersFaced() + ", " + ps.getWins() + ", " + ps.getLosses() + ");";
 				}
+				else if (mlbData instanceof MLBFieldingStats) {
+					MLBFieldingStats mfs = (MLBFieldingStats)mlbData;
+					FieldingStats fs = mfs.getFieldingStats();
+					insertSQL = "INSERT IGNORE INTO MLB_FIELDING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, POSITION, ASSISTS, PUT_OUTS, ERRORS, GAMES) VALUES (" +
+						mfs.getMlbPlayerId() + ", " + mfs.getMlbTeamId() + ", " + mfs.getYear() + ", '" + mfs.getPosition() + "', " + fs.getAssists() + ", " + fs.getPutOuts() + ", " + fs.getErrors() + ", " + mfs.getGames() + ");";
+				}
 				stmt.addBatch(insertSQL);
 				mlbDataCount++;
 				// Every 500 lines, insert the records
@@ -68,24 +74,6 @@ public class DAO {
 			e.printStackTrace();
 		}
 	}
-	/*
-	public static void createBatchStatsDataFromPlayersMaps(HashMap<Integer, MLBPlayer> battersMap, HashMap<Integer, MLBPlayer> pitchersMap, HashMap<Integer, MLBPlayer> fieldersMap) {
-		HashMap<Integer, MLBBattingStats> mlbBattingStatsMap = new HashMap<Integer, MLBBattingStats>();
-		HashMap<Integer, MLBPitchingStats> mlbPitchingStatsMap = new HashMap<Integer, MLBPitchingStats>();
-		HashMap<Integer, MLBFieldingStats> mlbFieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
-		for (Map.Entry<Integer, MLBPlayer> entry : battersMap.entrySet()) {
-			mlbBattingStatsMap.put(entry.getKey(), entry.getValue().getMlbBattingStats());
-		}
-		for (Map.Entry<Integer, MLBPlayer> entry : pitchersMap.entrySet()) {
-			mlbPitchingStatsMap.put(entry.getKey(), entry.getValue().getMlbPitchingStats());
-		}
-		for (Map.Entry<Integer, MLBPlayer> entry : fieldersMap.entrySet()) {
-			mlbFieldingStatsMap.put(entry.getKey(), entry.getValue().getMlbFieldingStats());
-		}
-		createBatchDataFromMap(mlbBattingStatsMap);
-		createBatchDataFromMap(mlbPitchingStatsMap);
-		//createBatchDataFromMap(mlbFieldingStatsMap);
-	}*/
 	
 	public static void createBatchDataFromMap(HashMap<?, ?> mlbDataMap) {
 		try {
@@ -110,12 +98,6 @@ public class DAO {
 					insertSQL = "INSERT IGNORE INTO MLB_PLAYER (MLB_PLAYER_ID, FULL_NAME, PRIMARY_POSITION, ARM_THROWS, BATS, JERSEY_NUMBER) VALUES (" + 
 						mlbPlayer.getMlbPlayerId() + ", '" + mlbPlayer.getFullName().replace("'", "") + "', '" + mlbPlayer.getPrimaryPosition() +
 						"', '" + mlbPlayer.getArmThrows() +"', '" + mlbPlayer.getBats() + "', " + mlbPlayer.getJerseyNumber() + ");";;
-				}
-				else if (entry.getValue() instanceof MLBFieldingStats) {
-					MLBFieldingStats mfs = (MLBFieldingStats)entry.getValue();
-					FieldingStats fs = mfs.getFieldingStats();
-					insertSQL = "INSERT IGNORE INTO MLB_FIELDING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, POSITION, ASSISTS, PUT_OUTS, ERRORS) VALUES (" +
-						mfs.getMlbPlayerId() + ", " + mfs.getMlbTeamId() + ", " + mfs.getYear() + ", '" + mfs.getPosition() + "', " + fs.getAssists() + ", " + fs.getPutOuts() + ", " + fs.getErrors() + ");";
 				}
 				stmt.addBatch(insertSQL);
 				mlbDataCount++;
@@ -391,6 +373,35 @@ public class DAO {
 			e.printStackTrace();
 		}
 		return battersMap;
+	}
+	
+	public static HashMap<Integer, ArrayList<MLBFieldingStats>> getFieldingStatsMapByTeamAndYear(Integer mlbTeamId, Integer year) {
+		HashMap<Integer, ArrayList<MLBFieldingStats>> fieldingStatsMap = new HashMap<>();
+		ArrayList<MLBFieldingStats> playerFieldingStats = new ArrayList<>();
+		Integer prevPlayerId = null;
+		Integer playerId = null;
+		MLBFieldingStats playerFieldingStatsByPosition = null;
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "SELECT * FROM MLB_FIELDING_STATS WHERE MLB_TEAM_ID = " +  mlbTeamId + " AND YEAR = " + year + " ORDER BY MLB_PLAYER_ID, GAMES DESC";
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				playerId = rs.getInt("MLB_PLAYER_ID");
+				if (prevPlayerId != null && playerId.intValue() != prevPlayerId.intValue()) {
+					fieldingStatsMap.put(prevPlayerId, playerFieldingStats);
+					playerFieldingStats = new ArrayList<>();
+				}
+				playerFieldingStatsByPosition = new MLBFieldingStats(playerId, rs.getInt("MLB_TEAM_ID"),  year, rs.getString("POSITION"), 
+					rs.getInt("GAMES"), new FieldingStats(rs.getInt("ASSISTS"), rs.getInt("PUT_OUTS"), rs.getInt("ERRORS")));
+				playerFieldingStats.add(playerFieldingStatsByPosition);
+				prevPlayerId = playerId;
+			}
+			fieldingStatsMap.put(playerId, playerFieldingStats);
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return fieldingStatsMap;
 	}
 	
 	public static void setConnection() {

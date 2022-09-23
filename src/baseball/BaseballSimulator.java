@@ -234,6 +234,8 @@ public class BaseballSimulator {
 					if (!seasonSimulationMode) {
 						rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
 						rosters[t].setBatters(DAO.getBattersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
+						HashMap<Integer, ArrayList<MLBFieldingStats>> fieldingStatsMap = DAO.getFieldingStatsMapByTeamAndYear(teams[t].getTeamId(), years[t]);
+						updateBattersFieldingStats(rosters[t].getBatters());
 					}
 					else {
 						rosters[t].setBatters(allBatters.get(teams[t].getTeamId()));
@@ -2641,13 +2643,17 @@ public class BaseballSimulator {
         }*/ 
 	}
 	
-	static private void printlnToScreen(String text) {
+	private static void updateBattersFieldingStats(HashMap<Integer, MLBPlayer> batters) {
+		
+	}
+	
+	 private static void printlnToScreen(String text) {
 		if (!seasonSimulationMode) {
 			System.out.println(text != null ? text : "");
 		}
 	}
 	
-	static private void printToScreen(String text) {
+	private static void printToScreen(String text) {
 		if (!seasonSimulationMode) {
 			System.out.print(text);
 		}

@@ -33,12 +33,12 @@ public class DBImport {
 	static int currentYear = Calendar.getInstance().get(Calendar.YEAR);
 
 	public static void main(String[] args) {
-		//Integer year = null;
 		int startYear = 0;
 		int endYear = -1;
 		boolean allYears = false;
 		ArrayList<MLBTeam> allTeamsList;
 		ArrayList<MLBTeam> teamsForYearList;
+		boolean fieldingOnly = false;
 		
 		if (args.length < 3) {
 			System.out.println("INVALID ARGS");
@@ -77,6 +77,9 @@ public class DBImport {
 					return;
 				}
 			}
+			if (args.length >= 5) {
+				fieldingOnly = args[4].equalsIgnoreCase("F");
+			}
 			for (int year = startYear; year <= endYear; year++) {
 				System.out.println("Import players for: " + year);
 				if (!args[3].equalsIgnoreCase("ALL")) {
@@ -89,16 +92,18 @@ public class DBImport {
 				HashMap<Integer, MLBPlayer> filteredHittersMap = new HashMap<Integer, MLBPlayer>();
 				HashMap<Integer, MLBPlayer> pitchersMap = importMlbPlayers(year, false, teamsForYearList); // import pitchers
 				HashMap<Integer, MLBPlayer> filteredPitchersMap = new HashMap<Integer, MLBPlayer>();
-				//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
 				ArrayList<Object> battingStatsList = importBattingStats(hittersMap, year, filteredHittersMap);
-				ArrayList<Object> pitchingStatsList = importPitchingStats(pitchersMap, year, filteredPitchersMap);
-				//importFieldingStats(hittersMap, year, fieldingStatsMap);  // hitters fielding
+				if (!fieldingOnly) {
+					ArrayList<Object> pitchingStatsList = importPitchingStats(pitchersMap, year, filteredPitchersMap);
+					DAO.createBatchDataFromMap(filteredHittersMap);
+					DAO.createBatchDataFromMap(filteredPitchersMap);
+					DAO.createBatchDataFromList(battingStatsList);
+					DAO.createBatchDataFromList(pitchingStatsList);
+				}
+				ArrayList<Object> fieldingStatsList = importFieldingStats(filteredHittersMap, year);  // hitters fielding
 				//importFieldingStats(pitchersMap, year, fieldingStatsMap); // pitchers fielding
-				DAO.createBatchDataFromMap(filteredHittersMap);
-				DAO.createBatchDataFromMap(filteredPitchersMap);
-				DAO.createBatchDataFromList(battingStatsList);
-				DAO.createBatchDataFromList(pitchingStatsList);
-				//DAO.createBatchDataFromMap(fieldingStatsMap);
+				
+				DAO.createBatchDataFromList(fieldingStatsList);
 			}
 		}
 		else {
@@ -313,7 +318,7 @@ public class DBImport {
 	}
 	
 	public static ArrayList<Object> importPitchingStats(HashMap<Integer, MLBPlayer> pitchersMap, int year, HashMap<Integer, MLBPlayer> filteredPitchersMap) {
-		ArrayList<Object> pitchingStatsList = new ArrayList<Object>();
+		ArrayList<Object> pitchingStatsList = new ArrayList<>();
 		int index = 1;
 		int qualifyingGamesPitched = 20;
 		if (year == 2020) { // pandemic year
@@ -385,9 +390,9 @@ public class DBImport {
 		return pitchingStatsList;
 	}
 	
-	/*
-	public static void importFieldingStats(HashMap<Integer, MLBPlayer> playersMap, int year, HashMap<Integer, MLBFieldingStats> fieldingStatsMap) {
+	public static ArrayList<Object> importFieldingStats(HashMap<Integer, MLBPlayer> playersMap, int year) {
 		int index = 1;
+		ArrayList<Object> fieldingStatsList = new ArrayList<>();
 		try {   
 			for (Map.Entry<Integer, MLBPlayer> entry : playersMap.entrySet()) {
 				String getFieldingStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_fielding_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + 
@@ -413,8 +418,8 @@ public class DBImport {
 								if (index % 50 == 0) {
 									System.out.println();
 								}
-								MLBFieldingStats mbs = createMLBFieldingStats(entry.getValue().getMlbPlayerId(), fieldingStatsJson, year);
-								fieldingStatsMap.put(entry.getValue().getMlbPlayerId(), mbs);
+								MLBFieldingStats mfs = createMLBFieldingStats(entry.getValue().getMlbPlayerId(), fieldingStatsJson, year);
+								fieldingStatsList.add(mfs);
 								index++;
 							}
 						}
@@ -426,8 +431,8 @@ public class DBImport {
 							if (index % 50 == 0) {
 								System.out.println();
 							}
-							MLBFieldingStats mbs = createMLBFieldingStats(entry.getValue().getMlbPlayerId(), fieldingStatsJson, year);
-							fieldingStatsMap.put(entry.getValue().getMlbPlayerId(), mbs);
+							MLBFieldingStats mfs = createMLBFieldingStats(entry.getValue().getMlbPlayerId(), fieldingStatsJson, year);
+							fieldingStatsList.add(mfs);
 							index++;
 						}
 					}
@@ -444,13 +449,15 @@ public class DBImport {
 		catch (IOException e) { 
 			e.printStackTrace();
 		}
-		for (Map.Entry<Integer, MLBFieldingStats> entry : fieldingStatsMap.entrySet()) {
-			MLBFieldingStats mbs = entry.getValue();
-			System.out.println(mbs.getMlbPlayerId() + " " + mbs.getMlbTeamId() + " " +  mbs.getYear() + " " +
-				mbs.getFieldingStats().getAssists() + " " + mbs.getFieldingStats().getPutOuts() + " " + mbs.getFieldingStats().getErrors());
+		System.out.println();
+		for (Object o : fieldingStatsList) {
+			MLBFieldingStats mfs = (MLBFieldingStats)o;
+			System.out.println(mfs.getMlbPlayerId() + " " + mfs.getMlbTeamId() + " " +  mfs.getYear() + " " + mfs.getPosition() + " " + mfs.getGames() + " " +
+				mfs.getFieldingStats().getAssists() + " " + mfs.getFieldingStats().getPutOuts() + " " + mfs.getFieldingStats().getErrors());
 		}
-		System.out.println("\nFielder import complete");
-	}*/
+		System.out.println("Fielder import complete");
+		return fieldingStatsList;
+	}
 	
 	static MLBBattingStats createMLBBattingStats(Integer mlbPlayerId, JSONObject battingStatsJson, Integer year) {
 		MLBBattingStats mbs = null;
@@ -494,7 +501,7 @@ public class DBImport {
 	static MLBFieldingStats createMLBFieldingStats(Integer mlbPlayerId, JSONObject fieldingStatsJson, Integer year) {
 		MLBFieldingStats mbs = null;
 		try {
-			mbs = new MLBFieldingStats(mlbPlayerId, Integer.parseInt(fieldingStatsJson.getString("team_id")), year, fieldingStatsJson.getString("position_txt"),
+			mbs = new MLBFieldingStats(mlbPlayerId, Integer.parseInt(fieldingStatsJson.getString("team_id")), year, fieldingStatsJson.getString("position_txt"), Integer.parseInt(fieldingStatsJson.getString("g")),
 				new FieldingStats(Integer.parseInt(fieldingStatsJson.getString("a")), Integer.parseInt(fieldingStatsJson.getString("po")), Integer.parseInt(fieldingStatsJson.getString("e"))));
 		}
 		catch (JSONException e) {

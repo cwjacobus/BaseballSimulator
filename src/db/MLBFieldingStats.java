@@ -10,6 +10,7 @@ public class MLBFieldingStats {
 	private Integer mlbTeamId;
 	private Integer year;
 	private String position;
+	private Integer games;
 	private FieldingStats fieldingStats;
 	
 	public static final String[] outfieldPositions = {"CF","LF","RF","OF"};
@@ -18,11 +19,12 @@ public class MLBFieldingStats {
 		this.fieldingStats = new FieldingStats();
 	}
 
-	public MLBFieldingStats(Integer mlbPlayerId, Integer mlbTeamId, Integer year, String position, FieldingStats fieldingStats) {
+	public MLBFieldingStats(Integer mlbPlayerId, Integer mlbTeamId, Integer year, String position, Integer games, FieldingStats fieldingStats) {
 		this.mlbPlayerId = mlbPlayerId;
 		this.mlbTeamId = mlbTeamId;
 		this.year = year;
 		this.position = position;
+		this.games = games;
 		this.fieldingStats = fieldingStats;
 	}
 
@@ -64,6 +66,14 @@ public class MLBFieldingStats {
 
 	public void setPosition(String position) {
 		this.position = position;
+	}
+
+	public Integer getGames() {
+		return games;
+	}
+
+	public void setGames(Integer games) {
+		this.games = games;
 	}
 
 	public FieldingStats getFieldingStats() {
