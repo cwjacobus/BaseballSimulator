@@ -383,7 +383,7 @@ public class DAO {
 		MLBFieldingStats playerFieldingStatsByPosition = null;
 		try {
 			Statement stmt = conn.createStatement();
-			String sql = "SELECT * FROM MLB_FIELDING_STATS WHERE MLB_TEAM_ID = " +  mlbTeamId + " AND YEAR = " + year + " ORDER BY MLB_PLAYER_ID, GAMES DESC";
+			String sql = "SELECT * FROM MLB_FIELDING_STATS WHERE MLB_TEAM_ID = " +  mlbTeamId + " AND YEAR = " + year + " MLB_PLAYER_ID, GAMES DESC";
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				playerId = rs.getInt("MLB_PLAYER_ID");
@@ -397,6 +397,45 @@ public class DAO {
 				prevPlayerId = playerId;
 			}
 			fieldingStatsMap.put(playerId, playerFieldingStats);
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return fieldingStatsMap;
+	}
+	
+	public static HashMap<Integer, HashMap<Integer, ArrayList<MLBFieldingStats>>> getFieldingStatsMapByYear(Integer year) {
+		HashMap<Integer, HashMap<Integer, ArrayList<MLBFieldingStats>>> fieldingStatsMap = new HashMap<>();
+		HashMap<Integer, ArrayList<MLBFieldingStats>> teamFieldingStats = new HashMap<>();
+		ArrayList<MLBFieldingStats> playerFieldingStats = new ArrayList<>();
+		Integer prevPlayerId = null;
+		Integer playerId = null;
+		Integer prevTeamId = null;
+		Integer teamId = null;
+		MLBFieldingStats playerFieldingStatsByPosition = null;
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "SELECT * FROM MLB_FIELDING_STATS WHERE YEAR = " + year + " ORDER BY MLB_TEAM_ID, MLB_PLAYER_ID, GAMES DESC";
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				playerId = rs.getInt("MLB_PLAYER_ID");
+				teamId = rs.getInt("MLB_TEAM_ID");
+				if (prevPlayerId != null && playerId.intValue() != prevPlayerId.intValue()) {
+					teamFieldingStats.put(prevPlayerId, playerFieldingStats);
+					playerFieldingStats = new ArrayList<>();
+				}
+				if (prevTeamId != null && teamId.intValue() != prevTeamId.intValue()) {
+					fieldingStatsMap.put(prevTeamId, teamFieldingStats);
+					teamFieldingStats = new HashMap<>();
+				}
+				playerFieldingStatsByPosition = new MLBFieldingStats(playerId, rs.getInt("MLB_TEAM_ID"),  year, rs.getString("POSITION"), 
+					rs.getInt("GAMES"), new FieldingStats(rs.getInt("ASSISTS"), rs.getInt("PUT_OUTS"), rs.getInt("ERRORS")));
+				playerFieldingStats.add(playerFieldingStatsByPosition);
+				teamFieldingStats.put(playerId, playerFieldingStats);
+				prevPlayerId = playerId;
+				prevTeamId = teamId;
+			}
+			fieldingStatsMap.put(teamId, teamFieldingStats);
 		}
 		catch (SQLException e) {
 			e.printStackTrace();

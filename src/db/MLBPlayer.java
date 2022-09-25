@@ -121,7 +121,7 @@ public class MLBPlayer {
 	}
 	
 	public String getPrimaryPositionByFieldingStats() {
-		String primaryPositionByFieldingStats = "DH";
+		String primaryPositionByFieldingStats = primaryPosition;
 		if (mlbFieldingStats != null && mlbFieldingStats.size() > 0) {
 			primaryPositionByFieldingStats = mlbFieldingStats.get(0).getPosition();
 		}

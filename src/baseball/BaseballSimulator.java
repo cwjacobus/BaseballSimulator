@@ -126,6 +126,7 @@ public class BaseballSimulator {
 		MLBTeam[] teams = {null, null};
 		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allBatters = null;
 		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allPitchers = null;
+		HashMap<Integer, HashMap<Integer, ArrayList<MLBFieldingStats>>> allFielders = null;
 		SeriesStats[] seriesStats = new SeriesStats[2];
 		int gameNumber = 0;
 		HashMap<Integer, Integer> teamSeasonGameIndexMap = new HashMap<>();
@@ -198,6 +199,7 @@ public class BaseballSimulator {
 			years[0] = years[1] = Integer.parseInt(args[1]);
 			allBatters = DAO.getBattersMapByYear(years[0]);
 			allPitchers = DAO.getPitchersMapByYear(years[0]);
+			allFielders = DAO.getFieldingStatsMapByYear(years[0]);
 		}
 		battersOnMultTeams = DAO.getBattersOnMultipleTeamsByPrimaryTeam(years);
 		pitchersOnMultTeams = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years);
@@ -235,7 +237,7 @@ public class BaseballSimulator {
 						rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
 						rosters[t].setBatters(DAO.getBattersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
 						HashMap<Integer, ArrayList<MLBFieldingStats>> fieldingStatsMap = DAO.getFieldingStatsMapByTeamAndYear(teams[t].getTeamId(), years[t]);
-						updateBattersFieldingStats(rosters[t].getBatters());
+						rosters[t].getBatters().entrySet().stream().forEach(entry -> entry.getValue().setMlbFieldingStats(fieldingStatsMap.get(entry.getValue().getMlbPlayerId())));
 					}
 					else {
 						rosters[t].setBatters(allBatters.get(teams[t].getTeamId()));
@@ -1387,13 +1389,13 @@ public class BaseballSimulator {
 					if (index == rosters[t].getBatters().size()) {
 						System.out.println("Can not create a lineup for the " + years[t] + " " + teams[t].getFullTeamName() + " with players:");
 						for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
-							System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPosition());
+							System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPositionByFieldingStats());
 						}
 						//return batters;
 						break;
 					}
 					player = rosters[t].getBatters().get(list.get(index).getKey());
-					if (player.getPrimaryPosition().equals("DH")/* || (years[t] > 2010 && player.getPrimaryPosition().equals("OF"))*/) {
+					if (player.getPrimaryPositionByFieldingStats().equals("DH")/* || (years[t] > 2010 && player.getPrimaryPosition().equals("OF"))*/) {
 						index++;
 						continue;
 					}
@@ -1402,7 +1404,7 @@ public class BaseballSimulator {
 						index++;
 						continue;
 					}
-					String playerPosition = player.getPrimaryPosition();
+					String playerPosition = player.getPrimaryPositionByFieldingStats();
 					if (playerPosition.equals("OF")) {
 						if (ofCount == 3) {
 							index++;
@@ -2643,11 +2645,7 @@ public class BaseballSimulator {
         }*/ 
 	}
 	
-	private static void updateBattersFieldingStats(HashMap<Integer, MLBPlayer> batters) {
-		
-	}
-	
-	 private static void printlnToScreen(String text) {
+	private static void printlnToScreen(String text) {
 		if (!seasonSimulationMode) {
 			System.out.println(text != null ? text : "");
 		}
