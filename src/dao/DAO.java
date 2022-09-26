@@ -383,7 +383,7 @@ public class DAO {
 		MLBFieldingStats playerFieldingStatsByPosition = null;
 		try {
 			Statement stmt = conn.createStatement();
-			String sql = "SELECT * FROM MLB_FIELDING_STATS WHERE MLB_TEAM_ID = " +  mlbTeamId + " AND YEAR = " + year + " MLB_PLAYER_ID, GAMES DESC";
+			String sql = "SELECT * FROM MLB_FIELDING_STATS WHERE MLB_TEAM_ID = " +  mlbTeamId + " AND YEAR = " + year + " ORDER BY MLB_PLAYER_ID, GAMES DESC";
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				playerId = rs.getInt("MLB_PLAYER_ID");

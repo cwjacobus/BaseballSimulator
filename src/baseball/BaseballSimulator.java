@@ -242,6 +242,8 @@ public class BaseballSimulator {
 					else {
 						rosters[t].setBatters(allBatters.get(teams[t].getTeamId()));
 						rosters[t].setPitchers(allPitchers.get(teams[t].getTeamId()));
+						HashMap<Integer, ArrayList<MLBFieldingStats>> fieldingStatsMap = allFielders.get(teams[t].getTeamId());
+						rosters[t].getBatters().entrySet().stream().forEach(entry -> entry.getValue().setMlbFieldingStats(fieldingStatsMap.get(entry.getValue().getMlbPlayerId())));
 					}
 					if (rosters[t].getBatters().size() == 0 || rosters[t].getPitchers().size() == 0) {
 						System.out.println("Players for " + years[t] + " " + teams[t].getFullTeamName() + " not found in database.  Import player stats from API.");
@@ -1413,6 +1415,14 @@ public class BaseballSimulator {
 						playerPosition = positions.get(nextOFPositionNeededIndex);
 					}
 					boolean positionNeeded = !positionsUsed.contains(playerPosition);
+					if (!positionNeeded) { // Check if player played other positions that are needed
+						for (MLBFieldingStats fs : player.getMlbFieldingStats()) {
+							if (!positionsUsed.contains(fs.getPosition()) && !playersInLineupList.contains(list.get(index).getKey())) {
+								positionNeeded = true;
+								playerPosition = fs.getPosition();
+							}
+						}
+					}
 					if (!playersInLineupList.contains(list.get(index).getKey()) && positionNeeded) {  // Not already in lineup, save P for end
 						playersInLineupList.add(list.get(index).getKey());
 						batters.get(t).get(i-1).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), playerPosition, player.getArmThrows(), player.getBats(), player.getJerseyNumber()));
@@ -1731,7 +1741,7 @@ public class BaseballSimulator {
 		ArrayList<ArrayList<MLBPlayer>> batters = boxScores[top].getBatters();
 		for (ArrayList<MLBPlayer> playerList : batters) {
 			for (MLBPlayer p : playerList) {
-				if (p.getPrimaryPosition().equals(position)) {
+				if (p.getPrimaryPositionByFieldingStats().equals(position)) {
 					return playerList.get(playerList.size() - 1); // get current player at that position
 				}
 			}
