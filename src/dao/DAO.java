@@ -338,11 +338,16 @@ public class DAO {
 					yearsString += ",";
 				}
 			}
-			String sql = "SELECT P.MLB_PLAYER_ID, MBS.MLB_TEAM_ID, MAX(MBS.PLATE_APPEARANCES) FROM MLB_BATTING_STATS MBS, MLB_PLAYER P WHERE " +
-				"P.MLB_PLAYER_ID = MBS.MLB_PLAYER_ID AND MBS.YEAR IN (" + yearsString + ") GROUP BY MBS.MLB_PLAYER_ID HAVING COUNT(*) > 1";
+			String sql = "SELECT MLB_PLAYER_ID, MLB_TEAM_ID, PLATE_APPEARANCES FROM MLB_BATTING_STATS WHERE MLB_PLAYER_ID IN (SELECT MLB_PLAYER_ID FROM " + 
+				"MLB_BATTING_STATS WHERE YEAR IN (" + yearsString + ") GROUP BY MLB_PLAYER_ID HAVING COUNT(*) > 1) AND YEAR IN (" + yearsString + ") " +
+				"ORDER BY MLB_PLAYER_ID, PLATE_APPEARANCES DESC";
 			ResultSet rs = stmt.executeQuery(sql);
+			Integer prevMlbPlayerId = null;
 			while (rs.next()) {
-				battersMap.put(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"));
+				Integer mlbPlayerId = rs.getInt("MLB_PLAYER_ID");
+				if (prevMlbPlayerId == null || mlbPlayerId.intValue() != prevMlbPlayerId.intValue())
+					battersMap.put(mlbPlayerId, rs.getInt("MLB_TEAM_ID"));
+				prevMlbPlayerId = mlbPlayerId;
 			}
 		}
 		catch (SQLException e) {
@@ -352,7 +357,7 @@ public class DAO {
 	}
 	
 	public static HashMap<Integer, Integer> getPitchersOnMultipleTeamsByPrimaryTeam(int[] years) {
-		HashMap<Integer, Integer> battersMap = new HashMap<>();
+		HashMap<Integer, Integer> pitchersMap = new HashMap<>();
 		try {
 			Statement stmt = conn.createStatement();
 			String yearsString = "";
@@ -362,17 +367,22 @@ public class DAO {
 					yearsString += ",";
 				}
 			}
-			String sql = "SELECT P.MLB_PLAYER_ID, MPS.MLB_TEAM_ID, MAX(MPS.BATTERS_FACED) FROM MLB_PITCHING_STATS MPS, MLB_PLAYER P WHERE " +
-				"P.MLB_PLAYER_ID = MPS.MLB_PLAYER_ID AND MPS.YEAR IN (" + yearsString + ") GROUP BY MPS.MLB_PLAYER_ID HAVING COUNT(*) > 1";
+			String sql = "SELECT MLB_PLAYER_ID, MLB_TEAM_ID, BATTERS_FACED FROM MLB_PITCHING_STATS WHERE MLB_PLAYER_ID IN (SELECT MLB_PLAYER_ID FROM " + 
+				"MLB_PITCHING_STATS WHERE YEAR IN (" + yearsString + ") GROUP BY MLB_PLAYER_ID HAVING COUNT(*) > 1) AND YEAR IN (" + yearsString + ") " +
+				"ORDER BY MLB_PLAYER_ID, BATTERS_FACED DESC";
 			ResultSet rs = stmt.executeQuery(sql);
+			Integer prevMlbPlayerId = null;
 			while (rs.next()) {
-				battersMap.put(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"));
+				Integer mlbPlayerId = rs.getInt("MLB_PLAYER_ID");
+				if (prevMlbPlayerId == null || mlbPlayerId.intValue() != prevMlbPlayerId.intValue())
+					pitchersMap.put(mlbPlayerId, rs.getInt("MLB_TEAM_ID"));
+				prevMlbPlayerId = mlbPlayerId;
 			}
 		}
 		catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return battersMap;
+		return pitchersMap;
 	}
 	
 	public static HashMap<Integer, ArrayList<MLBFieldingStats>> getFieldingStatsMapByTeamAndYear(Integer mlbTeamId, Integer year) {

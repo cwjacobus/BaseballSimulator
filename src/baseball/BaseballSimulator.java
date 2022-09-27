@@ -3,10 +3,6 @@ package baseball;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,10 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import dao.DAO;
 import db.MLBBattingStats;
@@ -1415,7 +1407,7 @@ public class BaseballSimulator {
 						playerPosition = positions.get(nextOFPositionNeededIndex);
 					}
 					boolean positionNeeded = !positionsUsed.contains(playerPosition);
-					if (!positionNeeded) { // Check if player played other positions that are needed
+					if (!positionNeeded && player.getMlbFieldingStats() != null) { // Check if player played other positions that are needed
 						for (MLBFieldingStats fs : player.getMlbFieldingStats()) {
 							if (!positionsUsed.contains(fs.getPosition()) && !playersInLineupList.contains(list.get(index).getKey())) {
 								positionNeeded = true;
@@ -1425,7 +1417,8 @@ public class BaseballSimulator {
 					}
 					if (!playersInLineupList.contains(list.get(index).getKey()) && positionNeeded) {  // Not already in lineup, save P for end
 						playersInLineupList.add(list.get(index).getKey());
-						batters.get(t).get(i-1).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), playerPosition, player.getArmThrows(), player.getBats(), player.getJerseyNumber()));
+						batters.get(t).get(i-1).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), playerPosition, player.getArmThrows(), player.getBats(), 
+							player.getJerseyNumber(), player.getMlbFieldingStats()));
 						positionsUsed.add(playerPosition);
 						if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(playerPosition)) {
 							nextOFPositionNeededIndex++;
@@ -1741,7 +1734,7 @@ public class BaseballSimulator {
 		ArrayList<ArrayList<MLBPlayer>> batters = boxScores[top].getBatters();
 		for (ArrayList<MLBPlayer> playerList : batters) {
 			for (MLBPlayer p : playerList) {
-				if (p.getPrimaryPositionByFieldingStats().equals(position)) {
+				if (p.getPrimaryPosition().equals(position)) {
 					return playerList.get(playerList.size() - 1); // get current player at that position
 				}
 			}
@@ -1794,64 +1787,14 @@ public class BaseballSimulator {
 		// Get arm rating from API
 		// Note: Fielding stats seem to only be from 1999 - present
 		Integer armRating = 0;
-		Integer outfieldAssists = 0;
-		try {
-			String getFieldingStatsAPI = "http://lookup-service-prod.mlb.com/json/named.sport_fielding_tm.bam?league_list_id=%27mlb%27&game_type=%27R%27&season=%27" + 
-				year + "%27" + "&player_id=%27" + outfielder.getMlbPlayerId() + "%27";
-			URL obj = new URL(getFieldingStatsAPI);
-			HttpURLConnection con = (HttpURLConnection)obj.openConnection();
-			BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream())); 
-			try {
-				JSONObject playerStats = new JSONObject(in.readLine());
-				JSONObject sportHittingTm = new JSONObject(playerStats.getString("sport_fielding_tm"));
-				JSONObject queryResults = new JSONObject(sportHittingTm.getString("queryResults"));
-				int numberOfResults = Integer.parseInt(queryResults.getString("totalSize"));
-				JSONObject fieldingStatsJson = null;
-				if (numberOfResults > 1) {
-					JSONArray multipleTeamStats = new JSONArray(queryResults.getString("row"));
-					for (int i = 0; i < multipleTeamStats.length(); i++) {
-						fieldingStatsJson = multipleTeamStats.getJSONObject(i);
-						if (fieldingStatsJson.getString("a").length() > 0 && Arrays.asList(MLBFieldingStats.outfieldPositions).contains(fieldingStatsJson.getString("position_txt"))) {
-							outfieldAssists += Integer.parseInt(fieldingStatsJson.getString("a"));
-						}
-					}
-				}
-				else if (numberOfResults == 1){
-					fieldingStatsJson = new JSONObject(queryResults.getString("row"));
-					if (fieldingStatsJson.getString("a").length() > 0) {
-						outfieldAssists = Integer.parseInt(fieldingStatsJson.getString("a"));
-					}
-				}
-				else {
-					return 1; // Default if no fielding record for player
+		ArrayList<MLBFieldingStats> fieldingStatsList = outfielder.getMlbFieldingStats();
+		if (fieldingStatsList != null) {
+			for (MLBFieldingStats fieldingStat : fieldingStatsList) {
+				if (fieldingStat.getPosition().equals(outfielder.getPrimaryPosition())) {
+					armRating = fieldingStat.getOutfielderArmRating();
+					break;
 				}
 			}
-			catch (JSONException e) {
-				System.out.println(getFieldingStatsAPI);
-				e.printStackTrace();
-			}
-		}
-		catch (MalformedURLException e) { 	
-			e.printStackTrace();
-		}
-		catch (IOException e) { 
-			System.out.println("No network connection!");
-			return 1;
-		}
-		if (outfieldAssists >= 9) {
-			armRating = 5;
-		} 
-		else if (outfieldAssists >= 7 && outfieldAssists < 9) {
-			armRating = 4;
-		}
-		else if (outfieldAssists >= 5 && outfieldAssists < 7) {
-			armRating = 3;
-		}
-		else if (outfieldAssists >= 3 && outfieldAssists < 5) {
-			armRating = 2;
-		}
-		else if (outfieldAssists >= 1 && outfieldAssists < 3) {
-			armRating = 1;
 		}
 		return armRating;
 	}

@@ -94,11 +94,21 @@ public class MLBFieldingStats {
 		int armRating = 0;
 		
 		if (Arrays.asList(outfieldPositions).contains(position)) {
-			if (fieldingStats.getAssists() >= 5) {
+			int outfieldAssists = getFieldingStats().getAssists();
+			if (outfieldAssists >= 9) {
 				armRating = 5;
+			} 
+			else if (outfieldAssists >= 7 && outfieldAssists < 9) {
+				armRating = 4;
 			}
-			else {
-				armRating = fieldingStats.getAssists();
+			else if (outfieldAssists >= 5 && outfieldAssists < 7) {
+				armRating = 3;
+			}
+			else if (outfieldAssists >= 3 && outfieldAssists < 5) {
+				armRating = 2;
+			}
+			else if (outfieldAssists >= 1 && outfieldAssists < 3) {
+				armRating = 1;
 			}
 		}
 		return armRating;

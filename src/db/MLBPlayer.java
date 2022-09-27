@@ -26,8 +26,7 @@ public class MLBPlayer {
 	}
 	
 	
-	public MLBPlayer(Integer mlbPlayerId, String fullName, String primaryPosition, String armThrows, String bats,
-			Integer jerseyNumber) {
+	public MLBPlayer(Integer mlbPlayerId, String fullName, String primaryPosition, String armThrows, String bats, Integer jerseyNumber) {
 		this.mlbPlayerId = mlbPlayerId;
 		this.fullName = fullName;
 		this.primaryPosition = primaryPosition;
@@ -37,6 +36,19 @@ public class MLBPlayer {
 		this.mlbBattingStats = new MLBBattingStats();
 		this.mlbPitchingStats = new MLBPitchingStats();
 		this.mlbFieldingStats = new ArrayList<>();
+	}
+	
+	public MLBPlayer(Integer mlbPlayerId, String fullName, String primaryPosition, String armThrows, String bats, 
+			Integer jerseyNumber, ArrayList<MLBFieldingStats> mlbFieldingStats) {
+		this.mlbPlayerId = mlbPlayerId;
+		this.fullName = fullName;
+		this.primaryPosition = primaryPosition;
+		this.armThrows = armThrows;
+		this.bats = bats;
+		this.jerseyNumber = jerseyNumber;
+		this.mlbBattingStats = new MLBBattingStats();
+		this.mlbPitchingStats = new MLBPitchingStats();
+		this.mlbFieldingStats = mlbFieldingStats;
 	}
 
 	public Integer getMlbPlayerId() {
