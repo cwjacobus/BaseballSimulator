@@ -45,10 +45,11 @@ public class BaseballSimulator {
 	static List<String> randoLog = new ArrayList<String>();
 	static ArrayList<MLBTeam> allMlbTeamsList;
 	static boolean useDH = true;
-	static HashMap<Integer, MLBPlayer> seasonPitchingStats  = new HashMap<>();
-	static HashMap<Integer, MLBPlayer> seasonBattingStats  = new HashMap<>();
+	static HashMap<Integer, MLBPlayer> seasonPitchingStats = new HashMap<>();
+	static HashMap<Integer, MLBPlayer> seasonBattingStats = new HashMap<>();
 	static HashMap<Integer, Integer> battersOnMultTeams;
 	static HashMap<Integer, Integer> pitchersOnMultTeams;
+	static HashMap<String, Integer> disabledList = new HashMap<>();
 	
 	// MLBDivisions 2013-2022
 	static final int AL_EAST = 0;
@@ -486,6 +487,9 @@ public class BaseballSimulator {
 			.forEach(entry -> System.out.println(entry.getValue().getFullName() + " " + (df.format((double)entry.getValue().getMlbBattingStats().getBattingStats().getHits() / 
 			entry.getValue().getMlbBattingStats().getBattingStats().getAtBats()))));
 		
+		// Output DL
+		System.out.println("\nDL: " + disabledList.size());
+		disabledList.entrySet().stream().forEach(entry -> System.out.println(entry.getValue() + " " + entry.getKey()));
 	}
 	
 	private static void playBall(GameState gameState, BoxScore[] boxScores, int gameNumber) {
@@ -588,6 +592,22 @@ public class BaseballSimulator {
 							"(" + getPlayerFromId(gameState.getBaseRunnerId(3)).getMlbBattingStats().getBattingStats().getSpeedRating() + ")");
 					printlnToScreen(currentBatter.getFirstLastName() + " UP OUTS: " + gameState.getOuts() + " "  + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()) + 
 						" (" + runnerOnFirst + " " + runnerOnSecond + " " + runnerOnThird + ")");	
+					// Look for injury (.001 chance)
+					if (getRandomNumberInRange(1, 1000) == 1) {
+						int injuredPlayerIndex = getRandomNumberInRange(1, 10);
+						MLBPlayer injuredPlayer = null;
+						if (injuredPlayerIndex == 10) { // Batter
+							injuredPlayer = currentBatter;
+						}
+						else if (injuredPlayerIndex == 9) { // Pitcher
+							injuredPlayer = currentPitcher;
+						}
+						else { // 1 - 8
+							ArrayList<ArrayList<MLBPlayer>> fielders = boxScores[top==0?1:0].getBatters();
+							injuredPlayer = fielders.get(injuredPlayerIndex -1).get(fielders.get(injuredPlayerIndex -1).size() - 1);
+						}
+						disabledList.put(injuredPlayer.getFullName() + ":" + injuredPlayer.getMlbPlayerId() + ":" + displayTeamName(top), new Integer(getRandomNumberInRange(1, 162)));
+					}
 					if (gameMode || (autoBeforeMode && inning >= autoBeforeInning)) {
 						myObj = new Scanner(System.in);
 						printToScreen("PITCH: ");
@@ -1377,8 +1397,11 @@ public class BaseballSimulator {
 			playersInLineupList = new ArrayList<Integer>();
 			batters.add(new ArrayList<ArrayList<MLBPlayer>>());
 			// Get random starter 1-5
-			for (int i = 1 ; i <= NUM_OF_PLAYERS_IN_LINEUP - 1; i++) {  // 1 - 8
+			for (int i = 1 ; i <= NUM_OF_PLAYERS_IN_LINEUP; i++) {  // 1 - 8
 				batters.get(t).add(new ArrayList<MLBPlayer>());
+				if (!useDH && i == NUM_OF_PLAYERS_IN_LINEUP) {
+					break;
+				}
 				if (i == 1) { 
 					statType = "SB";
 				}
@@ -1416,24 +1439,33 @@ public class BaseballSimulator {
 						break;
 					}
 					player = rosters[t].getBatters().get(list.get(index).getKey());
-					if (player.getPrimaryPositionByFieldingStats().equals("DH")/* || (years[t] > 2010 && player.getPrimaryPosition().equals("OF"))*/) {
+					/*if (player.getPrimaryPositionByFieldingStats().equals("DH") // || (years[t] > 2010 && player.getPrimaryPosition().equals("OF"))) {
 						index++;
 						continue;
-					}
+					}*/
 					// Skip players who were primarily on another team
 					if (battersOnMultTeams.containsKey(player.getMlbPlayerId()) && teams[t].getTeamId() != battersOnMultTeams.get(player.getMlbPlayerId())) {
 						index++;
 						continue;
 					}
-					String playerPosition = player.getPrimaryPositionByFieldingStats();
-					if (playerPosition.equals("OF")) {
-						if (ofCount == 3) {
-							index++;
-							continue;
+					String playerPosition;
+					if ((player.getMlbFieldingStats() == null || player.getMlbFieldingStats().isEmpty()) && useDH) { // DH
+						playerPosition = "DH";
+					}
+					else {
+						playerPosition = player.getPrimaryPositionByFieldingStats();
+						if (playerPosition.equals("OF")) {
+							if (ofCount == 3) {
+								index++;
+								continue;
+							}
+							playerPosition = positions.get(nextOFPositionNeededIndex);
 						}
-						playerPosition = positions.get(nextOFPositionNeededIndex);
 					}
 					boolean positionNeeded = !positionsUsed.contains(playerPosition);
+					if (!useDH && playerPosition.equals("DH")) { // Can't need a DH if useDH is false
+						positionNeeded = false;
+					}
 					if (!positionNeeded && player.getMlbFieldingStats() != null) { // Check if player played other positions that are needed
 						for (MLBFieldingStats fs : player.getMlbFieldingStats()) {
 							if (!positionsUsed.contains(fs.getPosition()) && !playersInLineupList.contains(list.get(index).getKey())) {
@@ -1456,8 +1488,8 @@ public class BaseballSimulator {
 					index++;
 				}
 			}
-			batters.get(t).add(new ArrayList<MLBPlayer>()); // For DH/P in 9
-			if (useDH) { // DH always bats ninth
+			//batters.get(t).add(new ArrayList<MLBPlayer>()); // For DH/P in 9
+			if (useDH && !positionsUsed.contains("DH")) { // Set DH at ninth if no DH already set
 				player =  getMlbPlayerWithMostPlateAppearances(teams[t].getTeamId(), years[t], playersInLineupList, t, battersOnMultTeams);
 				player.setPrimaryPosition("DH");
 				batters.get(t).get(8).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), player.getPrimaryPosition(), player.getArmThrows(), player.getBats(), player.getJerseyNumber()));
@@ -2659,6 +2691,9 @@ public class BaseballSimulator {
 				playedOutfield = false;
 				player = null;
 				ArrayList<MLBFieldingStats> playerFieldingStatsList = mapElement.getValue().getMlbFieldingStats();
+				if (playerFieldingStatsList == null) {
+					continue;
+				}
 				for (MLBFieldingStats playerFieldingStats : playerFieldingStatsList) {
 					if ((playerFieldingStats.getPosition().equals("LF") || playerFieldingStats.getPosition().equals("CF") || playerFieldingStats.getPosition().equals("RF")) &&
 						!playersInLineupList.contains(mapElement.getKey())) {
@@ -2671,7 +2706,7 @@ public class BaseballSimulator {
 					break;
 				}
 			}
-			if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(missingPosition)  && playedOutfield) {
+			if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(missingPosition) && playedOutfield) {
 				return player;
 			}
 			return null;
