@@ -185,7 +185,7 @@ public class BaseballSimulator {
 				seasonSimYear = Integer.parseInt(args[1]);
 			}
 			if (seasonSimYear < 2013) {
-				System.out.println("Season simulations only years 2013-2021!");
+				System.out.println("Season simulations only years 2013-2021!"); // 2013 HOU moved to AL West to make 6 Div of 5 teams
 				return;
 			}
 			createSchedule(seasonSimYear, seasonSched);
@@ -1386,7 +1386,6 @@ public class BaseballSimulator {
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> batters = new ArrayList<ArrayList<ArrayList<MLBPlayer>>>();
 		ArrayList<Integer> playersInLineupList;
 		HashMap<Integer, MLBPlayer> battingStatsSortedByStatMap;
-		List<Map.Entry<Integer, MLBPlayer>> list;
 		ArrayList<String> positionsUsed;
 		String statType = "";
 		MLBPlayer player;
@@ -1397,7 +1396,7 @@ public class BaseballSimulator {
 			playersInLineupList = new ArrayList<Integer>();
 			batters.add(new ArrayList<ArrayList<MLBPlayer>>());
 			// Get random starter 1-5
-			for (int i = 1 ; i <= NUM_OF_PLAYERS_IN_LINEUP; i++) {  // 1 - 8
+			for (int i = 1 ; i <= NUM_OF_PLAYERS_IN_LINEUP; i++) {  // 1 - 9
 				batters.get(t).add(new ArrayList<MLBPlayer>());
 				if (!useDH && i == NUM_OF_PLAYERS_IN_LINEUP) {
 					break;
@@ -1415,34 +1414,9 @@ public class BaseballSimulator {
 					statType = "H";
 				}
 				battingStatsSortedByStatMap = sortHashMapByValue(rosters[t].getBatters(), statType);
-				list = new LinkedList<Map.Entry<Integer, MLBPlayer>>(battingStatsSortedByStatMap.entrySet());
 				int index = 0;
-				while (true) {
-					if (index == rosters[t].getBatters().size()) {
-						ArrayList<String> missingPositions = getMissingPositionFromLineup(positionsUsed);
-						if (missingPositions.size() == 1) { // Missing one player
-							MLBPlayer missingPlayer = getOneMorePlayerToFillOutLineup(missingPositions.get(0), battingStatsSortedByStatMap, playersInLineupList);
-							if (missingPlayer != null) {
-								playersInLineupList.add(missingPlayer.getMlbPlayerId());
-								batters.get(t).get(i-1).add(new MLBPlayer(missingPlayer.getMlbPlayerId(), missingPlayer.getFullName(), missingPositions.get(0), missingPlayer.getArmThrows(),
-									missingPlayer.getBats(), missingPlayer.getJerseyNumber(), missingPlayer.getMlbFieldingStats()));
-								positionsUsed.add(missingPositions.get(0));
-							}
-						}
-						if (positionsUsed.size() == 7) { // Still not enough players in lineup
-							System.out.println("Can not create a lineup for the " + years[t] + " " + teams[t].getFullTeamName() + " with players:");
-							for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
-								System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPositionByFieldingStats());
-							}
-						}
-						//return batters;
-						break;
-					}
-					player = rosters[t].getBatters().get(list.get(index).getKey());
-					/*if (player.getPrimaryPositionByFieldingStats().equals("DH") // || (years[t] > 2010 && player.getPrimaryPosition().equals("OF"))) {
-						index++;
-						continue;
-					}*/
+				for (Map.Entry<Integer, MLBPlayer> sortedPlayer : battingStatsSortedByStatMap.entrySet()) {
+					player = sortedPlayer.getValue();
 					// Skip players who were primarily on another team
 					if (battersOnMultTeams.containsKey(player.getMlbPlayerId()) && teams[t].getTeamId() != battersOnMultTeams.get(player.getMlbPlayerId())) {
 						index++;
@@ -1468,14 +1442,14 @@ public class BaseballSimulator {
 					}
 					if (!positionNeeded && player.getMlbFieldingStats() != null) { // Check if player played other positions that are needed
 						for (MLBFieldingStats fs : player.getMlbFieldingStats()) {
-							if (!positionsUsed.contains(fs.getPosition()) && !playersInLineupList.contains(list.get(index).getKey())) {
+							if (!positionsUsed.contains(fs.getPosition()) && !playersInLineupList.contains(sortedPlayer.getValue().getMlbPlayerId())) {
 								positionNeeded = true;
 								playerPosition = fs.getPosition();
 							}
 						}
 					}
-					if (!playersInLineupList.contains(list.get(index).getKey()) && positionNeeded) {  // Not already in lineup, save P for end
-						playersInLineupList.add(list.get(index).getKey());
+					if (!playersInLineupList.contains(sortedPlayer.getValue().getMlbPlayerId()) && positionNeeded) {  // Not already in lineup, save P for end
+						playersInLineupList.add(sortedPlayer.getValue().getMlbPlayerId());
 						batters.get(t).get(i-1).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), playerPosition, player.getArmThrows(), player.getBats(), 
 							player.getJerseyNumber(), player.getMlbFieldingStats()));
 						positionsUsed.add(playerPosition);
@@ -1486,6 +1460,25 @@ public class BaseballSimulator {
 						break;
 					}
 					index++;
+				}
+				if (index >= rosters[t].getBatters().size()) {  // Check if player is missing 1-8
+					ArrayList<String> missingPositions = getMissingPositionFromLineup(positionsUsed);
+					if (missingPositions.size() == 1) { // Missing one player
+						MLBPlayer missingPlayer = getOneMorePlayerToFillOutLineup(missingPositions.get(0), battingStatsSortedByStatMap, playersInLineupList);
+						if (missingPlayer != null) {
+							playersInLineupList.add(missingPlayer.getMlbPlayerId());
+							batters.get(t).get(i-1).add(new MLBPlayer(missingPlayer.getMlbPlayerId(), missingPlayer.getFullName(), missingPositions.get(0), missingPlayer.getArmThrows(),
+								missingPlayer.getBats(), missingPlayer.getJerseyNumber(), missingPlayer.getMlbFieldingStats()));
+							positionsUsed.add(missingPositions.get(0));
+						}
+					}
+					if (positionsUsed.size() == 7) { // Still not enough players in lineup
+						System.out.println("Can not create a lineup for the " + years[t] + " " + teams[t].getFullTeamName() + " with players:");
+						for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
+							System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPositionByFieldingStats());
+						}
+					}
+					//return batters;
 				}
 			}
 			//batters.get(t).add(new ArrayList<MLBPlayer>()); // For DH/P in 9

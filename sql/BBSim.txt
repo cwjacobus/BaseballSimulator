@@ -167,6 +167,8 @@ select year, count(*) from mlb_pitching_stats group by year order by year;
 update mlb_player set primary_position = '1B' where full_name = 'Sano, Miguel';
 insert into mlb_batting_stats (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, AT_BATS, HITS, DOUBLES, TRIPLES, HOME_RUNS, WALKS, STRIKEOUTS, HIT_BY_PITCH, RUNS, RBIS, STOLEN_BASES, PLATE_APPEARANCES, CAUGHT_STEALING) values 
 (645277, 144, 2021, 629, 163, 40, 7, 30, 47, 128, 3, 103, 106, 20, 686, 4); /* Ozzie Albies */
+insert into mlb_fielding_stats (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, POSITION, ASSISTS, PUT_OUTS, ERRORS, GAMES) values 
+(645277, 144, 2021, '2B', 389, 231, 8, 156); /* Ozzie Albies */
 update mlb_player set PRIMARY_POSITION='2B' where full_name = 'Carpenter, Matt';
 update mlb_player set PRIMARY_POSITION='RF' where full_name = 'Soto, Juan';
 update mlb_player set PRIMARY_POSITION='LF' where full_name = 'Yelich, Christian';
