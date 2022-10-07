@@ -42,5 +42,9 @@ public class TeamSeasonResults implements Comparable<TeamSeasonResults> {
     public int compareTo(TeamSeasonResults teamSeasonResults) {
         return (int)(teamSeasonResults.getWins() - this.wins);
     }
+	
+	public String toString () {
+		return teamId.toString();
+	}
 
 }
