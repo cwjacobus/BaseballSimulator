@@ -48,6 +48,8 @@ public class BaseballSimulator {
 	static HashMap<Integer, Integer> battersOnMultTeams;
 	static HashMap<Integer, Integer> pitchersOnMultTeams;
 	static HashMap<String, Integer> disabledList = new HashMap<>();
+	static String visTeamImportFile = null;
+	static String homeTeamImportFile = null;
 
 	public static void main(String[] args) {
 		int seriesLength = 1;
@@ -89,6 +91,22 @@ public class BaseballSimulator {
 				gameMode = false;
 				if (args.length > 5 && args[5] != null) {
 					seriesLength = Integer.parseInt(args[5]);
+				}
+				if (args.length > 6 && args[6] != null) {
+					if (args[6].equalsIgnoreCase("V") && args.length > 7 && args[7] != null) {
+						visTeamImportFile = args[7];
+					}
+					else if (args[6].equalsIgnoreCase("H") && args.length > 7 && args[7] != null) {
+						homeTeamImportFile = args[7];
+					}
+				}
+				if (args.length > 8 && args[8] != null) {
+					if (args[8].equalsIgnoreCase("V") && args.length > 9 && args[9] != null) {
+						visTeamImportFile = args[9];
+					}
+					else if (args[8].equalsIgnoreCase("H") && args.length > 9 && args[9] != null) {
+						homeTeamImportFile =  args[9];
+					}
 				}
 			}
 			else if (args[4].equalsIgnoreCase("AUTO")) {
@@ -171,7 +189,9 @@ public class BaseballSimulator {
 					gameNumber++;
 				}
 				
-				setUpDataAndPlayGames(teams, years, seriesLength, seriesStats, allFielders, allBatters, allPitchers, null, gameNumber, false);
+				if (!setUpDataAndPlayGames(teams, years, seriesLength, seriesStats, allFielders, allBatters, allPitchers, null, gameNumber, false)) {
+					return; // Invalid lineup import
+				}
 				
 				if (seasonSimulationMode) {
 					Integer visTeamSeasonGameIndex = teamSeasonGameIndexMap.get(teams[0].getTeamId());
@@ -191,7 +211,7 @@ public class BaseballSimulator {
 		}
 	}
 	
-	private static void setUpDataAndPlayGames(MLBTeam[] teams, int[] years, int seriesLength, SeriesStats[] seriesStats, HashMap<Integer, 
+	private static boolean setUpDataAndPlayGames(MLBTeam[] teams, int[] years, int seriesLength, SeriesStats[] seriesStats, HashMap<Integer, 
 		HashMap<Integer, ArrayList<MLBFieldingStats>>> allFielders, LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allBatters, 
 		LinkedHashMap<Integer, HashMap<Integer, MLBPlayer>> allPitchers, HashMap<Integer, Integer> teamSeasonGameIndexMap, int gameNumber, boolean postSeason) {
 			
@@ -224,11 +244,11 @@ public class BaseballSimulator {
 		}
 		// Home team determines using DH
 		useDH = (teams[1].getLeague().equalsIgnoreCase("AL") && years[1] >= 1973) || (teams[1].getLeague().equalsIgnoreCase("NL") && (years[1] == 2020 || years[1] >= 2022));
+		boolean importedLineup = false;
+		MLBPlayer[] importedPitchers = new MLBPlayer[2];
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = setOptimalBattingLineup(teams, years);
 		boxScores[0].setBatters(lineupBatters.get(0));
 		boxScores[1].setBatters(lineupBatters.get(1));
-		MLBPlayer[] importedPitchers = new MLBPlayer[2];
-		boolean importedLineup = false;
 		boolean incompleteLineups = areLineupsIncomplete(lineupBatters);
 		while (incompleteLineups) {
 			handleIncompleteLineup();
@@ -238,6 +258,20 @@ public class BaseballSimulator {
 			importedPitchers[1] = gameState.getCurrentPitchers()[1];
 			importedLineup = true;
 			incompleteLineups = areLineupsIncomplete(lineupBatters);
+		}
+		if (visTeamImportFile != null || homeTeamImportFile != null) { // imported lineups
+			if (visTeamImportFile != null) {
+				if (!handleImportLineupCommand("IMPORT v " + visTeamImportFile, true)) {
+					return false;
+				}
+				lineupBatters.set(0, boxScores[0].getBatters());
+			}
+			if (homeTeamImportFile != null) {
+				if (!handleImportLineupCommand("IMPORT h " + homeTeamImportFile, true)) {
+					return false;
+				}
+				lineupBatters.set(1, boxScores[1].getBatters());
+			}
 		}
 		for (int s = 0; s < seriesLength; s++) {
 			gameState = new GameState();
@@ -281,6 +315,7 @@ public class BaseballSimulator {
 				updateSeriesOrSeasonStatsFromBoxScores(seriesStats, boxScores, gameState.getPitchersOfRecord(), true);
 			}
 		} // series loop
+		return true;
 	}
 	
 	private static void updateSeriesOrSeasonStatsFromBoxScores(SeriesStats[] seriesStats,  BoxScore[] boxScores, Map<String, Integer> pitchersOfRecord, boolean season) {
@@ -1453,7 +1488,7 @@ public class BaseballSimulator {
 							index++;
 							continue;
 						}
-						else if (playerPosition.equals("OF")) {
+						if (playerPosition.equals("OF")) {
 							if (ofCount == 3) {
 								index++;
 								continue;
@@ -2292,7 +2327,7 @@ public class BaseballSimulator {
 			System.out.print("Lineup can not be imported if game has already started!\n");
 			return false;
 		}
-		int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equalsIgnoreCase("1") ? 1 : 0;
+		int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equals("1") ? 1 : 0;
 		String lineupFileName = commandArray[2];
 		try {
 			@SuppressWarnings("resource")
@@ -2382,7 +2417,7 @@ public class BaseballSimulator {
 			reader.close();
 		}
 		catch (IOException e) {
-			System.out.println("Lineup file not found.  Import failed!");
+			System.out.println("Lineup file " + lineupFileName + " not found.  Import failed!");
 			return false;
 		}	
 		return fromIncompleteLineup ? true : false;

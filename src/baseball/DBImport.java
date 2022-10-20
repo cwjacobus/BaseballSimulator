@@ -33,6 +33,7 @@ public class DBImport {
 	static int currentYear = Calendar.getInstance().get(Calendar.YEAR);
 
 	public static void main(String[] args) {
+		// Example PLAYER 2022 2022 ALL
 		int startYear = 0;
 		int endYear = -1;
 		boolean allYears = false;

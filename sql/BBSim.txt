@@ -178,6 +178,9 @@ update mlb_player set PRIMARY_POSITION='CF' where full_name = 'Grisham, Trent';
 update mlb_player set PRIMARY_POSITION='RF' where full_name = 'Myers, Wil';
 update mlb_player set PRIMARY_POSITION='3B' where full_name = 'Machado, Manny';
 update mlb_player set PRIMARY_POSITION='SS' where full_name = 'Urias, Luis';
+// 2022
+update mlb_player set PRIMARY_POSITION='LF' where full_name = 'Gallo, Joey';
+update mlb_player set PRIMARY_POSITION='RF' where full_name = 'Bradley Jr., Jackie';
 
 delete from mlb_fielding_stats where MLB_PLAYER_ID=660271 and year=2021;  /* Delete Shohei Ohtani P fielding record */
 
@@ -188,4 +191,7 @@ GROUP BY MLB_PLAYER_ID HAVING COUNT(*) > 1) AND YEAR IN (2021,2021) ORDER BY MLB
 // Get list of pitchers who played on multiple teams for a year and their primary team
 SELECT MLB_PLAYER_ID, MLB_TEAM_ID, PLATE_APPEARANCES FROM MLB_PITCHING_STATS WHERE MLB_PLAYER_ID IN (SELECT MLB_PLAYER_ID FROM MLB_PITCHING_STATS WHERE YEAR IN (2021,2021) 
 GROUP BY MLB_PLAYER_ID HAVING COUNT(*) > 1) AND YEAR IN (2021,2021) ORDER BY MLB_PLAYER_ID, PLATE_APPEARANCES DESC;
+
+// Get a player's batting stats by name and year
+select p.full_name, bs.* from mlb_player p, mlb_batting_stats bs where p.MLB_PLAYER_ID = bs.MLB_PLAYER_ID and bs.year = 2022 and p.full_name like 'Brantley%';
 
