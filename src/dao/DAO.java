@@ -156,7 +156,6 @@ public class DAO {
 							rs.getInt("GAMES_STARTED"), rs.getInt("BALKS"), rs.getInt("WILD_PITCHES"), rs.getInt("SAC_FLIES"), rs.getInt("BATTERS_FACED"), rs.getInt("WINS"), rs.getInt("LOSSES"))));
 						dataMap.put(p.getMlbPlayerId() + ":" + p.getMlbPitchingStats().getMlbTeamId(), p);
 					}
-					
 				}
 			}
 		}
@@ -182,6 +181,28 @@ public class DAO {
 			e.printStackTrace();
 		}
 		return allTeams;
+	}
+	
+	public static MLBPlayer getMLBPlayerFromMLBPlayerIdAndYear(Integer mlbPlayerId, Integer year, boolean pitchers) {
+		MLBPlayer player = null;
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "SELECT MLB_TEAM_ID, FULL_NAME, PRIMARY_POSITION, ARM_THROWS, BATS, JERSEY_NUMBER, ";
+			sql += "sum(AT_BATS) AS SUM_AB, SUM(HITS) as SUM_H, SUM(DOUBLES) as SUM_D, SUM(TRIPLES) as SUM_T, SUM(HOME_RUNS) as SUM_HR, ";
+			sql += "SUM(WALKS) as SUM_BB, SUM(STRIKEOUTS) as SUM_K, SUM(HIT_BY_PITCH) as SUM_HBP, SUM(RUNS) as SUM_R, SUM(RBIS) as SUM_RBI, SUM(STOLEN_BASES) as SUM_SB, ";
+			sql += "SUM(PLATE_APPEARANCES) as SUM_PA, SUM(CAUGHT_STEALING) as SUM_CS ";
+			sql += "FROM MLB_PLAYER P, MLB_BATTING_STATS BS WHERE P.MLB_PLAYER_ID = BS.MLB_PLAYER_ID AND BS.MLB_PLAYER_ID  = " + mlbPlayerId + " AND YEAR = " + year;
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				player = new MLBPlayer(mlbPlayerId, rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
+				player.setMlbBattingStats(new MLBBattingStats(mlbPlayerId, rs.getInt("MLB_TEAM_ID"),  year, new BattingStats(rs.getInt("SUM_AB"), rs.getInt("SUM_H"), rs.getInt("SUM_D"), rs.getInt("SUM_T"), 
+					rs.getInt("SUM_HR"), rs.getInt("SUM_BB"), rs.getInt("SUM_K"), rs.getInt("SUM_HBP"), rs.getInt("SUM_R"), rs.getInt("SUM_RBI"), rs.getInt("SUM_SB"), rs.getInt("SUM_PA"), rs.getInt("SUM_CS"))));
+			}	
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return player;
 	}
 	
 	public static HashMap<Integer, Object> getPlayerStatsMapForMultipleTeams(Integer year, boolean pitchers) {

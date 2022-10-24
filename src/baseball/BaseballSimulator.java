@@ -218,6 +218,7 @@ public class BaseballSimulator {
 		for (int t = 0; t < 2; t++) {
 			boxScores[t] = new BoxScore();
 			boxScores[t].setTeam(teams[t]);
+			boxScores[t].setYear(years[t]);
 			if (!seasonSimulationMode) {
 				rosters[t].setPitchers(DAO.getPitchersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
 				rosters[t].setBatters(DAO.getBattersMapByTeamAndYear(teams[t].getTeamId(), years[t]));
@@ -228,7 +229,9 @@ public class BaseballSimulator {
 				rosters[t].setBatters(allBatters.get(teams[t].getTeamId()));
 				rosters[t].setPitchers(allPitchers.get(teams[t].getTeamId()));
 				HashMap<Integer, ArrayList<MLBFieldingStats>> fieldingStatsMap = allFielders.get(teams[t].getTeamId());
-				rosters[t].getBatters().entrySet().stream().forEach(entry -> entry.getValue().setMlbFieldingStats(fieldingStatsMap.get(entry.getValue().getMlbPlayerId())));
+				if (years[t] >= 1999 && years[t] <= 2021) {
+					rosters[t].getBatters().entrySet().stream().forEach(entry -> entry.getValue().setMlbFieldingStats(fieldingStatsMap.get(entry.getValue().getMlbPlayerId())));
+				}
 			}
 			if (rosters[t].getBatters().size() == 0 || rosters[t].getPitchers().size() == 0) {
 				System.out.println("Players for " + years[t] + " " + teams[t].getFullTeamName() + " not found in database.  Import player stats from API.");
@@ -1524,7 +1527,7 @@ public class BaseballSimulator {
 				if (index >= rosters[t].getBatters().size()) {  // Check if player is missing 1-8
 					ArrayList<String> missingPositions = getMissingPositionFromLineup(positionsUsed);
 					if (missingPositions.size() == 1) { // Missing one player
-						MLBPlayer missingPlayer = getOneMorePlayerToFillOutLineup(missingPositions.get(0), battingStatsSortedByStatMap, playersInLineupList);
+						MLBPlayer missingPlayer = getOneMorePlayerToFillOutLineup(missingPositions.get(0), battingStatsSortedByStatMap, playersInLineupList, useFieldingStats);
 						if (missingPlayer != null) {
 							playersInLineupList.add(missingPlayer.getMlbPlayerId());
 							batters.get(t).get(i-1).add(new MLBPlayer(missingPlayer.getMlbPlayerId(), missingPlayer.getFullName(), missingPositions.get(0), missingPlayer.getArmThrows(),
@@ -1532,7 +1535,7 @@ public class BaseballSimulator {
 							positionsUsed.add(missingPositions.get(0));
 						}
 					}
-					if (positionsUsed.size() == 7) { // Still not enough players in lineup
+					if (positionsUsed.size() < 8) { // Still not enough players in lineup
 						System.out.println("Can not create a lineup for the " + years[t] + " " + teams[t].getFullTeamName() + " with players:");
 						for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
 							System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPositionByFieldingStats());
@@ -2357,13 +2360,20 @@ public class BaseballSimulator {
 				MLBPlayer player;
 				try {
 					player = getPlayerFromId(Integer.parseInt(id));
+					if (player == null) {
+						System.out.println("Player " + id + " not found in " + boxScores[top].getTeamAndYearDisplay() + " roster.  Checking all players.");
+						player = DAO.getMLBPlayerFromMLBPlayerIdAndYear(Integer.parseInt(id), boxScores[top].getYear(), false);
+						if (player != null) {
+							rosters[top].getBatters().put(player.getMlbPlayerId(), player); // Add player from another team
+						}
+					}
 				}
 				catch (NumberFormatException e) {
 					System.out.println("Invalid player ID: " + id + ".  Import failed!");
 					return false;
 				}
 				if (player == null) {
-					System.out.println("Player " + id + " not found in " + boxScores[top].getTeamAndYearDisplay() + " roster.  Import failed!");
+					System.out.println("Player " + id + " not found.  Import failed!");
 					return false;
 				}
 				if (!positions.containsValue(lineupPos)) {
@@ -2736,23 +2746,31 @@ public class BaseballSimulator {
 	}
 	
 	private static MLBPlayer getOneMorePlayerToFillOutLineup(String missingPosition, HashMap<Integer, MLBPlayer> battingStatsSortedByStatMap,
-		ArrayList<Integer> playersInLineupList) {
+		ArrayList<Integer> playersInLineupList, boolean useFieldingStats) {
 			// Currently limited to looking for outfielder
 			MLBPlayer player = null;
 			boolean playedOutfield = false;
 			for (Map.Entry<Integer, MLBPlayer> mapElement : battingStatsSortedByStatMap.entrySet()) {
 				playedOutfield = false;
 				player = null;
-				ArrayList<MLBFieldingStats> playerFieldingStatsList = mapElement.getValue().getMlbFieldingStats();
-				if (playerFieldingStatsList == null) {
-					continue;
-				}
-				for (MLBFieldingStats playerFieldingStats : playerFieldingStatsList) {
-					if ((playerFieldingStats.getPosition().equals("LF") || playerFieldingStats.getPosition().equals("CF") || playerFieldingStats.getPosition().equals("RF")) &&
-						!playersInLineupList.contains(mapElement.getKey())) {
+				if (useFieldingStats) {
+					ArrayList<MLBFieldingStats> playerFieldingStatsList = mapElement.getValue().getMlbFieldingStats();
+					if (playerFieldingStatsList == null) {
+						continue;
+					}
+					for (MLBFieldingStats playerFieldingStats : playerFieldingStatsList) {
+						if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(playerFieldingStats.getPosition()) && !playersInLineupList.contains(mapElement.getKey())) {
 							player = mapElement.getValue();
 							playedOutfield = true;
 							break;
+						}
+					}
+				}
+				else {
+					if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(mapElement.getValue().getPrimaryPosition()) && !playersInLineupList.contains(mapElement.getKey())) {
+						player = mapElement.getValue();
+						playedOutfield = true;
+						break;
 					}
 				}
 				if (player != null) {
