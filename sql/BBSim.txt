@@ -205,3 +205,6 @@ GROUP BY MLB_PLAYER_ID HAVING COUNT(*) > 1) AND YEAR IN (2021,2021) ORDER BY MLB
 // Get a player's batting stats by name and year
 select p.full_name, bs.* from mlb_player p, mlb_batting_stats bs where p.MLB_PLAYER_ID = bs.MLB_PLAYER_ID and bs.year = 2022 and p.full_name like 'Brantley%';
 
+// Get a teams batting stats for a year ordfered by hits
+select p.MLB_PLAYER_ID, p.FULL_NAME, p.PRIMARY_POSITION, bs.* from mlb_player p, mlb_batting_stats bs where p.MLB_PLAYER_ID = bs.MLB_PLAYER_ID and mlb_team_id = 112 and year=2022 order by bs.HITS desc;
+

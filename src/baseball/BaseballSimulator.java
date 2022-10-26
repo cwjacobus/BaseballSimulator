@@ -531,10 +531,12 @@ public class BaseballSimulator {
 		Collections.sort(sortedAlTeams);
 		List<TeamSeasonResults> sortedNlTeams = new ArrayList<>(nlTeams.values());
 		Collections.sort(sortedNlTeams);
-		alSeededPlayoffTeams.add(sortedAlTeams.get(0));
-		alSeededPlayoffTeams.add(sortedAlTeams.get(1));
-		nlSeededPlayoffTeams.add(sortedNlTeams.get(0));
-		nlSeededPlayoffTeams.add(sortedNlTeams.get(1));
+		int numberOfWildcards = 3;
+		for (int w = 0; w < numberOfWildcards; w++) {
+			// Add wild card teams
+			alSeededPlayoffTeams.add(sortedAlTeams.get(w));
+			nlSeededPlayoffTeams.add(sortedNlTeams.get(w));
+		}
 		System.out.println(seasonSimYear + " AL Playoff teams");
 		int seedIndex = 1;
 		for (TeamSeasonResults tr: alSeededPlayoffTeams) {
