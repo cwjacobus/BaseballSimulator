@@ -208,3 +208,7 @@ select p.full_name, bs.* from mlb_player p, mlb_batting_stats bs where p.MLB_PLA
 // Get a teams batting stats for a year ordfered by hits
 select p.MLB_PLAYER_ID, p.FULL_NAME, p.PRIMARY_POSITION, bs.* from mlb_player p, mlb_batting_stats bs where p.MLB_PLAYER_ID = bs.MLB_PLAYER_ID and mlb_team_id = 112 and year=2022 order by bs.HITS desc;
 
+// Updates for Cleveland Indians -> Guardians in 2022
+insert into mlb_team (TEAM_ID, MLB_FRANCHISE_ID, FULL_NAME, SHORT_NAME, LEAGUE, FIRST_YEAR_PLAYED, LAST_YEAR_PLAYED) values (114, 114, 'Cleveland Guardians', 'CLE', 'AL', 1922, NULL);
+update mlb_team set LAST_YEAR_PLAYED = 2021 where MLB_TEAM_ID = 101;
+
