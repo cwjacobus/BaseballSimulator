@@ -83,5 +83,9 @@ public class MLBTeam {
 	public void setLastYearPlayed(Integer lastYearPlayed) {
 		this.lastYearPlayed = lastYearPlayed;
 	}
+	
+	public String toString () {
+		return fullTeamName;
+	}
 
 }

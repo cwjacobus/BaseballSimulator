@@ -283,29 +283,30 @@ public class BaseballSimulator {
 				lineupBatters.set(1, boxScores[1].getBatters());
 			}
 		}
-		int teamIndex;
 		for (int s = 0; s < seriesLength; s++) {
 			gameState = new GameState();
 			boxScores = new BoxScore[2];
 			for (int t = 0; t < 2; t++) {
-				teamIndex = bestOfSeries && (seriesLength == 7 && (s >= 2 && s <= 4)) ? (1 - (t % 2)) : t; // Best of 7, game 3, 4 or 5, flip vis/home 
+				if (bestOfSeries && t == 0 && (s == 2 || (seriesLength == 7 && s == 5) || (seriesLength == 5 && s == 4))) { // home/vis change
+					swapHomeVisitorForBestOfSeries(teams, years, lineupBatters, importedPitchers, seriesStats);
+				}
 				boxScores[t] = new BoxScore();
-				boxScores[t].setYear(years[teamIndex]);
-				boxScores[t].setBatters(lineupBatters.get(teamIndex));
-				boxScores[t].setTeam(teams[teamIndex]);
+				boxScores[t].setYear(years[t]);
+				boxScores[t].setBatters(lineupBatters.get(t));
+				boxScores[t].setTeam(teams[t]);
 				clearPlayerGameData(boxScores[t]);
 				MLBPlayer startingPitcher;
-				if (s == 0 && importedLineup && importedPitchers[teamIndex] != null) {
-					startingPitcher = importedPitchers[teamIndex];	
+				if (s == 0 && importedLineup && importedPitchers[t] != null) {
+					startingPitcher = importedPitchers[t];	
 				}
 				else {
 					if (!seasonSimulationMode || teamSeasonGameIndexMap == null) {
-						int rotationRange = rosters[teamIndex].getPitchers().size() < 5 ? rosters[teamIndex].getPitchers().size() - 1 : 4; // In case team has less than 5 starters
-						startingPitcher = getPitcher(teamIndex, "GS", seriesLength > 1 ? s % (rotationRange + 1) : getRandomNumberInRange(0, rotationRange), null);
+						int rotationRange = rosters[t].getPitchers().size() < 5 ? rosters[t].getPitchers().size() - 1 : 4; // In case team has less than 5 starters
+						startingPitcher = getPitcher(t, "GS", seriesLength > 1 ? s % (rotationRange + 1) : getRandomNumberInRange(0, rotationRange), null);
 					}
 					else {
-						Integer teamSeasonGameIndex =  teamSeasonGameIndexMap.get(teams[teamIndex].getTeamId()) != null ? teamSeasonGameIndexMap.get(teams[teamIndex].getTeamId()) : 1;
-						startingPitcher = getPitcher(teamIndex, "GS",  (teamSeasonGameIndex - 1) % 5, null);
+						Integer teamSeasonGameIndex =  teamSeasonGameIndexMap.get(teams[t].getTeamId()) != null ? teamSeasonGameIndexMap.get(teams[t].getTeamId()) : 1;
+						startingPitcher = getPitcher(t, "GS",  (teamSeasonGameIndex - 1) % 5, null);
 					}
 				}
 				gameState.setCurrentPitcher(startingPitcher, t);
@@ -333,6 +334,31 @@ public class BaseballSimulator {
 			}
 		} // series loop
 		return true;
+	}
+	
+	private static void swapHomeVisitorForBestOfSeries(MLBTeam[] teams, int[] years, ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters, MLBPlayer[] importedPitchers, SeriesStats[] seriesStats) {
+		int tempY = years[0];
+		years[0] = years[1];
+		years[1] = tempY;
+		MLBTeam tempT = teams[0];
+		teams[0] = teams[1];
+		teams[1] = tempT;
+		MLBPlayer tempIP = importedPitchers[0];
+		importedPitchers[0] = importedPitchers[1];
+		importedPitchers[1] = tempIP;
+		MLBPlayer tempC = closers[0];
+		closers[0] = closers[1];
+		closers[1] = tempC;
+		MLBPlayer tempS = setupMen[0];
+		setupMen[0] = setupMen[1];
+		setupMen[1] = tempS;
+		Roster tempR = rosters[0];
+		rosters[0] = rosters[1];
+		rosters[1] = tempR;
+		SeriesStats tempSS = seriesStats[0];
+		seriesStats[0] = seriesStats[1];
+		seriesStats[1] = tempSS;
+		Collections.swap(lineupBatters, 0, 1);
 	}
 	
 	private static void updateSeriesOrSeasonStatsFromBoxScores(SeriesStats[] seriesStats,  BoxScore[] boxScores, Map<String, Integer> pitchersOfRecord, boolean season) {
