@@ -94,6 +94,10 @@ public class BaseballSimulator {
 					if (args[5].charAt(0) == 'B') {
 						bestOfSeries = true;
 						seriesLength = Integer.parseInt(args[5].substring(1, args[5].length()));
+						if (seriesLength != 5 && seriesLength != 7) {
+							System.out.println("Best of series can only be 5 or 7 games");
+							return;
+						}
 					}
 					else {
 						seriesLength = Integer.parseInt(args[5]);
@@ -210,7 +214,7 @@ public class BaseballSimulator {
 			} //away teams
 		} // home teams
 		if (seriesLength > 1) { // Series results and calculations
-			outputSeriesResults(seriesLength, seriesStats);
+			outputSeriesResults(seriesLength, seriesStats, bestOfSeries);
 		}
 		else if (seasonSimulationMode) {
 			outputSeasonResults(seasonResults, seasonSimYear);
@@ -283,6 +287,12 @@ public class BaseballSimulator {
 				lineupBatters.set(1, boxScores[1].getBatters());
 			}
 		}
+		Map<String, Integer> boSeriesWins  = new HashMap<String, Integer>() {
+			private static final long serialVersionUID = 1L;
+		{
+		    put(teams[0].getShortTeamName(), 0);
+		    put(teams[1].getShortTeamName(), 0);
+		}};
 		for (int s = 0; s < seriesLength; s++) {
 			gameState = new GameState();
 			boxScores = new BoxScore[2];
@@ -328,8 +338,15 @@ public class BaseballSimulator {
 				updateSeriesOrSeasonStatsFromBoxScores(seriesStats, boxScores, gameState.getPitchersOfRecord(), true);
 			}
 			if (bestOfSeries) {
-				if (false) {
-					break;
+				if (boxScores[0].getFinalScore() > boxScores[1].getFinalScore()) {
+					boSeriesWins.put(boxScores[0].getTeam().getShortTeamName(), boSeriesWins.get(boxScores[0].getTeam().getShortTeamName()) + 1);
+				}
+				else {
+					boSeriesWins.put(boxScores[1].getTeam().getShortTeamName(), boSeriesWins.get(boxScores[1].getTeam().getShortTeamName()) + 1);
+				}
+				if ((seriesLength == 7 && (boSeriesWins.get(boxScores[0].getTeam().getShortTeamName()) == 4 || boSeriesWins.get(boxScores[1].getTeam().getShortTeamName()) == 4)) ||
+				    (seriesLength == 5 && (boSeriesWins.get(boxScores[0].getTeam().getShortTeamName()) == 3 || boSeriesWins.get(boxScores[1].getTeam().getShortTeamName()) == 3))) {
+						break;
 				}
 			}
 		} // series loop
@@ -457,7 +474,7 @@ public class BaseballSimulator {
 		}
 	}
 	
-	private static void outputSeriesResults(int seriesLength, SeriesStats[] seriesStats) {
+	private static void outputSeriesResults(int seriesLength, SeriesStats[] seriesStats, boolean bestOfSeries) {
 		System.out.println("\nSeries Stats");
 		outputBoxScore(seriesStats);
 		HashMap<String, Integer> totalWins = new HashMap<String, Integer>();
@@ -467,19 +484,29 @@ public class BaseballSimulator {
 		totalRuns.put(boxScores[0].getTeam().getShortTeamName() + "" + boxScores[0].getYear(), 0);
 		totalRuns.put(boxScores[1].getTeam().getShortTeamName() + "" + boxScores[1].getYear(), 0);
 		System.out.println("\n");
+		int seriesGameIndex = 0;
 		for (BoxScore[] bsArray : seriesBoxScores) {
+			if (bsArray[0] == null || bsArray[1] == null) {
+				break;
+			}
 			int winner = bsArray[0].getFinalScore() > bsArray[1].getFinalScore() ? 0 : 1;
 			System.out.println(displayTeamName(winner, bsArray) + " " + bsArray[winner].getFinalScore() + (bsArray[winner].getFinalScore() > 9 ? " " : "  ") +  
 				displayTeamName(winner==1?0:1, bsArray) + " " + bsArray[winner==1?0:1].getFinalScore());
 			totalWins.put(bsArray[winner].getTeam().getShortTeamName() + "" + bsArray[winner].getYear(), totalWins.get(bsArray[winner].getTeam().getShortTeamName() + "" + bsArray[winner].getYear()) + 1);
 			totalRuns.put(bsArray[0].getTeam().getShortTeamName() + "" + bsArray[0].getYear(), totalRuns.get(bsArray[0].getTeam().getShortTeamName() + "" + bsArray[0].getYear()) + bsArray[0].getFinalScore());
 			totalRuns.put(bsArray[1].getTeam().getShortTeamName() + "" + bsArray[1].getYear(), totalRuns.get(bsArray[1].getTeam().getShortTeamName() + "" + bsArray[1].getYear()) + bsArray[1].getFinalScore());
+			seriesGameIndex++;
 		}
 		System.out.println("\nTotals:");
 		int homeWinner = totalWins.get(boxScores[1].getTeam().getShortTeamName() + "" + boxScores[1].getYear()) > totalWins.get(boxScores[0].getTeam().getShortTeamName() + "" + boxScores[0].getYear()) ? 1 : 0;
-		System.out.println(displayTeamName(homeWinner, boxScores) + ": " + totalWins.get(boxScores[homeWinner].getTeam().getShortTeamName() + "" + boxScores[homeWinner].getYear()) + "(" + df.format((double)totalWins.get(boxScores[homeWinner].getTeam().getShortTeamName() + 
+		if (bestOfSeries) {
+			System.out.println(displayTeamName(homeWinner, boxScores) + " in " + seriesGameIndex + " games");
+		}
+		else {
+			System.out.println(displayTeamName(homeWinner, boxScores) + ": " + totalWins.get(boxScores[homeWinner].getTeam().getShortTeamName() + "" + boxScores[homeWinner].getYear()) + "(" + df.format((double)totalWins.get(boxScores[homeWinner].getTeam().getShortTeamName() + 
 			"" + boxScores[homeWinner].getYear())/seriesLength) +  ") " + displayTeamName(homeWinner==1?0:1, boxScores) + ": " + totalWins.get(boxScores[homeWinner==1?0:1].getTeam().getShortTeamName() + "" + boxScores[homeWinner==1?0:1].getYear()) + 
 			"(" + df.format((double)totalWins.get(boxScores[homeWinner==1?0:1].getTeam().getShortTeamName() + "" + boxScores[homeWinner==1?0:1].getYear())/seriesLength) + ")");
+		}
 		System.out.println("Average Score:"); 
 		System.out.println(displayTeamName(homeWinner, boxScores) + ": " + df.format((double)totalRuns.get(boxScores[homeWinner].getTeam().getShortTeamName() + "" + 
 			boxScores[homeWinner].getYear())/seriesLength) + " " + displayTeamName(homeWinner==1?0:1, boxScores) + ": " + df.format((double)totalRuns.get(boxScores[homeWinner==1?0:1].getTeam().getShortTeamName() + 
