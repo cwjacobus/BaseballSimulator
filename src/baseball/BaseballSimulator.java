@@ -554,8 +554,8 @@ public class BaseballSimulator {
 			entry.getValue().getMlbBattingStats().getBattingStats().getAtBats()))));
 		
 		// Output DL
-		System.out.println("\nDL: " + disabledList.size());
-		disabledList.entrySet().stream().forEach(entry -> System.out.println(entry.getValue() + " " + entry.getKey()));
+		/*System.out.println("\nDL: " + disabledList.size());
+		disabledList.entrySet().stream().forEach(entry -> System.out.println(entry.getValue() + " " + entry.getKey()));*/
 	}
 	
 	private static void postSeason(Map<Integer, Map<Integer, TeamSeasonResults>> seasonResults, Integer seasonSimYear) {
@@ -615,6 +615,44 @@ public class BaseballSimulator {
 		for (TeamSeasonResults tr: nlSeededPlayoffTeams) {
 			System.out.println(seedIndex + ". " + getTeamByYearAndTeamId(seasonSimYear, tr.getTeamId(), allMlbTeamsList).getFullTeamName());
 			seedIndex++;
+		}
+		System.out.println("\n"  + seasonSimYear + " Play Playoff games");
+		MLBTeam[] playoffTeams = {null, null};
+		Map<String, Integer> playoffSeriesWinsMap = new HashMap<>();
+		int[] playoffYears = {seasonSimYear, seasonSimYear};
+		SeriesStats[] playoffSeriesStats = new SeriesStats[2];
+		if (seasonSimYear >= 2022) {
+			int firstRoundSeriesMax = 5;
+			playoffTeams[0] = getTeamByYearAndTeamId(playoffYears[0], alSeededPlayoffTeams.get(5).getTeamId(), allMlbTeamsList);
+			playoffTeams[1] = getTeamByYearAndTeamId(playoffYears[1], alSeededPlayoffTeams.get(2).getTeamId(), allMlbTeamsList);
+			playoffSeriesWinsMap.put(playoffTeams[0].getFullTeamName(), 0);
+			playoffSeriesWinsMap.put(playoffTeams[1].getFullTeamName(), 0);
+			seasonSimulationMode = false;
+			seriesBoxScores = new BoxScore[firstRoundSeriesMax][2];
+			setUpDataAndPlayGames(playoffTeams, playoffYears, firstRoundSeriesMax, true, playoffSeriesStats, null, null, null, null, 1, false);
+			System.out.println("\n");
+			int seriesLength = 0;
+			for (BoxScore[] bsArray : seriesBoxScores) {
+				if (bsArray[0] == null || bsArray[1] == null) {
+					break;
+				}
+				seriesLength++;
+				if (bsArray[0].getFinalScore() > bsArray[1].getFinalScore()) {
+					playoffSeriesWinsMap.put(bsArray[0].getTeam().getFullTeamName(), playoffSeriesWinsMap.get(bsArray[0].getTeam().getFullTeamName()) + 1);
+					System.out.println(bsArray[0].getTeam().getShortTeamName() + " " + bsArray[0].getFinalScore() + " " + 
+						bsArray[1].getTeam().getShortTeamName() + " " + bsArray[1].getFinalScore());
+				}
+				else {
+					playoffSeriesWinsMap.put(playoffTeams[1].getFullTeamName(), playoffSeriesWinsMap.get(playoffTeams[1].getFullTeamName()) + 1);
+					System.out.println(bsArray[1].getTeam().getShortTeamName() + " " + bsArray[1].getFinalScore() + " " + 
+						bsArray[0].getTeam().getShortTeamName() + " " + bsArray[0].getFinalScore());
+				}
+			}
+			int winner = playoffSeriesWinsMap.get(playoffTeams[0].getFullTeamName()) > playoffSeriesWinsMap.get(playoffTeams[1].getFullTeamName()) ? 0 : 1;
+			System.out.println(playoffTeams[winner].getFullTeamName() + " over " + playoffTeams[winner == 1 ? 0 : 1].getFullTeamName() + " in " + seriesLength);
+		}
+		else {
+			
 		}
 	}
 	
