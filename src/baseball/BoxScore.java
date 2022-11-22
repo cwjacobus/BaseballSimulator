@@ -110,4 +110,8 @@ public class BoxScore {
 	public String getTeamAndYearDisplay() {
 		return team.getShortTeamName() + "(" + year + ")";
 	}
+	
+	public String toString() {
+		return getTeamAndYearDisplay() + " " + getFinalScore();
+	}
 }
