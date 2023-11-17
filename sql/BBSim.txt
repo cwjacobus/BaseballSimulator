@@ -188,6 +188,21 @@ update mlb_player set PRIMARY_POSITION='2B' where full_name = 'Marte, Ketel';
 update mlb_player set PRIMARY_POSITION='SS' where full_name = 'Hoerner, Nico';
 update mlb_player set PRIMARY_POSITION='3B' where full_name = 'Riley, Austin';
 update mlb_player set PRIMARY_POSITION='2B' where full_name = 'Segura, Jean';
+/* 2023 */
+update mlb_player set PRIMARY_POSITION='RF' where full_name = 'Laureano, Ramon';
+update mlb_player set PRIMARY_POSITION='SS' where full_name = 'Allen, Nick' and mlb_player_id = 669397;
+update mlb_player set PRIMARY_POSITION='2B' where full_name = 'Semien, Marcus';
+update mlb_player set PRIMARY_POSITION='2B' where full_name = 'Garcia, Adolis';
+update mlb_player set PRIMARY_POSITION='3B' where full_name = 'Henderson, Gunnar';
+update mlb_player set PRIMARY_POSITION='3B' where full_name = 'Urias, Ramon';
+update mlb_player set PRIMARY_POSITION='RF' where full_name = 'Santander, Anthony';
+update mlb_player set PRIMARY_POSITION='LF' where full_name = 'Varsho, Daulton';
+update mlb_player set PRIMARY_POSITION='3B' where full_name = 'Muncy, Max';
+update mlb_player set PRIMARY_POSITION='LF' where full_name = 'Tatis Jr., Fernando';
+update mlb_player set PRIMARY_POSITION='1B' where full_name = 'Cronenworth, Jake';
+update mlb_player set PRIMARY_POSITION='1B' where full_name = 'Wade Jr., LaMonte';
+update mlb_player set PRIMARY_POSITION='1B' where full_name = 'Bellinger, Cody';
+update mlb_player set PRIMARY_POSITION='SS' where full_name = 'Wendle, Joey';
 
 delete from mlb_fielding_stats where MLB_PLAYER_ID=660271 and year=2021;  /* Delete Shohei Ohtani P fielding record */
 

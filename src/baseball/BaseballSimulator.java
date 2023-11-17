@@ -31,6 +31,7 @@ public class BaseballSimulator {
 	static boolean autoBeforeMode = false;
 	static boolean gameMode = false;
 	static boolean seasonSimulationMode = false;
+	static boolean seasonSimulationPlayoffsMode = false;
 	static int autoBeforeInning = 1000;
 	static GameState gameState = new GameState();
 	static BoxScore[] boxScores = new BoxScore[2];
@@ -624,61 +625,61 @@ public class BaseballSimulator {
 		MLBTeam[] playoffTeams = {null, null};
 		int[] playoffYears = {seasonSimYear, seasonSimYear};
 		for (int round = 0; round < 4; round++) {
-		for (int league = 0; league < 2; league++) {
-		SeriesStats[] playoffSeriesStats = new SeriesStats[2];
-		Map<String, Integer> playoffSeriesWinsMap = new HashMap<>();
-		if (seasonSimYear >= 2022) {
-			int firstRoundSeriesMax;
-			if (round == 0) {
-				firstRoundSeriesMax = 5;
-				int higherSeededTeam;
-				int lowerSeededTeam;
-				if (league == 0) {
-					higherSeededTeam = alSeededPlayoffTeams.get(2).getTeamId();
-					lowerSeededTeam = alSeededPlayoffTeams.get(5).getTeamId();
+			for (int league = 0; league < 2; league++) {
+				SeriesStats[] playoffSeriesStats = new SeriesStats[2];
+				Map<String, Integer> playoffSeriesWinsMap = new HashMap<>();
+				if (seasonSimYear >= 2022) {
+					int firstRoundSeriesMax;
+					if (round == 0) {
+						firstRoundSeriesMax = 5;
+						int higherSeededTeam;
+						int lowerSeededTeam;
+						if (league == 0) {
+							higherSeededTeam = alSeededPlayoffTeams.get(2).getTeamId();
+							lowerSeededTeam = alSeededPlayoffTeams.get(5).getTeamId();
+						}
+						else {
+							higherSeededTeam = nlSeededPlayoffTeams.get(2).getTeamId();
+							lowerSeededTeam = nlSeededPlayoffTeams.get(5).getTeamId();
+						}
+						playoffTeams[0] = getTeamByYearAndTeamId(playoffYears[0], lowerSeededTeam, allMlbTeamsList);
+						playoffTeams[1] = getTeamByYearAndTeamId(playoffYears[1], higherSeededTeam, allMlbTeamsList);
+					}
+					else {
+						return;
+					}
+					playoffSeriesWinsMap.put(playoffTeams[0].getFullTeamName(), 0);
+					playoffSeriesWinsMap.put(playoffTeams[1].getFullTeamName(), 0);
+					seasonSimulationMode = false;
+					seasonSimulationPlayoffsMode = true;
+					seriesBoxScores = new BoxScore[firstRoundSeriesMax][2];
+					setUpDataAndPlayGames(playoffTeams, playoffYears, firstRoundSeriesMax, true, playoffSeriesStats, null, null, null, null, 1, false);
+					System.out.println("\n");
+					int seriesLength = 0;
+					for (BoxScore[] bsArray : seriesBoxScores) {
+						if (bsArray[0] == null || bsArray[1] == null) {
+							break;
+						}
+						seriesLength++;
+						if (bsArray[0].getFinalScore() > bsArray[1].getFinalScore()) {
+							playoffSeriesWinsMap.put(bsArray[0].getTeam().getFullTeamName(), playoffSeriesWinsMap.get(bsArray[0].getTeam().getFullTeamName()) + 1);
+							System.out.println(bsArray[0].getTeam().getShortTeamName() + " " + bsArray[0].getFinalScore() + " " + 
+								bsArray[1].getTeam().getShortTeamName() + " " + bsArray[1].getFinalScore());
+						}
+						else {
+							playoffSeriesWinsMap.put(bsArray[1].getTeam().getFullTeamName(), playoffSeriesWinsMap.get(bsArray[1].getTeam().getFullTeamName()) + 1);
+							System.out.println(bsArray[1].getTeam().getShortTeamName() + " " + bsArray[1].getFinalScore() + " " + 
+								bsArray[0].getTeam().getShortTeamName() + " " + bsArray[0].getFinalScore());
+						}
+					}
+					int winner = playoffSeriesWinsMap.get(playoffTeams[0].getFullTeamName()) > playoffSeriesWinsMap.get(playoffTeams[1].getFullTeamName()) ? 0 : 1;
+					System.out.println(playoffTeams[winner].getFullTeamName() + " over " + playoffTeams[winner == 1 ? 0 : 1].getFullTeamName() + " in " + seriesLength);
 				}
-				else {
-					higherSeededTeam = nlSeededPlayoffTeams.get(2).getTeamId();
-					lowerSeededTeam = nlSeededPlayoffTeams.get(5).getTeamId();
-				}
-				playoffTeams[0] = getTeamByYearAndTeamId(playoffYears[0], lowerSeededTeam, allMlbTeamsList);
-				playoffTeams[1] = getTeamByYearAndTeamId(playoffYears[1], higherSeededTeam, allMlbTeamsList);
-			}
-			else {
-				return;
-			}
-			playoffSeriesWinsMap.put(playoffTeams[0].getFullTeamName(), 0);
-			playoffSeriesWinsMap.put(playoffTeams[1].getFullTeamName(), 0);
-			seasonSimulationMode = false;
-			seriesBoxScores = new BoxScore[firstRoundSeriesMax][2];
-			setUpDataAndPlayGames(playoffTeams, playoffYears, firstRoundSeriesMax, true, playoffSeriesStats, null, null, null, null, 1, false);
-			System.out.println("\n");
-			int seriesLength = 0;
-			for (BoxScore[] bsArray : seriesBoxScores) {
-				if (bsArray[0] == null || bsArray[1] == null) {
-					break;
-				}
-				seriesLength++;
-				if (bsArray[0].getFinalScore() > bsArray[1].getFinalScore()) {
-					playoffSeriesWinsMap.put(bsArray[0].getTeam().getFullTeamName(), playoffSeriesWinsMap.get(bsArray[0].getTeam().getFullTeamName()) + 1);
-					System.out.println(bsArray[0].getTeam().getShortTeamName() + " " + bsArray[0].getFinalScore() + " " + 
-						bsArray[1].getTeam().getShortTeamName() + " " + bsArray[1].getFinalScore());
-				}
-				else {
-					playoffSeriesWinsMap.put(bsArray[1].getTeam().getFullTeamName(), playoffSeriesWinsMap.get(bsArray[1].getTeam().getFullTeamName()) + 1);
-					System.out.println(bsArray[1].getTeam().getShortTeamName() + " " + bsArray[1].getFinalScore() + " " + 
-						bsArray[0].getTeam().getShortTeamName() + " " + bsArray[0].getFinalScore());
-				}
-			}
-			int winner = playoffSeriesWinsMap.get(playoffTeams[0].getFullTeamName()) > playoffSeriesWinsMap.get(playoffTeams[1].getFullTeamName()) ? 0 : 1;
-			System.out.println(playoffTeams[winner].getFullTeamName() + " over " + playoffTeams[winner == 1 ? 0 : 1].getFullTeamName() + " in " + seriesLength);
-		}
-		else { // Before 2022
+				else { // Before 2022
 			
+				}
+			}
 		}
-		}
-		}
-		
 	}
 	
 	private static void playBall(GameState gameState, BoxScore[] boxScores, int gameNumber) {
@@ -919,11 +920,11 @@ public class BaseballSimulator {
 			gameState.getCurrentPitchers()[1].getMlbPitchingStats().getPitchingStats().setSaves(1);
 		}
 		// Output Box Score
-		if (!seasonSimulationMode) {
+		if (!seasonSimulationMode && !seasonSimulationPlayoffsMode) {
 			outputBoxScore(boxScores, false, gameState.getInning(), gameState.getPitchersOfRecord());
 		}
 		else {
-			System.out.print(boxScores[1].getYear() + " Season game #" + gameNumber + " " + boxScores[0].getTeam().getFullTeamName() + 
+			System.out.print(boxScores[1].getYear() + (seasonSimulationPlayoffsMode ? " Playoffs " : " Season ") + "game #" + gameNumber + " " + boxScores[0].getTeam().getFullTeamName() + 
 				" " + boxScores[0].getFinalScore() + " at " + boxScores[1].getTeam().getFullTeamName() + " " + boxScores[1].getFinalScore());
 			MLBPlayer visStarter = boxScores[0].getPitchers().entrySet().iterator().next().getValue();
 			MLBPlayer homeStarter = boxScores[1].getPitchers().entrySet().iterator().next().getValue();
@@ -2854,13 +2855,14 @@ public class BaseballSimulator {
 	}
 	
 	private static void printlnToScreen(String text) {
-		if (!seasonSimulationMode) {
+		if (!seasonSimulationMode && !seasonSimulationPlayoffsMode) {
 			System.out.println(text != null ? text : "");
 		}
+		
 	}
 	
 	private static void printToScreen(String text) {
-		if (!seasonSimulationMode) {
+		if (!seasonSimulationMode && !seasonSimulationPlayoffsMode) {
 			System.out.print(text);
 		}
 	}

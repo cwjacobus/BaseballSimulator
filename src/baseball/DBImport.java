@@ -101,10 +101,11 @@ public class DBImport {
 					DAO.createBatchDataFromList(battingStatsList);
 					DAO.createBatchDataFromList(pitchingStatsList);
 				}
-				ArrayList<Object> fieldingStatsList = importFieldingStats(filteredHittersMap, year);  // hitters fielding
+				// Fielding stats only were available 1990-2021
+				//ArrayList<Object> fieldingStatsList = importFieldingStats(filteredHittersMap, year);  // hitters fielding
 				//importFieldingStats(pitchersMap, year, fieldingStatsMap); // pitchers fielding
 				
-				DAO.createBatchDataFromList(fieldingStatsList);
+				//DAO.createBatchDataFromList(fieldingStatsList);
 			}
 		}
 		else {
@@ -319,13 +320,13 @@ public class DBImport {
 		ArrayList<Object> pitchingStatsList = new ArrayList<>();
 		int index = 1;
 		int mlbPlayerId = 0;
-		int qualifyingGamesPitched = 20;
+		double qualifyingInningsPitched = 40.0;
 		if (year == 2020) { // pandemic year
-			qualifyingGamesPitched = 8;
+			qualifyingInningsPitched = 16.0;
 			
 		}
 		else if (year == 1994) { // strike year
-			qualifyingGamesPitched = 14;
+			qualifyingInningsPitched = 28.0;
 		}   
 		for (Map.Entry<Integer, MLBPlayer> entry : pitchersMap.entrySet()) {
 			mlbPlayerId = entry.getValue().getMlbPlayerId();
@@ -347,7 +348,9 @@ public class DBImport {
 					JSONArray multipleTeamStats = new JSONArray(queryResults.getString("row"));
 					for (int i = 0; i < multipleTeamStats.length(); i++) {
 						pitchingStatsJson = multipleTeamStats.getJSONObject(i);
-						if (Integer.parseInt(pitchingStatsJson.getString("g")) > qualifyingGamesPitched) { // only import if games > 20
+						// As of 2023 changed from 20 games to 40 innings pitched
+						double inningsPitched = Double.parseDouble(pitchingStatsJson.getString("ip"));
+						if (inningsPitched > qualifyingInningsPitched) { 
 							System.out.print(index + " ");
 							if (index % 50 == 0) {
 								System.out.println();
@@ -361,7 +364,9 @@ public class DBImport {
 				}
 				else {
 					pitchingStatsJson = new JSONObject(queryResults.getString("row"));
-					if (Integer.parseInt(pitchingStatsJson.getString("g")) > qualifyingGamesPitched) { // only import if games > 20
+					// As of 2023 changed from 20 games to 40 innings pitched
+					double inningsPitched = Double.parseDouble(pitchingStatsJson.getString("ip"));
+					if (inningsPitched > qualifyingInningsPitched) {
 						System.out.print(index + " ");
 						if (index % 50 == 0) {
 							System.out.println();
