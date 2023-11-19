@@ -1590,8 +1590,9 @@ public class BaseballSimulator {
             		return (avg1 > avg2 ? -1 : 1);
             	}
             	else if (type.equals("GS")){
+            		// Use innings pitched as next sort criteria if tied
             		if (o1.getValue().getMlbPitchingStats().getPitchingStats().getGamesStarted() == o2.getValue().getMlbPitchingStats().getPitchingStats().getGamesStarted()) {
-            			return 0;
+            			return (o1.getValue().getMlbPitchingStats().getPitchingStats().getInningsPitched() >= o2.getValue().getMlbPitchingStats().getPitchingStats().getInningsPitched() ? -1 : 1);
             		}
             		return (o1.getValue().getMlbPitchingStats().getPitchingStats().getGamesStarted() > o2.getValue().getMlbPitchingStats().getPitchingStats().getGamesStarted() ? -1 : 1);
             	}
