@@ -203,6 +203,7 @@ update mlb_player set PRIMARY_POSITION='1B' where full_name = 'Cronenworth, Jake
 update mlb_player set PRIMARY_POSITION='1B' where full_name = 'Wade Jr., LaMonte';
 update mlb_player set PRIMARY_POSITION='1B' where full_name = 'Bellinger, Cody';
 update mlb_player set PRIMARY_POSITION='SS' where full_name = 'Wendle, Joey';
+update mlb_player set PRIMARY_POSITION='LF' where full_name = 'Melendez, MJ';
 
 delete from mlb_fielding_stats where MLB_PLAYER_ID=660271 and year=2021;  /* Delete Shohei Ohtani P fielding record */
 
