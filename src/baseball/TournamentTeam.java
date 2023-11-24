@@ -1,14 +1,16 @@
 package baseball;
 
+import db.MLBTeam;
+
 public class TournamentTeam {
 	
-	public TournamentTeam(Integer year, Integer teamId) {
+	public TournamentTeam(Integer year, MLBTeam mlbTeam) {
 		this.year = year;
-		this.teamId = teamId;
+		this.mlbTeam = mlbTeam;
 	}
 	
 	Integer year;
-	Integer teamId;
+	MLBTeam mlbTeam;
 	
 	public Integer getYear() {
 		return year;
@@ -16,11 +18,17 @@ public class TournamentTeam {
 	public void setYear(Integer year) {
 		this.year = year;
 	}
-	public Integer getTeamId() {
-		return teamId;
+	
+	public MLBTeam getMlbTeam() {
+		return mlbTeam;
 	}
-	public void setTeamId(Integer teamId) {
-		this.teamId = teamId;
+	
+	public void setMlbTeam(MLBTeam mlbTeam) {
+		this.mlbTeam = mlbTeam;
+	}
+	
+	public String toString () {
+		return year + " " + mlbTeam.getTeamId();
 	}
 
 }

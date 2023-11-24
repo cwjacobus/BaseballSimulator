@@ -19,6 +19,10 @@ public class MLBTeam {
 		this.firstYearPlayed = firstYearPlayed;
 		this.lastYearPlayed = lastYearPlayed;
 	}
+	
+	public MLBTeam(Integer teamId) {
+		this.teamId = teamId;
+	}
 
 	public Integer getMlbTeamId() {
 		return mlbTeamId;

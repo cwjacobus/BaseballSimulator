@@ -178,34 +178,36 @@ public class BaseballSimulator {
 			// Import 12 seeded teams from file, TEMP hardcoded
 			List<TournamentTeam> alSeededTournamentTeams = new ArrayList<TournamentTeam>() {
 	            {
-	                add(new TournamentTeam(1927, 147));
-	                add(new TournamentTeam(1939, 147));
-	                add(new TournamentTeam(1998, 147));
-	                add(new TournamentTeam(1929, 133));
-	                add(new TournamentTeam(1961, 147));
-	                add(new TournamentTeam(1970, 110));
+	                add(new TournamentTeam(1927, new MLBTeam(147)));
+	                add(new TournamentTeam(1939, new MLBTeam(147)));
+	                add(new TournamentTeam(1998, new MLBTeam(147)));
+	                add(new TournamentTeam(1929, new MLBTeam(133)));
+	                add(new TournamentTeam(1961, new MLBTeam(147)));
+	                add(new TournamentTeam(1970, new MLBTeam(110)));
 	            }
 	        };
 			List<TournamentTeam> nlSeededTournamentTeams = new ArrayList<TournamentTeam>(){
 	            {
-	                add(new TournamentTeam(1975, 113));
-	                add(new TournamentTeam(1902, 134));
-	                add(new TournamentTeam(1907, 112));
-	                add(new TournamentTeam(1976, 113));
-	                add(new TournamentTeam(1905, 137));
-	                add(new TournamentTeam(1986, 121));
+	                add(new TournamentTeam(1975, new MLBTeam(113)));
+	                add(new TournamentTeam(1902, new MLBTeam(134)));
+	                add(new TournamentTeam(1907, new MLBTeam(112)));
+	                add(new TournamentTeam(1976, new MLBTeam(113)));
+	                add(new TournamentTeam(1905, new MLBTeam(137)));
+	                add(new TournamentTeam(1986, new MLBTeam(121)));
 	            }
 	        };
 	        years[0] = 1927; years[1] = 1998;
+	        battersOnMultTeams = DAO.getBattersOnMultipleTeamsByPrimaryTeam(years);
+			pitchersOnMultTeams = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years);
+			seriesBoxScores = new BoxScore[seriesLength][2];
 	        playTournamentGames(0, alSeededTournamentTeams, nlSeededTournamentTeams, false);
+	        return;
 		} // End parameter processing
 		
 		battersOnMultTeams = DAO.getBattersOnMultipleTeamsByPrimaryTeam(years);
 		pitchersOnMultTeams = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years);
 		seriesBoxScores = new BoxScore[seriesLength][2];
-		if (tournamentMode) {
-			return;
-		}
+		
 		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) { // home teams
 			for (Integer opp : team.getValue()) { // away teams
 				if (seasonSimulationMode) {
@@ -656,17 +658,18 @@ public class BaseballSimulator {
 	private static void playPostSeasonGames(int seasonSimYear, List<TeamSeasonResults> alSeededPlayoffTeams, List<TeamSeasonResults> nlSeededPlayoffTeams) {
 		List<TournamentTeam> alSeededTournamentTeams = new ArrayList<>();
 		List<TournamentTeam> nlSeededTournamentTeams = new ArrayList<>();
-		alSeededPlayoffTeams.stream().forEach(entry -> alSeededTournamentTeams.add(new TournamentTeam(seasonSimYear, entry.getTeamId())));
-		nlSeededPlayoffTeams.stream().forEach(entry -> nlSeededTournamentTeams.add(new TournamentTeam(seasonSimYear, entry.getTeamId())));
+		alSeededPlayoffTeams.stream().forEach(entry -> alSeededTournamentTeams.add(new TournamentTeam(seasonSimYear, new MLBTeam(entry.getTeamId()))));
+		nlSeededPlayoffTeams.stream().forEach(entry -> nlSeededTournamentTeams.add(new TournamentTeam(seasonSimYear, new MLBTeam(entry.getTeamId()))));
 		playTournamentGames(seasonSimYear, alSeededTournamentTeams, nlSeededTournamentTeams, true); // play post season playoff games
 	}
 	
 	private static void playTournamentGames(int seasonSimYear, List<TournamentTeam> alSeededTournamentTeams, List<TournamentTeam> nlSeededTournamentTeams, boolean mlbPlayoffs) {
-		MLBTeam[] tournamentTeams = {null, null};
+		MLBTeam[] tournamentMlbTeams = {null, null};
+		TournamentTeam[] tournamentTeams = {null, null};
 		HashMap<Integer, ArrayList<Integer>> nlTournamentWinnersBySeed = new HashMap<>();
 		HashMap<Integer, ArrayList<Integer>> alTournamentWinnersBySeed = new HashMap<>();
 		List<TournamentTeam> seededTournamentTeams;
-		int[] tournamentYears = {seasonSimYear, seasonSimYear};
+		int[] tournamentYears = {0, 0};
 		for (int round = 0; round < 4; round++) {
 			nlTournamentWinnersBySeed.put(round, new ArrayList<Integer>());
 			alTournamentWinnersBySeed.put(round, new ArrayList<Integer>());
@@ -725,16 +728,20 @@ public class BaseballSimulator {
 							higherSeededTeam = alSeededTournamentTeams.get(alTournamentWinnersBySeed.get(round-1).get(0));
 							lowerSeededTeam = nlSeededTournamentTeams.get(nlTournamentWinnersBySeed.get(round-1).get(0));
 						}
-						tournamentTeams[0] = getTeamByYearAndTeamId(lowerSeededTeam.getYear(), lowerSeededTeam.getTeamId(), allMlbTeamsList);
-						tournamentTeams[1] = getTeamByYearAndTeamId(higherSeededTeam.getYear(), higherSeededTeam.getTeamId(), allMlbTeamsList);
-						tournamentYears[0] = lowerSeededTeam.getYear();
-						tournamentYears[1] = higherSeededTeam.getYear();
-						tournamentSeriesWinsMap.put(tournamentTeams[0].getFullTeamName(), 0);
-						tournamentSeriesWinsMap.put(tournamentTeams[1].getFullTeamName(), 0);
+						
+						tournamentTeams[0] = new TournamentTeam(lowerSeededTeam.getYear(), getTeamByYearAndTeamId(lowerSeededTeam.getYear(), lowerSeededTeam.getMlbTeam().getTeamId(), allMlbTeamsList));
+						tournamentTeams[1] = new TournamentTeam(higherSeededTeam.getYear(), getTeamByYearAndTeamId(higherSeededTeam.getYear(), higherSeededTeam.getMlbTeam().getTeamId(), allMlbTeamsList));
+						tournamentYears[0] = tournamentTeams[0].getYear();
+						tournamentYears[1] = tournamentTeams[1].getYear();
+						tournamentMlbTeams[0] = tournamentTeams[0].getMlbTeam();
+						tournamentMlbTeams[1] = tournamentTeams[1].getMlbTeam();
+						tournamentSeriesWinsMap.put(tournamentTeams[0].getYear() + " " + tournamentTeams[0].getMlbTeam().getFullTeamName(), 0);
+						tournamentSeriesWinsMap.put(tournamentTeams[1].getYear() + " " + tournamentTeams[1].getMlbTeam().getFullTeamName(), 0);
 						seasonSimulationMode = false;
-						seasonSimulationPlayoffsMode = true;
+						seasonSimulationPlayoffsMode = mlbPlayoffs;
+						tournamentMode = !mlbPlayoffs;
 						seriesBoxScores = new BoxScore[seriesMax][2];
-						setUpDataAndPlayGames(tournamentTeams, tournamentYears, seriesMax, true, tournamentSeriesStats, null, null, null, null, 1, true);
+						setUpDataAndPlayGames(tournamentMlbTeams, tournamentYears, seriesMax, true, tournamentSeriesStats, null, null, null, null, 1, true);
 						System.out.println();
 						int seriesLength = 0;
 						for (BoxScore[] bsArray : seriesBoxScores) {
@@ -743,31 +750,38 @@ public class BaseballSimulator {
 							}
 							seriesLength++;
 							if (bsArray[0].getFinalScore() > bsArray[1].getFinalScore()) {
-								tournamentSeriesWinsMap.put(bsArray[0].getTeam().getFullTeamName(), tournamentSeriesWinsMap.get(bsArray[0].getTeam().getFullTeamName()) + 1);
-								System.out.println(bsArray[0].getTeam().getShortTeamName() + " " + bsArray[0].getFinalScore() + " " + 
-									bsArray[1].getTeam().getShortTeamName() + " " + bsArray[1].getFinalScore());
+								tournamentSeriesWinsMap.put(bsArray[0].getYear() + " " + bsArray[0].getTeam().getFullTeamName(), 
+									tournamentSeriesWinsMap.get(bsArray[0].getYear() + " " + bsArray[0].getTeam().getFullTeamName()) + 1);
+								System.out.println((tournamentMode ? bsArray[0].getYear() + " " : "") + bsArray[0].getTeam().getShortTeamName() + " " + bsArray[0].getFinalScore() + " " + 
+									(tournamentMode ? bsArray[1].getYear() + " " : "") + bsArray[1].getTeam().getShortTeamName() + " " + bsArray[1].getFinalScore());
 							}
 							else {
-								tournamentSeriesWinsMap.put(bsArray[1].getTeam().getFullTeamName(), tournamentSeriesWinsMap.get(bsArray
-										[1].getTeam().getFullTeamName()) + 1);
-								System.out.println(bsArray[1].getTeam().getShortTeamName() + " " + bsArray[1].getFinalScore() + " " + 
-									bsArray[0].getTeam().getShortTeamName() + " " + bsArray[0].getFinalScore());
+								tournamentSeriesWinsMap.put(bsArray[1].getYear() + " " + bsArray[1].getTeam().getFullTeamName(), 
+									tournamentSeriesWinsMap.get(bsArray[1].getYear() + " " + bsArray[1].getTeam().getFullTeamName()) + 1);
+								System.out.println((tournamentMode ? bsArray[1].getYear() + " " : "") + bsArray[1].getTeam().getShortTeamName() + " " + bsArray[1].getFinalScore() + " " + 
+									(tournamentMode ? bsArray[0].getYear() + " " : "") + bsArray[0].getTeam().getShortTeamName() + " " + bsArray[0].getFinalScore());
 							}
 						}
-						int winner = tournamentSeriesWinsMap.get(tournamentTeams[0].getFullTeamName()) > tournamentSeriesWinsMap.get(tournamentTeams[1].getFullTeamName()) ? 0 : 1;
-						System.out.println(tournamentTeams[winner].getFullTeamName() + " over " + tournamentTeams[winner == 1 ? 0 : 1].getFullTeamName() + " in " + seriesLength + "\n");
+						int winner = tournamentSeriesWinsMap.get(tournamentTeams[0].getYear() + " " + tournamentTeams[0].getMlbTeam().getFullTeamName()) > 
+							tournamentSeriesWinsMap.get(tournamentTeams[1].getYear() + " " + tournamentTeams[1].getMlbTeam().getFullTeamName()) ? 0 : 1;
+						System.out.println((tournamentMode ? tournamentTeams[winner].getYear() + " " : "" ) + tournamentTeams[winner].getMlbTeam().getFullTeamName() + 
+							" over " + (tournamentMode ? tournamentTeams[winner == 1 ? 0 : 1].getYear() + " " : "" ) + tournamentTeams[winner == 1 ? 0 : 1].getMlbTeam().getFullTeamName() + " in " + seriesLength + "\n");
 						int winningSeed = 0;
 						ArrayList<Integer> tournamentWinnersBySeed;
 						for (TournamentTeam winningPlayoffTeam : seededTournamentTeams) {
-							if (winningPlayoffTeam.getTeamId().intValue() == tournamentTeams[winner].getTeamId() && league == 0) {
-								tournamentWinnersBySeed = alTournamentWinnersBySeed.get(round);
-								tournamentWinnersBySeed.add(winningSeed);
-								alTournamentWinnersBySeed.put(new Integer(round), tournamentWinnersBySeed);
+							if (winningPlayoffTeam.getMlbTeam().getTeamId() == tournamentTeams[winner].getMlbTeam().getTeamId() && 
+								winningPlayoffTeam.getYear() == tournamentTeams[winner].getYear() &&
+								league == 0) {
+									tournamentWinnersBySeed = alTournamentWinnersBySeed.get(round);
+									tournamentWinnersBySeed.add(winningSeed);
+									alTournamentWinnersBySeed.put(new Integer(round), tournamentWinnersBySeed);
 							}
-							else if (winningPlayoffTeam.getTeamId().intValue() == tournamentTeams[winner].getTeamId() && league == 1) {
-								tournamentWinnersBySeed = nlTournamentWinnersBySeed.get(round);
-								tournamentWinnersBySeed.add(winningSeed);
-								nlTournamentWinnersBySeed.put(new Integer(round), tournamentWinnersBySeed);
+							else if (winningPlayoffTeam.getMlbTeam().getTeamId() == tournamentTeams[winner].getMlbTeam().getTeamId() && 
+								winningPlayoffTeam.getYear() == tournamentTeams[winner].getYear() &&
+								league == 1) {
+									tournamentWinnersBySeed = nlTournamentWinnersBySeed.get(round);
+									tournamentWinnersBySeed.add(winningSeed);
+									nlTournamentWinnersBySeed.put(new Integer(round), tournamentWinnersBySeed);
 							}
 							winningSeed++;
 						}
@@ -1022,7 +1036,7 @@ public class BaseballSimulator {
 			outputBoxScore(boxScores, false, gameState.getInning(), gameState.getPitchersOfRecord());
 		}
 		else {
-			System.out.print(boxScores[1].getYear() + (seasonSimulationPlayoffsMode ? " Playoffs " : " Season ") + "game #" + gameNumber + " " + boxScores[0].getTeam().getFullTeamName() + 
+			System.out.print(boxScores[1].getYear() + (seasonSimulationPlayoffsMode ? " Playoff" : " Season") + " game #" + gameNumber + " " + boxScores[0].getTeam().getFullTeamName() + 
 				" " + boxScores[0].getFinalScore() + " at " + boxScores[1].getTeam().getFullTeamName() + " " + boxScores[1].getFinalScore());
 			MLBPlayer visStarter = boxScores[0].getPitchers().entrySet().iterator().next().getValue();
 			MLBPlayer homeStarter = boxScores[1].getPitchers().entrySet().iterator().next().getValue();
@@ -2954,14 +2968,14 @@ public class BaseballSimulator {
 	}
 	
 	private static void printlnToScreen(String text) {
-		if (!seasonSimulationMode && !seasonSimulationPlayoffsMode) {
+		if (!seasonSimulationMode && !seasonSimulationPlayoffsMode && !tournamentMode) {
 			System.out.println(text != null ? text : "");
 		}
 		
 	}
 	
 	private static void printToScreen(String text) {
-		if (!seasonSimulationMode && !seasonSimulationPlayoffsMode) {
+		if (!seasonSimulationMode && !seasonSimulationPlayoffsMode && !tournamentMode) {
 			System.out.print(text);
 		}
 	}
