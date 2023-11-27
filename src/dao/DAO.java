@@ -348,7 +348,7 @@ public class DAO {
 		return allPitchersMap;
 	}
 	
-	public static HashMap<Integer, Integer> getBattersOnMultipleTeamsByPrimaryTeam(int[] years) {
+	public static HashMap<Integer, Integer> getBattersOnMultipleTeamsByPrimaryTeam(int[] years) { // change years to year
 		HashMap<Integer, Integer> battersMap = new HashMap<>();
 		try {
 			Statement stmt = conn.createStatement();

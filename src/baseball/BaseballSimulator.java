@@ -52,6 +52,7 @@ public class BaseballSimulator {
 	static HashMap<String, Integer> disabledList = new HashMap<>();
 	static String visTeamImportFile = null;
 	static String homeTeamImportFile = null;
+	static String importDir = "C:\\Users\\cjaco\\Documents\\Sports\\BBSim\\";
 
 	public static void main(String[] args) {
 		int seriesLength = 1;
@@ -175,39 +176,28 @@ public class BaseballSimulator {
 		else if (args[0].equalsIgnoreCase("TOURNAMENT")) {
 			System.out.println("Tournament");
 			tournamentMode = true;
-			// Import 12 seeded teams from file, TEMP hardcoded
-			List<TournamentTeam> alSeededTournamentTeams = new ArrayList<TournamentTeam>() {
-	            {
-	                add(new TournamentTeam(1927, new MLBTeam(147)));
-	                add(new TournamentTeam(1939, new MLBTeam(147)));
-	                add(new TournamentTeam(1998, new MLBTeam(147)));
-	                add(new TournamentTeam(1929, new MLBTeam(133)));
-	                add(new TournamentTeam(1961, new MLBTeam(147)));
-	                add(new TournamentTeam(1970, new MLBTeam(110)));
-	            }
-	        };
-			List<TournamentTeam> nlSeededTournamentTeams = new ArrayList<TournamentTeam>(){
-	            {
-	                add(new TournamentTeam(1975, new MLBTeam(113)));
-	                add(new TournamentTeam(1902, new MLBTeam(134)));
-	                add(new TournamentTeam(1907, new MLBTeam(112)));
-	                add(new TournamentTeam(1976, new MLBTeam(113)));
-	                add(new TournamentTeam(1905, new MLBTeam(137)));
-	                add(new TournamentTeam(1986, new MLBTeam(121)));
-	            }
-	        };
-	        years[0] = 1927; years[1] = 1998;
-	        battersOnMultTeams = DAO.getBattersOnMultipleTeamsByPrimaryTeam(years);
-			pitchersOnMultTeams = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years);
-			seriesBoxScores = new BoxScore[seriesLength][2];
-	        playTournamentGames(0, alSeededTournamentTeams, nlSeededTournamentTeams, false);
+	        List<TournamentTeam> seededTournamentTeams = importTournamentTeamsFromFile(args[1]);
+	        if (seededTournamentTeams != null) {
+	        	years[0] = 1927; years[1] = 1998; // TEMP
+	        	List<TournamentTeam> alSeededTournamentTeams = new ArrayList<TournamentTeam>();
+	        	List<TournamentTeam> nlSeededTournamentTeams = new ArrayList<TournamentTeam>();
+	        	seededTournamentTeams.stream().filter(entry -> entry.getMlbTeam().getLeague().equals("AL")).forEach(entry -> alSeededTournamentTeams.add(entry));
+	        	seededTournamentTeams.stream().filter(entry -> entry.getMlbTeam().getLeague().equals("NL")).forEach(entry -> nlSeededTournamentTeams.add(entry));
+	        	if (alSeededTournamentTeams.size() != 6 || nlSeededTournamentTeams.size() != 6) {
+		        	System.out.println("Only support tournaments with 6 AL and 6 NL teams!"); // 12 (6 AL/6 NL) is size of current number of playoff teams
+		        	return;
+		        }
+	        	battersOnMultTeams = DAO.getBattersOnMultipleTeamsByPrimaryTeam(years);   // move to playTournamentGames
+	        	pitchersOnMultTeams = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years); // move to playTournamentGames
+	        	seriesBoxScores = new BoxScore[seriesLength][2];
+	        	playTournamentGames(0, alSeededTournamentTeams, nlSeededTournamentTeams, false);
+			}
 	        return;
 		} // End parameter processing
 		
-		battersOnMultTeams = DAO.getBattersOnMultipleTeamsByPrimaryTeam(years);
-		pitchersOnMultTeams = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years);
+		battersOnMultTeams = DAO.getBattersOnMultipleTeamsByPrimaryTeam(years);   // change to array and 1 year
+		pitchersOnMultTeams = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years); // change to array and 1 year
 		seriesBoxScores = new BoxScore[seriesLength][2];
-		
 		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) { // home teams
 			for (Integer opp : team.getValue()) { // away teams
 				if (seasonSimulationMode) {
@@ -255,6 +245,64 @@ public class BaseballSimulator {
 			outputSeasonResults(seasonResults, seasonSimYear);
 			postSeason(seasonResults, seasonSimYear);
 		}
+	}
+	
+	private static void createSchedule(Integer schedYear, Map<Integer, ArrayList<Integer>> seasonSched) {
+		int division = 0;
+		for (MLBTeam team : allMlbTeamsList) { // 8 4 3 2 
+			ArrayList<Integer> teamSched = new ArrayList<>();
+			if (team.getLastYearPlayed() != null && team.getLastYearPlayed() != 0) {  //active team
+				continue;
+			}
+			for (int i = 0; i < 6; i++) {
+				if (Arrays.asList(mlbDivisionTeams[i]).contains(team.getTeamId())) {
+					division = i;
+					for (int j = 0; j < mlbDivisionTeams[i].length; j++) {
+						if (mlbDivisionTeams[i][j] != team.getTeamId()) {
+							for (int k = 0; k < 8; k++) {
+								teamSched.add(mlbDivisionTeams[i][j]);  // 8 x per div opponent
+							}
+						}
+					}
+				}
+			}
+			int leagueOpponentCount = 1;
+			for (MLBTeam team2 : allMlbTeamsList) {
+				if (team2.getLastYearPlayed() != null && team2.getLastYearPlayed() != 0) {  //active team
+					continue;
+				}
+				if (leagueOpponentCount == 16) {
+					leagueOpponentCount = 0;
+				}
+				if (team2.getLeague().equals(team.getLeague()) && !Arrays.asList(mlbDivisionTeams[division]).contains(team2.getTeamId())) {
+					/*int numberOfLeagueOpponentGames = leagueOpponentCount < 5 ? 4 : 3;
+					for (int j = 0; j < numberOfLeagueOpponentGames; j++) {
+						teamSched.add(team2.getTeamId());  // 4 x per league opponent for 4 teams and 3 x league opponent for other 6 teams
+					}
+					leagueOpponentCount++;*/
+					for (int j = 0; j < 4; j++) {
+						teamSched.add(team2.getTeamId());  // 4 x per league opponent
+					}
+				}
+			}
+			Integer[] interleagueOpponents = team.getLeague().equals("AL") ? mlbDivisionTeams[division+3] : mlbDivisionTeams[division-3];
+			for (int i = 0; i < interleagueOpponents.length; i++) {
+				for (int j = 0; j < 2; j++) {
+					teamSched.add(interleagueOpponents[i]);  // 2 x per interleague opponent
+				}
+			}
+			seasonSched.put(team.getTeamId(), teamSched);
+		}
+		/*
+		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) { 
+			Integer teamId = team.getKey();
+			ArrayList<Integer> teamSched = team.getValue();
+			System.out.print("Sched for " + teamId + ": ");
+			for (int i = 0; i < teamSched.size(); i++) {
+				System.out.print(teamSched.get(i) + " ");
+			}
+			System.out.println();
+        }*/ 
 	}
 	
 	private static boolean setUpDataAndPlayGames(MLBTeam[] teams, int[] years, int seriesLength, boolean bestOfSeries, SeriesStats[] seriesStats, HashMap<Integer, 
@@ -741,6 +789,10 @@ public class BaseballSimulator {
 						seasonSimulationPlayoffsMode = mlbPlayoffs;
 						tournamentMode = !mlbPlayoffs;
 						seriesBoxScores = new BoxScore[seriesMax][2];
+						/*for (int y = 0; y < 2; y++) {
+							battersOnMultTeams[0] = DAO.getBattersOnMultipleTeamsByPrimaryTeam(y);
+				            pitchersOnMultTeams[0] = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(y);
+						}*/
 						setUpDataAndPlayGames(tournamentMlbTeams, tournamentYears, seriesMax, true, tournamentSeriesStats, null, null, null, null, 1, true);
 						System.out.println();
 						int seriesLength = 0;
@@ -2064,17 +2116,6 @@ public class BaseballSimulator {
 		}
 	}
 	
-	private static String padSpaces(String defSpaces, double stat) {
-		String spaces = defSpaces;
-		if (stat < 100.0) {
-			spaces += " ";
-		}
-		if (stat < 10.0) {
-			spaces += " ";
-		}
-		return spaces;
-	}
-	
 	private static int getBattingOrderForPlayer(int id, int top) {
 		// Returns 0 if not found
 		int order = 1;
@@ -2102,6 +2143,66 @@ public class BaseballSimulator {
 			}
 		}
 		return player;
+	}
+	
+	private static int getDivisionByTeamId(Integer[][] divisions, int teamId) {
+		int division = 0;
+		for (Integer[] div : divisions) {
+			for (Integer team : div) {
+				if (teamId == team) {
+					return division;
+				}
+			}
+			division++;
+		}
+		return 0;
+	}
+	
+	private static MLBPlayer getOneMorePlayerToFillOutLineup(String missingPosition, HashMap<Integer, MLBPlayer> battingStatsSortedByStatMap,
+		ArrayList<Integer> playersInLineupList, boolean useFieldingStats) {
+			// Currently limited to looking for outfielder
+			MLBPlayer player = null;
+			boolean playedOutfield = false;
+			for (Map.Entry<Integer, MLBPlayer> mapElement : battingStatsSortedByStatMap.entrySet()) {
+				playedOutfield = false;
+				player = null;
+				if (useFieldingStats) {
+					ArrayList<MLBFieldingStats> playerFieldingStatsList = mapElement.getValue().getMlbFieldingStats();
+					if (playerFieldingStatsList == null) {
+						continue;
+					}
+					for (MLBFieldingStats playerFieldingStats : playerFieldingStatsList) {
+						if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(playerFieldingStats.getPosition()) && !playersInLineupList.contains(mapElement.getKey())) {
+							player = mapElement.getValue();
+							playedOutfield = true;
+							break;
+						}
+					}
+				}
+				else {
+					if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(mapElement.getValue().getPrimaryPosition()) && !playersInLineupList.contains(mapElement.getKey())) {
+						player = mapElement.getValue();
+						playedOutfield = true;
+						break;
+					}
+				}
+				if (player != null) {
+					break;
+				}
+			}
+			if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(missingPosition) && playedOutfield) {
+				return player;
+			}
+			return null;
+	}
+	
+	private static ArrayList<String> getMissingPositionFromLineup(ArrayList<String> positionsUsed) {
+		// Get missing position (Not including P or DH)
+		ArrayList<String> positionsList = new ArrayList<>(positions.values());
+		positionsList.removeAll(positionsUsed);
+		positionsList.remove("P");
+		positionsList.remove("DH");
+		return positionsList;
 	}
 	
 	private static MLBPlayer getPlayerFromId(int id) {
@@ -2567,6 +2668,49 @@ public class BaseballSimulator {
 		}
 	}
 	
+	private static List<TournamentTeam> importTournamentTeamsFromFile(String importFile) {
+		List<TournamentTeam> tournamentTeams = new ArrayList<TournamentTeam>();
+		
+		String[] lineArray = {"", ""};
+		try {
+			@SuppressWarnings("resource")
+			BufferedReader reader = new BufferedReader(new FileReader(importDir + importFile));
+			String line = reader.readLine();
+			while (line != null) {
+				lineArray = line.split(" ");
+				if (lineArray.length != 2) {
+					System.out.println("Invalid Tournament Team input line: " + line);
+					return null;
+				}
+				MLBTeam matchingTeam = null;
+				int ttYear = Integer.parseInt(lineArray[0]);
+				for (MLBTeam t : allMlbTeamsList) {
+					if (t.getShortTeamName().equalsIgnoreCase(lineArray[1]) && t.getFirstYearPlayed() <= ttYear && 
+						(t.getLastYearPlayed() == null || t.getLastYearPlayed() == 0 || t.getLastYearPlayed() >= ttYear)) {
+							matchingTeam = t;
+							break;
+					}
+				}
+				if (matchingTeam == null) {
+					System.out.println("No MLB Team matching: " + lineArray[0] + " " + lineArray[1]);
+					return null;
+				}
+				TournamentTeam tTeam = new TournamentTeam(ttYear, matchingTeam);
+				tournamentTeams.add(tTeam);
+				line = reader.readLine();
+			}
+		}
+		catch (IOException e) {
+			System.out.println("Lineup file " + importFile + " not found.  Import failed!");
+			return null;
+		}
+		catch (NumberFormatException e) {
+			System.out.println("Invalid year: " + lineArray[0]);
+			return null;
+		}
+		return tournamentTeams;
+	}
+	
     private static boolean handleImportLineupCommand(String command, boolean fromIncompleteLineup) {
     	String[] commandArray = command.split(" ");
 		if (commandArray.length < 3) {
@@ -2581,7 +2725,7 @@ public class BaseballSimulator {
 		String lineupFileName = commandArray[2];
 		try {
 			@SuppressWarnings("resource")
-			BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\cjaco\\Documents\\Sports\\BBSim\\" + lineupFileName));
+			BufferedReader reader = new BufferedReader(new FileReader(importDir + lineupFileName));
 			String line = reader.readLine();
 			String id = null;
 			String lineupPos = null;
@@ -2909,62 +3053,15 @@ public class BaseballSimulator {
 		return null;
 	}
 	
-	private static void createSchedule(Integer schedYear, Map<Integer, ArrayList<Integer>> seasonSched) {
-		int division = 0;
-		for (MLBTeam team : allMlbTeamsList) { // 8 4 3 2 
-			ArrayList<Integer> teamSched = new ArrayList<>();
-			if (team.getLastYearPlayed() != null && team.getLastYearPlayed() != 0) {  //active team
-				continue;
-			}
-			for (int i = 0; i < 6; i++) {
-				if (Arrays.asList(mlbDivisionTeams[i]).contains(team.getTeamId())) {
-					division = i;
-					for (int j = 0; j < mlbDivisionTeams[i].length; j++) {
-						if (mlbDivisionTeams[i][j] != team.getTeamId()) {
-							for (int k = 0; k < 8; k++) {
-								teamSched.add(mlbDivisionTeams[i][j]);  // 8 x per div opponent
-							}
-						}
-					}
-				}
-			}
-			int leagueOpponentCount = 1;
-			for (MLBTeam team2 : allMlbTeamsList) {
-				if (team2.getLastYearPlayed() != null && team2.getLastYearPlayed() != 0) {  //active team
-					continue;
-				}
-				if (leagueOpponentCount == 16) {
-					leagueOpponentCount = 0;
-				}
-				if (team2.getLeague().equals(team.getLeague()) && !Arrays.asList(mlbDivisionTeams[division]).contains(team2.getTeamId())) {
-					/*int numberOfLeagueOpponentGames = leagueOpponentCount < 5 ? 4 : 3;
-					for (int j = 0; j < numberOfLeagueOpponentGames; j++) {
-						teamSched.add(team2.getTeamId());  // 4 x per league opponent for 4 teams and 3 x league opponent for other 6 teams
-					}
-					leagueOpponentCount++;*/
-					for (int j = 0; j < 4; j++) {
-						teamSched.add(team2.getTeamId());  // 4 x per league opponent
-					}
-				}
-			}
-			Integer[] interleagueOpponents = team.getLeague().equals("AL") ? mlbDivisionTeams[division+3] : mlbDivisionTeams[division-3];
-			for (int i = 0; i < interleagueOpponents.length; i++) {
-				for (int j = 0; j < 2; j++) {
-					teamSched.add(interleagueOpponents[i]);  // 2 x per interleague opponent
-				}
-			}
-			seasonSched.put(team.getTeamId(), teamSched);
+	private static String padSpaces(String defSpaces, double stat) {
+		String spaces = defSpaces;
+		if (stat < 100.0) {
+			spaces += " ";
 		}
-		/*
-		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) { 
-			Integer teamId = team.getKey();
-			ArrayList<Integer> teamSched = team.getValue();
-			System.out.print("Sched for " + teamId + ": ");
-			for (int i = 0; i < teamSched.size(); i++) {
-				System.out.print(teamSched.get(i) + " ");
-			}
-			System.out.println();
-        }*/ 
+		if (stat < 10.0) {
+			spaces += " ";
+		}
+		return spaces;
 	}
 	
 	private static void printlnToScreen(String text) {
@@ -2978,65 +3075,5 @@ public class BaseballSimulator {
 		if (!seasonSimulationMode && !seasonSimulationPlayoffsMode && !tournamentMode) {
 			System.out.print(text);
 		}
-	}
-	
-	private static int getDivisionByTeamId(Integer[][] divisions, int teamId) {
-		int division = 0;
-		for (Integer[] div : divisions) {
-			for (Integer team : div) {
-				if (teamId == team) {
-					return division;
-				}
-			}
-			division++;
-		}
-		return 0;
-	}
-	
-	private static MLBPlayer getOneMorePlayerToFillOutLineup(String missingPosition, HashMap<Integer, MLBPlayer> battingStatsSortedByStatMap,
-		ArrayList<Integer> playersInLineupList, boolean useFieldingStats) {
-			// Currently limited to looking for outfielder
-			MLBPlayer player = null;
-			boolean playedOutfield = false;
-			for (Map.Entry<Integer, MLBPlayer> mapElement : battingStatsSortedByStatMap.entrySet()) {
-				playedOutfield = false;
-				player = null;
-				if (useFieldingStats) {
-					ArrayList<MLBFieldingStats> playerFieldingStatsList = mapElement.getValue().getMlbFieldingStats();
-					if (playerFieldingStatsList == null) {
-						continue;
-					}
-					for (MLBFieldingStats playerFieldingStats : playerFieldingStatsList) {
-						if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(playerFieldingStats.getPosition()) && !playersInLineupList.contains(mapElement.getKey())) {
-							player = mapElement.getValue();
-							playedOutfield = true;
-							break;
-						}
-					}
-				}
-				else {
-					if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(mapElement.getValue().getPrimaryPosition()) && !playersInLineupList.contains(mapElement.getKey())) {
-						player = mapElement.getValue();
-						playedOutfield = true;
-						break;
-					}
-				}
-				if (player != null) {
-					break;
-				}
-			}
-			if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(missingPosition) && playedOutfield) {
-				return player;
-			}
-			return null;
-		}
-	
-	private static ArrayList<String> getMissingPositionFromLineup(ArrayList<String> positionsUsed) {
-		// Get missing position (Not including P or DH)
-		ArrayList<String> positionsList = new ArrayList<>(positions.values());
-		positionsList.removeAll(positionsUsed);
-		positionsList.remove("P");
-		positionsList.remove("DH");
-		return positionsList;
 	}
 }
