@@ -348,20 +348,13 @@ public class DAO {
 		return allPitchersMap;
 	}
 	
-	public static HashMap<Integer, Integer> getBattersOnMultipleTeamsByPrimaryTeam(int[] years) { // change years to year
+	public static HashMap<Integer, Integer> getBattersOnMultipleTeamsByPrimaryTeam(int year) {
 		HashMap<Integer, Integer> battersMap = new HashMap<>();
 		try {
 			Statement stmt = conn.createStatement();
-			String yearsString = "";
-			for (int y = 0; y < years.length; y++) {
-				yearsString += years[y];
-				if (y < (years.length - 1) ) {
-					yearsString += ",";
-				}
-			}
 			String sql = "SELECT MLB_PLAYER_ID, MLB_TEAM_ID, PLATE_APPEARANCES FROM MLB_BATTING_STATS WHERE MLB_PLAYER_ID IN (SELECT MLB_PLAYER_ID FROM " + 
-				"MLB_BATTING_STATS WHERE YEAR IN (" + yearsString + ") GROUP BY MLB_PLAYER_ID HAVING COUNT(*) > 1) AND YEAR IN (" + yearsString + ") " +
-				"ORDER BY MLB_PLAYER_ID, PLATE_APPEARANCES DESC";
+				"MLB_BATTING_STATS WHERE YEAR = " + year + " GROUP BY MLB_PLAYER_ID HAVING COUNT(*) > 1) AND YEAR = " + year +
+				" ORDER BY MLB_PLAYER_ID, PLATE_APPEARANCES DESC";
 			ResultSet rs = stmt.executeQuery(sql);
 			Integer prevMlbPlayerId = null;
 			while (rs.next()) {
@@ -377,20 +370,13 @@ public class DAO {
 		return battersMap;
 	}
 	
-	public static HashMap<Integer, Integer> getPitchersOnMultipleTeamsByPrimaryTeam(int[] years) {
+	public static HashMap<Integer, Integer> getPitchersOnMultipleTeamsByPrimaryTeam(int year) {
 		HashMap<Integer, Integer> pitchersMap = new HashMap<>();
 		try {
 			Statement stmt = conn.createStatement();
-			String yearsString = "";
-			for (int y = 0; y < years.length; y++) {
-				yearsString += years[y];
-				if (y < (years.length - 1) ) {
-					yearsString += ",";
-				}
-			}
 			String sql = "SELECT MLB_PLAYER_ID, MLB_TEAM_ID, BATTERS_FACED FROM MLB_PITCHING_STATS WHERE MLB_PLAYER_ID IN (SELECT MLB_PLAYER_ID FROM " + 
-				"MLB_PITCHING_STATS WHERE YEAR IN (" + yearsString + ") GROUP BY MLB_PLAYER_ID HAVING COUNT(*) > 1) AND YEAR IN (" + yearsString + ") " +
-				"ORDER BY MLB_PLAYER_ID, BATTERS_FACED DESC";
+				"MLB_PITCHING_STATS WHERE YEAR = " + year + " GROUP BY MLB_PLAYER_ID HAVING COUNT(*) > 1) AND YEAR = " + year +
+				" ORDER BY MLB_PLAYER_ID, BATTERS_FACED DESC";
 			ResultSet rs = stmt.executeQuery(sql);
 			Integer prevMlbPlayerId = null;
 			while (rs.next()) {

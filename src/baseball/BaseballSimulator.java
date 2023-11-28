@@ -47,8 +47,8 @@ public class BaseballSimulator {
 	static boolean useDH = true;
 	static HashMap<Integer, MLBPlayer> seasonPitchingStats = new HashMap<>();
 	static HashMap<Integer, MLBPlayer> seasonBattingStats = new HashMap<>();
-	static HashMap<Integer, Integer> battersOnMultTeams;
-	static HashMap<Integer, Integer> pitchersOnMultTeams;
+	static List<HashMap<Integer, Integer>> battersOnMultTeams = new ArrayList<>();
+	static List<HashMap<Integer, Integer>> pitchersOnMultTeams = new ArrayList<>();
 	static HashMap<String, Integer> disabledList = new HashMap<>();
 	static String visTeamImportFile = null;
 	static String homeTeamImportFile = null;
@@ -154,7 +154,7 @@ public class BaseballSimulator {
 			ArrayList<Integer> teamSched = new ArrayList<>();
 			teamSched.add(new Integer(teams[0].getTeamId()));
 			seasonSched.put(teams[1].getTeamId(), teamSched); // Schedule with one game
-		}
+		} // GAME SIM or AUTO
 		else if (args[0].equalsIgnoreCase("SEASON")) { // Season sim mode
 			simulationMode = true;
 			seasonSimulationMode = true;
@@ -178,7 +178,6 @@ public class BaseballSimulator {
 			tournamentMode = true;
 	        List<TournamentTeam> seededTournamentTeams = importTournamentTeamsFromFile(args[1]);
 	        if (seededTournamentTeams != null) {
-	        	years[0] = 1927; years[1] = 1998; // TEMP
 	        	List<TournamentTeam> alSeededTournamentTeams = new ArrayList<TournamentTeam>();
 	        	List<TournamentTeam> nlSeededTournamentTeams = new ArrayList<TournamentTeam>();
 	        	seededTournamentTeams.stream().filter(entry -> entry.getMlbTeam().getLeague().equals("AL")).forEach(entry -> alSeededTournamentTeams.add(entry));
@@ -187,16 +186,16 @@ public class BaseballSimulator {
 		        	System.out.println("Only support tournaments with 6 AL and 6 NL teams!"); // 12 (6 AL/6 NL) is size of current number of playoff teams
 		        	return;
 		        }
-	        	battersOnMultTeams = DAO.getBattersOnMultipleTeamsByPrimaryTeam(years);   // move to playTournamentGames
-	        	pitchersOnMultTeams = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years); // move to playTournamentGames
 	        	seriesBoxScores = new BoxScore[seriesLength][2];
 	        	playTournamentGames(0, alSeededTournamentTeams, nlSeededTournamentTeams, false);
 			}
 	        return;
 		} // End parameter processing
 		
-		battersOnMultTeams = DAO.getBattersOnMultipleTeamsByPrimaryTeam(years);   // change to array and 1 year
-		pitchersOnMultTeams = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years); // change to array and 1 year
+		for (int t = 0; t < 2; t++) {
+			battersOnMultTeams.add(DAO.getBattersOnMultipleTeamsByPrimaryTeam(years[t])); 
+			pitchersOnMultTeams.add(DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years[t]));
+		}
 		seriesBoxScores = new BoxScore[seriesLength][2];
 		for (Map.Entry<Integer, ArrayList<Integer>> team : seasonSched.entrySet()) { // home teams
 			for (Integer opp : team.getValue()) { // away teams
@@ -789,10 +788,12 @@ public class BaseballSimulator {
 						seasonSimulationPlayoffsMode = mlbPlayoffs;
 						tournamentMode = !mlbPlayoffs;
 						seriesBoxScores = new BoxScore[seriesMax][2];
-						/*for (int y = 0; y < 2; y++) {
-							battersOnMultTeams[0] = DAO.getBattersOnMultipleTeamsByPrimaryTeam(y);
-				            pitchersOnMultTeams[0] = DAO.getPitchersOnMultipleTeamsByPrimaryTeam(y);
-						}*/
+						if (!mlbPlayoffs) {  // Already have multiple players
+							for (int t = 0; t < 2; t++) {
+								battersOnMultTeams.add(DAO.getBattersOnMultipleTeamsByPrimaryTeam(tournamentYears[t]));
+								pitchersOnMultTeams.add(DAO.getPitchersOnMultipleTeamsByPrimaryTeam(tournamentYears[t]));
+							}
+						}
 						setUpDataAndPlayGames(tournamentMlbTeams, tournamentYears, seriesMax, true, tournamentSeriesStats, null, null, null, null, 1, true);
 						System.out.println();
 						int seriesLength = 0;
@@ -818,6 +819,12 @@ public class BaseballSimulator {
 							tournamentSeriesWinsMap.get(tournamentTeams[1].getYear() + " " + tournamentTeams[1].getMlbTeam().getFullTeamName()) ? 0 : 1;
 						System.out.println((tournamentMode ? tournamentTeams[winner].getYear() + " " : "" ) + tournamentTeams[winner].getMlbTeam().getFullTeamName() + 
 							" over " + (tournamentMode ? tournamentTeams[winner == 1 ? 0 : 1].getYear() + " " : "" ) + tournamentTeams[winner == 1 ? 0 : 1].getMlbTeam().getFullTeamName() + " in " + seriesLength + "\n");
+						
+						if (round == 3) {
+							System.out.println("Final Round Stats");
+							outputSeriesResults(7, tournamentSeriesStats, true);
+						}
+						
 						int winningSeed = 0;
 						ArrayList<Integer> tournamentWinnersBySeed;
 						for (TournamentTeam winningPlayoffTeam : seededTournamentTeams) {
@@ -839,7 +846,7 @@ public class BaseballSimulator {
 						}
 					}
 					else { // Before 2022
-			
+						System.out.println("Don't currently support post season before 2022");
 					}
 				}
 			}
@@ -1776,7 +1783,7 @@ public class BaseballSimulator {
 				for (Map.Entry<Integer, MLBPlayer> sortedPlayer : battingStatsSortedByStatMap.entrySet()) {
 					player = sortedPlayer.getValue();
 					// Skip players who were primarily on another team
-					if (battersOnMultTeams.containsKey(player.getMlbPlayerId()) && teams[t].getTeamId() != battersOnMultTeams.get(player.getMlbPlayerId())) {
+					if (battersOnMultTeams.get(t).containsKey(player.getMlbPlayerId()) && teams[t].getTeamId() != battersOnMultTeams.get(t).get(player.getMlbPlayerId())) {
 						index++;
 						continue;
 					}
@@ -1845,7 +1852,7 @@ public class BaseballSimulator {
 			}
 			//batters.get(t).add(new ArrayList<MLBPlayer>()); // For DH/P in 9
 			if (useDH && !positionsUsed.contains("DH")) { // Set DH at ninth if no DH already set
-				player =  getMlbPlayerWithMostPlateAppearances(teams[t].getTeamId(), years[t], playersInLineupList, t, battersOnMultTeams);
+				player =  getMlbPlayerWithMostPlateAppearances(teams[t].getTeamId(), years[t], playersInLineupList, t, battersOnMultTeams.get(t));
 				player.setPrimaryPosition("DH");
 				batters.get(t).get(8).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), player.getPrimaryPosition(), player.getArmThrows(), player.getBats(), player.getJerseyNumber()));
 			}
@@ -2983,7 +2990,8 @@ public class BaseballSimulator {
 			for (Map.Entry<Integer, MLBPlayer> rosterEntry : rosters[top].getPitchers().entrySet()) {
 				// Skip pitchers that have been used and starters if you are looking for a mid reliever
 				if (excludingPitchers.contains(rosterEntry.getKey()) ||
-				   (pitchersOnMultTeams.containsKey(rosterEntry.getKey()) && boxScores[top].getTeam().getTeamId() != pitchersOnMultTeams.get(rosterEntry.getKey())) ||
+				   (pitchersOnMultTeams.get(top).containsKey(rosterEntry.getKey()) && 
+					boxScores[top].getTeam().getTeamId() != pitchersOnMultTeams.get(top).get(rosterEntry.getKey())) ||
 				   (sortBy.equalsIgnoreCase("IP") && rosterEntry.getValue().getMlbPitchingStats().getPitchingStats().getGamesStarted() > 10)) {
 						continue;
 				}
