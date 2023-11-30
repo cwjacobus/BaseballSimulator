@@ -55,6 +55,12 @@ public class BaseballSimulator {
 	static String importDir = "C:\\Users\\cjaco\\Documents\\Sports\\BBSim\\";
 
 	public static void main(String[] args) {
+		// Param examples
+		// TOURNAMENT All_Time_Tournament.txt
+		// SEASON 2023
+		// 1978 NYY 1996 NYY SIM 7
+		// 1978 NYY 1996 NYY AUTO 8
+		// 1978 NYY 2022 HOU SIM 1 V 1978NYY.txt H 2022HOU.txt
 		int seriesLength = 1;
 		int seasonSimYear = 0;
 		boolean bestOfSeries = false;
@@ -246,6 +252,16 @@ public class BaseballSimulator {
 		}
 	}
 	
+	private static void closeFileReader(BufferedReader reader) {
+		try {
+			if (reader != null) {
+				reader.close();
+			}
+		}
+		catch (IOException e) {	
+		}
+	}
+	
 	private static void createSchedule(Integer schedYear, Map<Integer, ArrayList<Integer>> seasonSched) {
 		int division = 0;
 		for (MLBTeam team : allMlbTeamsList) { // 8 4 3 2 
@@ -361,12 +377,16 @@ public class BaseballSimulator {
 					return false;
 				}
 				lineupBatters.set(0, boxScores[0].getBatters());
+				importedPitchers[0] = gameState.getCurrentPitchers()[0];
+				importedLineup = true;
 			}
 			if (homeTeamImportFile != null) {
 				if (!handleImportLineupCommand("IMPORT h " + homeTeamImportFile, true)) {
 					return false;
 				}
 				lineupBatters.set(1, boxScores[1].getBatters());
+				importedPitchers[1] = gameState.getCurrentPitchers()[1];
+				importedLineup = true;
 			}
 		}
 		Map<String, Integer> boSeriesWins  = new HashMap<String, Integer>() {
@@ -388,7 +408,7 @@ public class BaseballSimulator {
 				boxScores[t].setTeam(teams[t]);
 				clearPlayerGameData(boxScores[t]);
 				MLBPlayer startingPitcher;
-				if (s == 0 && importedLineup && importedPitchers[t] != null) {
+				if (s == 0 && seriesLength == 1 && importedLineup && importedPitchers[t] != null) {  // Dont use imported pitcher for series
 					startingPitcher = importedPitchers[t];	
 				}
 				else {
@@ -2675,18 +2695,19 @@ public class BaseballSimulator {
 		}
 	}
 	
+	@SuppressWarnings("resource")
 	private static List<TournamentTeam> importTournamentTeamsFromFile(String importFile) {
-		List<TournamentTeam> tournamentTeams = new ArrayList<TournamentTeam>();
-		
+			List<TournamentTeam> tournamentTeams = new ArrayList<TournamentTeam>();
 		String[] lineArray = {"", ""};
+		BufferedReader reader = null;
 		try {
-			@SuppressWarnings("resource")
-			BufferedReader reader = new BufferedReader(new FileReader(importDir + importFile));
+			reader = new BufferedReader(new FileReader(importDir + importFile));
 			String line = reader.readLine();
 			while (line != null) {
 				lineArray = line.split(" ");
 				if (lineArray.length != 2) {
 					System.out.println("Invalid Tournament Team input line: " + line);
+					closeFileReader(reader);
 					return null;
 				}
 				MLBTeam matchingTeam = null;
@@ -2700,6 +2721,7 @@ public class BaseballSimulator {
 				}
 				if (matchingTeam == null) {
 					System.out.println("No MLB Team matching: " + lineArray[0] + " " + lineArray[1]);
+					closeFileReader(reader);
 					return null;
 				}
 				TournamentTeam tTeam = new TournamentTeam(ttYear, matchingTeam);
@@ -2709,15 +2731,21 @@ public class BaseballSimulator {
 		}
 		catch (IOException e) {
 			System.out.println("Lineup file " + importFile + " not found.  Import failed!");
+			closeFileReader(reader);
 			return null;
 		}
 		catch (NumberFormatException e) {
 			System.out.println("Invalid year: " + lineArray[0]);
+			closeFileReader(reader);
 			return null;
+		}
+		finally {
+			closeFileReader(reader);
 		}
 		return tournamentTeams;
 	}
 	
+	@SuppressWarnings("resource")
     private static boolean handleImportLineupCommand(String command, boolean fromIncompleteLineup) {
     	String[] commandArray = command.split(" ");
 		if (commandArray.length < 3) {
@@ -2730,9 +2758,9 @@ public class BaseballSimulator {
 		}
 		int top = commandArray[1].equalsIgnoreCase("HOME") || commandArray[1].equalsIgnoreCase("H") || commandArray[1].equals("1") ? 1 : 0;
 		String lineupFileName = commandArray[2];
+		BufferedReader reader = null;
 		try {
-			@SuppressWarnings("resource")
-			BufferedReader reader = new BufferedReader(new FileReader(importDir + lineupFileName));
+			reader = new BufferedReader(new FileReader(importDir + lineupFileName));
 			String line = reader.readLine();
 			String id = null;
 			String lineupPos = null;
@@ -2768,19 +2796,23 @@ public class BaseballSimulator {
 				}
 				catch (NumberFormatException e) {
 					System.out.println("Invalid player ID: " + id + ".  Import failed!");
+					closeFileReader(reader);
 					return false;
 				}
 				if (player == null) {
 					System.out.println("Player " + id + " not found.  Import failed!");
+					closeFileReader(reader);
 					return false;
 				}
 				if (!positions.containsValue(lineupPos)) {
 					System.out.println("Position: " + lineupPos + " not valid.  Import failed!");
+					closeFileReader(reader);
 					return false;
 					
 				}
 				if (positionsUsed.contains(lineupPos) && lineupCount != 10) {
 					System.out.println("Position: " + lineupPos + " is already used.  Import failed!");
+					closeFileReader(reader);
 					return false;
 				}
 				if (lineupCount < 10) {
@@ -2822,12 +2854,14 @@ public class BaseballSimulator {
 			boxScores[top].getPitchers().put(importPitcher.getMlbPlayerId(), importPitcher);
 			gameState.setCurrentPitcher(importPitcher, top);
 			System.out.println("\nLineup imported for: " + boxScores[top].getTeamAndYearDisplay() + "\n");
-			reader.close();
 		}
 		catch (IOException e) {
 			System.out.println("Lineup file " + lineupFileName + " not found.  Import failed!");
 			return false;
-		}	
+		}
+		finally {
+			closeFileReader(reader);
+		}
 		return fromIncompleteLineup ? true : false;
     }
     
