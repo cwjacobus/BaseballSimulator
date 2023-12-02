@@ -55,12 +55,14 @@ public class BaseballSimulator {
 	static String importDir = "C:\\Users\\cjaco\\Documents\\Sports\\BBSim\\";
 
 	public static void main(String[] args) {
-		// Param examples
+		// Argument examples
 		// TOURNAMENT All_Time_Tournament.txt
 		// SEASON 2023
 		// 1978 NYY 1996 NYY SIM 7
+		// 1978 NYY 2022 HOU SIM 7 V 1978NYY.txt H 2022HOU.txt
 		// 1978 NYY 1996 NYY AUTO 8
-		// 1978 NYY 2022 HOU SIM 1 V 1978NYY.txt H 2022HOU.txt
+		// 1978 NYY 2022 HOU GAME
+		// 1978 NYY 2022 HOU GAME V 1978NYY.txt H 2022HOU.txt
 		int seriesLength = 1;
 		int seasonSimYear = 0;
 		boolean bestOfSeries = false;
@@ -112,22 +114,6 @@ public class BaseballSimulator {
 						seriesLength = Integer.parseInt(args[5]);
 					}
 				}
-				if (args.length > 6 && args[6] != null) {
-					if (args[6].equalsIgnoreCase("V") && args.length > 7 && args[7] != null) {
-						visTeamImportFile = args[7];
-					}
-					else if (args[6].equalsIgnoreCase("H") && args.length > 7 && args[7] != null) {
-						homeTeamImportFile = args[7];
-					}
-				}
-				if (args.length > 8 && args[8] != null) {
-					if (args[8].equalsIgnoreCase("V") && args.length > 9 && args[9] != null) {
-						visTeamImportFile = args[9];
-					}
-					else if (args[8].equalsIgnoreCase("H") && args.length > 9 && args[9] != null) {
-						homeTeamImportFile =  args[9];
-					}
-				}
 			}
 			else if (args[4].equalsIgnoreCase("AUTO")) {
 				simulationMode = false;
@@ -142,6 +128,26 @@ public class BaseballSimulator {
 					}
 				}
 			}
+			// Get import file names from arguments
+			int fileNameArgOrder1 = args[4].equalsIgnoreCase("SIM") ? 7 : 6;  // arg order diff for SIM v GAME/AUTO
+			int fileNameArgOrder2 = args[4].equalsIgnoreCase("SIM") ? 9 : 8;
+			if (args.length > fileNameArgOrder1 - 1 && args[fileNameArgOrder1 - 1] != null) {
+				if (args[fileNameArgOrder1 - 1].equalsIgnoreCase("V") && args.length > fileNameArgOrder1 && args[fileNameArgOrder1] != null) {
+					visTeamImportFile = args[fileNameArgOrder1];
+				}
+				else if (args[fileNameArgOrder1 - 1].equalsIgnoreCase("H") && args.length > fileNameArgOrder1 && args[fileNameArgOrder1] != null) {
+					homeTeamImportFile = args[fileNameArgOrder1];
+				}
+			}
+			if (args.length > fileNameArgOrder2 - 1 && args[fileNameArgOrder2 - 1] != null) {
+				if (args[fileNameArgOrder2 - 1].equalsIgnoreCase("V") && args.length > fileNameArgOrder2 && args[fileNameArgOrder2] != null) {
+					visTeamImportFile = args[fileNameArgOrder2];
+				}
+				else if (args[fileNameArgOrder2 - 1].equalsIgnoreCase("H") && args.length > fileNameArgOrder2 && args[fileNameArgOrder2] != null) {
+					homeTeamImportFile =  args[fileNameArgOrder2];
+				}
+			}
+			
 			String[] teamNames = {args[1].toUpperCase(), args[3].toUpperCase()};
 			years[0] = Integer.parseInt(args[0]);
 			years[1] = Integer.parseInt(args[2]);
@@ -363,14 +369,18 @@ public class BaseballSimulator {
 			lineupBatters = setOptimalBattingLineup(teams, years);
 			boxScores[0].setBatters(lineupBatters.get(0));
 			boxScores[1].setBatters(lineupBatters.get(1));
-			boolean incompleteLineups = areLineupsIncomplete(lineupBatters);
-			while (incompleteLineups) {
+			if (areLineupsIncomplete(lineupBatters)) {
+				System.out.println("INCOMPLETE LINEUPS! RERUN WITH IMPORTED LINEUP FILES");
+				return false;
+			}
+			
+			/*while (incompleteLineups) {
 				handleIncompleteLineup();
 				lineupBatters.set(0, boxScores[0].getBatters());
 				lineupBatters.set(1, boxScores[1].getBatters());
 				importedLineup = true;
 				incompleteLineups = areLineupsIncomplete(lineupBatters);
-			}
+			} */
 		}
 		else { // imported lineups
 			if (visTeamImportFile != null) {
@@ -380,7 +390,6 @@ public class BaseballSimulator {
 					return false;
 				}
 				lineupBatters.set(0, boxScores[0].getBatters());
-				importedLineup = true;
 			}
 			if (homeTeamImportFile != null) {
 				lineupBatters.add(new ArrayList<>());
@@ -389,7 +398,6 @@ public class BaseballSimulator {
 					return false;
 				}
 				lineupBatters.set(1, boxScores[1].getBatters());
-				importedLineup = true;
 			}
 		}
 		Map<String, Integer> boSeriesWins  = new HashMap<String, Integer>() {
@@ -2603,9 +2611,10 @@ public class BaseballSimulator {
 			System.out.println("Pinch running at " + base + " : " + pinchRunner.getFirstLastName() + "\n");
 			return false;
 		} // End SUBR
-		else if (command.toUpperCase().indexOf("IMPORT") != -1) {
+		/*else if (command.toUpperCase().indexOf("IMPORT") != -1) {
 			return handleImportLineupCommand(command, false, null); // TODO: set importedPitcherRotation
 		} // End IMPORT
+		*/
 		else {  // Commands without parameters
 			switch (command) {
 				case "SIM":
@@ -2899,7 +2908,7 @@ public class BaseballSimulator {
 		System.out.println();
 		return false; 
     }
-    
+    /*
     private static void handleIncompleteLineup() {
     Scanner myObj;
 		while(true) {
@@ -2921,7 +2930,7 @@ public class BaseballSimulator {
 			}
 		}
 		myObj.close();
-    }
+    } */
     
     private static boolean areLineupsIncomplete(ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineups) {
     	for (int top = 0; top < 2; top++) {
