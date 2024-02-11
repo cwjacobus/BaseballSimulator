@@ -1132,6 +1132,7 @@ public class BaseballSimulator {
 							printlnToScreen("WALKOFF ");
 							break;
 						}
+						boxScore.incrementBaseRunners();
 					}
 					currentPitcherGameStats.incrementBattersFaced();
 					currentBatterGameStats.incrementPlateAppearances();
@@ -1173,7 +1174,14 @@ public class BaseballSimulator {
 				" " + boxScores[0].getFinalScore() + " at " + boxScores[1].getTeam().getFullTeamName() + " " + boxScores[1].getFinalScore());
 			MLBPlayer visStarter = boxScores[0].getPitchers().entrySet().iterator().next().getValue();
 			MLBPlayer homeStarter = boxScores[1].getPitchers().entrySet().iterator().next().getValue();
-			System.out.println(" ("  + visStarter.getFullName() + " v " + homeStarter.getFullName() + ")");
+			String specialGame = "";
+			if (boxScores[0].getHits() == 0 || boxScores[1].getHits() == 0) {
+				 specialGame = "NO HITTER!";
+			}
+			if (boxScores[0].getBaseRunners() == 0 || boxScores[1].getBaseRunners() == 0) {
+				 specialGame = "PERFECT GAME!";
+			}
+			System.out.println(" ("  + visStarter.getFullName() + " v " + homeStarter.getFullName() + ") " + specialGame);
 		}
 		 
 	  /*JSONObject bsJSON = new JSONObject(boxScores[0]);

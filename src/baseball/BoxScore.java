@@ -10,6 +10,7 @@ public class BoxScore {
 	public static final int NUM_OF_PLAYERS_IN_LINEUP = 9;
 	int hits = 0;
 	int errors = 0;
+	int baseRunners = 0;
 	int[] runsScored = new int[50];
 	boolean walkOff = false;
 	ArrayList<ArrayList<MLBPlayer>> batters = new ArrayList<ArrayList<MLBPlayer>>();
@@ -113,5 +114,17 @@ public class BoxScore {
 	
 	public String toString() {
 		return getTeamAndYearDisplay() + " " + getFinalScore();
+	}
+	
+	public int getBaseRunners() {
+		return baseRunners;
+	}
+
+	public void setBaseRunners(int baseRunners) {
+		this.baseRunners = baseRunners;
+	}
+	
+	public void incrementBaseRunners() {
+		this.baseRunners++;
 	}
 }
