@@ -183,8 +183,9 @@ public class DAO {
 		return allTeams;
 	}
 	
-	public static MLBPlayer getMLBPlayerFromMLBPlayerIdAndYear(Integer mlbPlayerId, Integer year, boolean pitchers) {
+	public static MLBPlayer getMLBBatterFromMLBPlayerIdAndYear(Integer mlbPlayerId, Integer year) {
 		MLBPlayer player = null;
+		// TBD doesn't need the sums
 		try {
 			Statement stmt = conn.createStatement();
 			String sql = "SELECT MLB_TEAM_ID, FULL_NAME, PRIMARY_POSITION, ARM_THROWS, BATS, JERSEY_NUMBER, ";
@@ -197,6 +198,31 @@ public class DAO {
 				player = new MLBPlayer(mlbPlayerId, rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
 				player.setMlbBattingStats(new MLBBattingStats(mlbPlayerId, rs.getInt("MLB_TEAM_ID"),  year, new BattingStats(rs.getInt("SUM_AB"), rs.getInt("SUM_H"), rs.getInt("SUM_D"), rs.getInt("SUM_T"), 
 					rs.getInt("SUM_HR"), rs.getInt("SUM_BB"), rs.getInt("SUM_K"), rs.getInt("SUM_HBP"), rs.getInt("SUM_R"), rs.getInt("SUM_RBI"), rs.getInt("SUM_SB"), rs.getInt("SUM_PA"), rs.getInt("SUM_CS"))));
+			}	
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return player;
+	}
+	
+	public static MLBPlayer getMLBPitcherFromMLBPlayerIdAndYear(Integer mlbPlayerId, Integer year) {
+		MLBPlayer player = null;
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "SELECT MLB_TEAM_ID, FULL_NAME, PRIMARY_POSITION, ARM_THROWS, BATS, JERSEY_NUMBER, ";
+			sql += "SUM(INNINGS_PITCHED) AS SUM_IP, SUM(WALKS) AS SUM_BB, SUM(STRIKEOUTS) AS SUM_K, SUM(RUNS_ALLOWED) AS SUM_RA, ";
+			sql += "SUM(EARNED_RUNS_ALLOWED) AS SUM_ERA, SUM(HOME_RUNS_ALLOWED) AS SUM_HRA, SUM(STOLEN_BASES_ALLOWED) AS SUM_SBA, SUM(HIT_BATTERS) AS SUM_HB, ";
+			sql += "SUM(STOLEN_BASES_ALLOWED) AS SUM_SBA, SUM(HIT_BATTERS) AS SUM_HB, SUM(HITS_ALLOWED) AS SUM_HA, SUM(HOLDS) AS SUM_H, SUM(SAVES) AS SUM_S, ";
+			sql += "SUM(BLOWN_SAVES) AS SUM_BS, SUM(GAMES_STARTED) AS SUM_GS, SUM(BALKS) AS SUM_B, SUM(WILD_PITCHES) AS SUM_WP, SUM(SAC_FLIES) AS SUM_SF, ";
+			sql += "SUM(BATTERS_FACED) AS SUM_BF, SUM(WINS) AS SUM_W, SUM(LOSSES) AS SUM_L ";
+			sql += "FROM MLB_PLAYER P, MLB_PITCHING_STATS BS WHERE P.MLB_PLAYER_ID = BS.MLB_PLAYER_ID AND BS.MLB_PLAYER_ID = " + mlbPlayerId + " AND YEAR = " + year;
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				player = new MLBPlayer(mlbPlayerId, rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
+				player.setMlbPitchingStats(new MLBPitchingStats(mlbPlayerId, rs.getInt("MLB_TEAM_ID"), year, new PitchingStats(rs.getDouble("SUM_IP"), rs.getInt("SUM_ERA"), rs.getInt("SUM_RA"), 
+					rs.getInt("SUM_BB"), rs.getInt("SUM_K"), rs.getInt("SUM_HRA"), rs.getInt("SUM_SBA"), rs.getInt("SUM_HB"), rs.getInt("SUM_HA"), rs.getInt("SUM_H"), rs.getInt("SUM_S"), 
+					rs.getInt("SUM_BS"), rs.getInt("SUM_GS"), rs.getInt("SUM_B"), rs.getInt("SUM_WP"), rs.getInt("SUM_SF"), rs.getInt("SUM_BF"), rs.getInt("SUM_W"), rs.getInt("SUM_L"))));
 			}	
 		}
 		catch (SQLException e) {

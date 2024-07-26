@@ -248,13 +248,13 @@ ps.HOLDS as holds, ps.SAVES as s, ps.BLOWN_SAVES as bs, ps.GAMES_STARTED as gs, 
 from mlb_player p, mlb_pitching_stats ps, mlb_team t 
 where p.mlb_player_id = ps.mlb_player_id and p.full_name like '%Sadecki%' and (ps.MLB_TEAM_ID = t.TEAM_ID and t.first_year_played <= ps.year and (t.last_year_played >= ps.year or t.last_year_played is null)) order by ps.year;
 
-// Get batters who played on more than 1 team in a year
+// Get batters who played on more than 1 team in a given year
 select p.full_name as name, t.short_name as team, p.primary_position as pos, bs.AT_BATS as ab, bs.HITS as h, bs.HITS/bs.AT_BATS as avg, bs.DOUBLES as d, bs.TRIPLES as t, bs.HOME_RUNS as hr, bs.WALKS as bb, 
 bs.STRIKEOUTS as k, bs.HIT_BY_PITCH as hbp, bs.RUNS as r, bs.RBIS as rbi, bs.STOLEN_BASES as sb, bs.PLATE_APPEARANCES as pa from mlb_batting_stats bs, mlb_player p, mlb_team t where 
 p.mlb_player_id = bs.mlb_player_id and year=2023 and (bs.MLB_TEAM_ID = t.TEAM_ID and t.first_year_played <= bs.year and (t.last_year_played >= bs.year or t.last_year_played is null)) and
 bs.mlb_player_id in (select mlb_player_id from mlb_batting_stats where year=2023 group by mlb_player_id having count(*) > 1);
 
-// Get pitchers who played on more than 1 team in a year
+// Get pitchers who played on more than 1 team in a given year
 select p.full_name as name, t.short_name as team, p.primary_position as pos, ps.INNINGS_PITCHED as ip, ps.WALKS as bb, ps.STRIKEOUTS as k, ps.RUNS_ALLOWED as r, ps.EARNED_RUNS_ALLOWED as er, 
 ps.EARNED_RUNS_ALLOWED*9/ps.INNINGS_PITCHED as era, ps.HOME_RUNS_ALLOWED as hr, ps.STOLEN_BASES_ALLOWED as sb, ps.HIT_BATTERS as hb, ps.HITS_ALLOWED as h, ps.HOLDS as holds, ps.SAVES as s, 
 ps.BLOWN_SAVES as bs, ps.GAMES_STARTED as gs, ps.BALKS as bk, ps.WILD_PITCHES as wp, ps.SAC_FLIES as sf, ps.BATTERS_FACED as bf, ps.WINS as w, ps.LOSSES as l 
@@ -277,6 +277,11 @@ ps.HOLDS as holds, ps.SAVES as s, ps.BLOWN_SAVES as bs, ps.GAMES_STARTED as gs, 
 from mlb_player p, mlb_pitching_stats ps, mlb_team t where p.mlb_player_id = ps.mlb_player_id and t.short_name= 'NYY' and ps.year=1964 and
 (ps.MLB_TEAM_ID = t.TEAM_ID and t.first_year_played <= ps.year and (t.last_year_played >= ps.year or t.last_year_played is null))
 order by ps.INNINGS_PITCHED desc;
+
+// Get HR leaders for a given year by league
+select p.full_name as name, p.primary_position as pos, t.full_name as team, t.league as league, bs.HOME_RUNS from mlb_player p, mlb_batting_stats bs, mlb_team t 
+where p.mlb_player_id = bs.mlb_player_id and (bs.MLB_TEAM_ID = t.TEAM_ID and t.first_year_played <= bs.year and (t.last_year_played >= bs.year or t.last_year_played is null)) and 
+bs.year=2023 and bs.HOME_RUNS > 30 order by t.league, bs.HOME_RUNS desc;
 
 // Ohtani pitching 2018-2023
 INSERT IGNORE INTO MLB_PITCHING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, INNINGS_PITCHED, WALKS, STRIKEOUTS, RUNS_ALLOWED, EARNED_RUNS_ALLOWED, 

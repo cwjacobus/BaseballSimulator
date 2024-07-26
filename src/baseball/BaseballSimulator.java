@@ -34,6 +34,7 @@ public class BaseballSimulator {
 	static boolean seasonSimulationMode = false;
 	static boolean seasonSimulationPlayoffsMode = false;
 	static boolean tournamentMode = false;
+	static boolean allStarGameMode = false;
 	static int autoBeforeInning = 1000;
 	static GameState gameState = new GameState();
 	static BoxScore[] boxScores = new BoxScore[2];
@@ -61,6 +62,7 @@ public class BaseballSimulator {
 		// SEASON 2023
 		// 1978 NYY 1996 NYY SIM 7
 		// 1978 NYY 2022 HOU SIM 7 V 1978NYY.txt H 2022HOU.txt
+		// 1978 AAS 1978 NAS SIM 1 V 1978_AL_Allstars.txt H 1978_NL_Allstars.txt
 		// 1978 NYY 1996 NYY AUTO 8
 		// 1978 NYY 2022 HOU GAME
 		// 1978 NYY 2022 HOU GAME V 1978NYY.txt H 2022HOU.txt
@@ -130,6 +132,15 @@ public class BaseballSimulator {
 					}
 				}
 			}
+			// Set allStarGameMode
+			if (args[1].equalsIgnoreCase("AAS") || args[1].equalsIgnoreCase("NAS") ||
+				args[3].equalsIgnoreCase("AAS") || args[3].equalsIgnoreCase("NAS")) {
+					allStarGameMode = true;
+					if (args.length < 9) {
+						System.out.println("Rosters must be imported for an all star game");
+						return;
+					}
+			}
 			// Get import file names from arguments
 			int fileNameArgOrder1 = args[4].equalsIgnoreCase("SIM") ? 7 : 6;  // arg order diff for SIM v GAME/AUTO
 			int fileNameArgOrder2 = args[4].equalsIgnoreCase("SIM") ? 9 : 8;
@@ -154,7 +165,24 @@ public class BaseballSimulator {
 			years[0] = Integer.parseInt(args[0]);
 			years[1] = Integer.parseInt(args[2]);
 			for (int t = 0; t < 2; t++) {
-				teams[t] = getTeamByYearAndShortName(years[t], teamNames[t], allMlbTeamsList);
+				int index = t == 0 ? 1 : 3;
+				if (args[index].equalsIgnoreCase("AAS") || args[index].equalsIgnoreCase("NAS")) {
+					String aSFullTeamName = "League All Stars";
+					String aSShortTeamName = args[index];
+					String aSLeague;
+					if (args[index].equalsIgnoreCase("AAS")) {
+						aSFullTeamName = "American " + aSFullTeamName;
+						aSLeague = "AL";
+					}
+					else {
+						aSFullTeamName = "National " + aSFullTeamName;
+						aSLeague = "NL";
+					}
+					teams[t] = new MLBTeam(0, null, aSFullTeamName, aSShortTeamName, aSLeague, null, null);
+				}
+				else {
+					teams[t] = getTeamByYearAndShortName(years[t], teamNames[t], allMlbTeamsList);
+				}
 				if (teams[t] == null) {
 					System.out.println("Invalid team: " + teamNames[t] + " " + years[t]);
 					System.out.println("\nValid teams: ");
@@ -384,15 +412,17 @@ public class BaseballSimulator {
 					rosters[t].getBatters().entrySet().stream().forEach(entry -> entry.getValue().setMlbFieldingStats(fieldingStatsMap.get(entry.getValue().getMlbPlayerId())));
 				}
 			}
-			if (rosters[t].getBatters().size() == 0 || rosters[t].getPitchers().size() == 0) {
+			if ((rosters[t].getBatters().size() == 0 || rosters[t].getPitchers().size() == 0) && !allStarGameMode) {
 				System.out.println("Players for " + years[t] + " " + teams[t].getFullTeamName() + " not found in database.  Import player stats from API.");
 				ArrayList<MLBTeam> teamList = new ArrayList<MLBTeam>();
 				teamList.add(teams[t]);
 				importTeam(years[t], t, teamList);
 			}
-			closers[t] = getPitcher(t, "SV", 0, null);
-			if (years[t] >= 1999) {
-				setupMen[t] = getPitcher(t, "HD", 0, null);
+			if (!allStarGameMode) {
+				closers[t] = getPitcher(t, "SV", 0, null);
+				if (years[t] >= 1999) {
+					setupMen[t] = getPitcher(t, "HD", 0, null);
+				}
 			}
 			seriesStats[t] = new SeriesStats(teams[t], years[t], seriesLength);
 		}
@@ -945,6 +975,7 @@ public class BaseballSimulator {
 					displayTeamName(1, boxScores) + ": " + boxScores[1].getScore(gameState.getInning()) + " ***");
 				boolean gameTiedStartOfAB;
 				Arrays.fill(gameState.getBaseRunners(), new BaseRunner());
+				
 				if (top == 0 && gameState.getInning() == 6) { // Set winning pitcher after 5 innings
 					if (boxScores[0].getScore(gameState.getInning()) > boxScores[1].getScore(gameState.getInning())) {
 						gameState.setPitcherOfRecord("W", gameState.getCurrentPitchers()[0].getMlbPlayerId());
@@ -953,6 +984,14 @@ public class BaseballSimulator {
 						gameState.setPitcherOfRecord("W", gameState.getCurrentPitchers()[1].getMlbPlayerId());
 					}
 				}
+				
+				if (allStarGameMode) {
+					if (top == 0 && gameState.getInning() != 1 && gameState.getInning() % 2 == 1) {
+						printToScreen("ALL STAR GAME PITCHERS MUST BE CHANGED!  INNING: " + gameState.getInning() + "\n");
+					}
+					
+				}
+				
 				while (gameState.getOuts() < OUTS_PER_INNING) {
 					if (gameState.getOuts() == 2 && gameState.getCurrentBasesSituation() != GameState.BASES_EMPTY) {
 						gameState.setHitAndRun(true);  // start runners with 2 outs and runners on
@@ -962,7 +1001,7 @@ public class BaseballSimulator {
 					BattingStats currentBatterGameStats = currentBatter.getMlbBattingStats().getBattingStats();
 					BattingStats currentBatterSeasonStats = getBattersSeasonBattingStats(roster, currentBatter.getMlbPlayerId());
 					PitchingStats currentPitcherGameStats = currentPitcher != null ? currentPitcher.getMlbPitchingStats().getPitchingStats() : null;
-					if (simulationMode || (autoBeforeMode && inning < autoBeforeInning)) {  // Only look to change pitchers in SIM mode
+					if ((simulationMode || (autoBeforeMode && inning < autoBeforeInning)) && !allStarGameMode) {  // Only look to change pitchers in SIM mode and not AS game
 						int pitcherYear = boxScores[top==0?1:0].getYear();
 						ArrayList<Integer> excludingPitchers = new ArrayList<Integer>(boxScores[top==0?1:0].getPitchers().keySet());
 						// No Holds before 1999
@@ -2846,10 +2885,18 @@ public class BaseballSimulator {
 				try {
 					player = getPlayerFromId(Integer.parseInt(id));
 					if (player == null) {
-						System.out.println("Player " + id + " not found in " + boxScores[top].getTeamAndYearDisplay() + " roster.  Checking all players.");
-						player = DAO.getMLBPlayerFromMLBPlayerIdAndYear(Integer.parseInt(id), boxScores[top].getYear(), false);
-						if (player != null) {
-							rosters[top].getBatters().put(player.getMlbPlayerId(), player); // Add player from another team
+						if (!allStarGameMode) {
+							System.out.println("Player " + id + " not found in " + boxScores[top].getTeamAndYearDisplay() + " roster.  Checking all players.");
+						}
+						player = DAO.getMLBBatterFromMLBPlayerIdAndYear(Integer.parseInt(id), boxScores[top].getYear());
+						if (player != null && player.getFullName() != null) {
+							rosters[top].getBatters().put(player.getMlbPlayerId(), player); // Add batter from another team
+						}
+						else {
+							player = DAO.getMLBPitcherFromMLBPlayerIdAndYear(Integer.parseInt(id), boxScores[top].getYear());
+							if (player != null) {
+								rosters[top].getBatters().put(player.getMlbPlayerId(), player); // Add pitcher from another team
+							}
 						}
 					}
 				}
@@ -2882,6 +2929,7 @@ public class BaseballSimulator {
 				else {
 					importedPitcherRotation.get(top).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), lineupPos, 
 						player.getArmThrows(), player.getBats(), player.getJerseyNumber()));
+					rosters[top].getPitchers().put(player.getMlbPlayerId(), player);
 				}
 				if (!(lineupPos.equalsIgnoreCase("P") && positionsUsed.contains("P"))) {
 					positionsUsed.add(lineupPos);
