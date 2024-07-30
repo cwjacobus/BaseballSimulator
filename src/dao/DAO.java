@@ -185,11 +185,10 @@ public class DAO {
 	
 	public static MLBPlayer getMLBBatterFromMLBPlayerIdAndYear(Integer mlbPlayerId, Integer year) {
 		MLBPlayer player = null;
-		// TBD doesn't need the sums
 		try {
 			Statement stmt = conn.createStatement();
 			String sql = "SELECT MLB_TEAM_ID, FULL_NAME, PRIMARY_POSITION, ARM_THROWS, BATS, JERSEY_NUMBER, ";
-			sql += "sum(AT_BATS) AS SUM_AB, SUM(HITS) as SUM_H, SUM(DOUBLES) as SUM_D, SUM(TRIPLES) as SUM_T, SUM(HOME_RUNS) as SUM_HR, ";
+			sql += "SUM(AT_BATS) AS SUM_AB, SUM(HITS) as SUM_H, SUM(DOUBLES) as SUM_D, SUM(TRIPLES) as SUM_T, SUM(HOME_RUNS) as SUM_HR, ";
 			sql += "SUM(WALKS) as SUM_BB, SUM(STRIKEOUTS) as SUM_K, SUM(HIT_BY_PITCH) as SUM_HBP, SUM(RUNS) as SUM_R, SUM(RBIS) as SUM_RBI, SUM(STOLEN_BASES) as SUM_SB, ";
 			sql += "SUM(PLATE_APPEARANCES) as SUM_PA, SUM(CAUGHT_STEALING) as SUM_CS ";
 			sql += "FROM MLB_PLAYER P, MLB_BATTING_STATS BS WHERE P.MLB_PLAYER_ID = BS.MLB_PLAYER_ID AND BS.MLB_PLAYER_ID  = " + mlbPlayerId + " AND YEAR = " + year;

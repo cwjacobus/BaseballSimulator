@@ -431,6 +431,7 @@ public class BaseballSimulator {
 		boolean importedLineup = visTeamImportFile != null || homeTeamImportFile != null;
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = new ArrayList<>();
 		List<List<MLBPlayer>> importedPitcherRotation = new ArrayList<>();
+		List<List<MLBPlayer>> importedAllstarSubs = new ArrayList<>();
 		if (!importedLineup) {
 			lineupBatters = setOptimalBattingLineup(teams, years);
 			boxScores[0].setBatters(lineupBatters.get(0));
@@ -452,7 +453,8 @@ public class BaseballSimulator {
 			if (visTeamImportFile != null) {
 				lineupBatters.add(new ArrayList<>());
 				importedPitcherRotation.add(new ArrayList<>());
-				if (!handleImportLineupCommand("IMPORT v " + visTeamImportFile, true, importedPitcherRotation)) {
+				importedAllstarSubs.add(new ArrayList<>());
+				if (!handleImportLineupCommand("IMPORT v " + visTeamImportFile, true, importedPitcherRotation, importedAllstarSubs)) {
 					return false;
 				}
 				lineupBatters.set(0, boxScores[0].getBatters());
@@ -460,7 +462,8 @@ public class BaseballSimulator {
 			if (homeTeamImportFile != null) {
 				lineupBatters.add(new ArrayList<>());
 				importedPitcherRotation.add(new ArrayList<>());
-				if (!handleImportLineupCommand("IMPORT h " + homeTeamImportFile, true, importedPitcherRotation)) {
+				importedAllstarSubs.add(new ArrayList<>());
+				if (!handleImportLineupCommand("IMPORT h " + homeTeamImportFile, true, importedPitcherRotation, importedAllstarSubs)) {
 					return false;
 				}
 				lineupBatters.set(1, boxScores[1].getBatters());
@@ -510,7 +513,7 @@ public class BaseballSimulator {
 			if (simulationMode || autoBeforeMode) { // Set game started for SIM mode
 				gameState.setGameStarted(true);
 			}
-			playBall(gameState, boxScores, ((gameNumber > 0 && !postSeason) ? gameNumber : s + 1), multiIterationTournament);
+			playBall(gameState, boxScores, ((gameNumber > 0 && !postSeason) ? gameNumber : s + 1), multiIterationTournament, importedPitcherRotation, importedAllstarSubs);
 			if (seriesLength > 1) {
 				seriesBoxScores[s] = boxScores;
 				updateSeriesOrSeasonStatsFromBoxScores(seriesStats, boxScores, gameState.getPitchersOfRecord(), false);
@@ -953,9 +956,11 @@ public class BaseballSimulator {
 		return tournamentWinner;
 	}
 	
-	private static void playBall(GameState gameState, BoxScore[] boxScores, int gameNumber, boolean multiIterationTournament) {
+	private static void playBall(GameState gameState, BoxScore[] boxScores, int gameNumber, boolean multiIterationTournament, 
+			List<List<MLBPlayer>> importedPitcherRotation, List<List<MLBPlayer>> importedAllstarSubs) {
 		printlnToScreen("\nStarting pitchers for Game #" + gameNumber +  " " + boxScores[0].getTeam().getShortTeamName() + ": " + 
 			gameState.getCurrentPitchers()[0].getFirstLastName() + " v " + boxScores[1].getTeam().getShortTeamName() + ": " + gameState.getCurrentPitchers()[1].getFirstLastName());
+		boolean tiedAllStarGame = false;
 		while (gameState.getInning() <= INNINGS_PER_GAME || boxScores[0].getScore(gameState.getInning()) == boxScores[1].getScore(gameState.getInning())) {
 			int inning = gameState.getInning();
 			Scanner myObj = null;
@@ -985,11 +990,25 @@ public class BaseballSimulator {
 					}
 				}
 				
-				if (allStarGameMode) {
-					if (top == 0 && gameState.getInning() != 1 && gameState.getInning() % 2 == 1) {
-						printToScreen("ALL STAR GAME PITCHERS MUST BE CHANGED!  INNING: " + gameState.getInning() + "\n");
+				if (allStarGameMode) { // Check for all star subs
+					if (gameState.getInning() != 1 && gameState.getInning() % 2 == 1) { // change pitchers
+						int currentPitcherIndex = 0;
+						for (MLBPlayer p : importedPitcherRotation.get(top==0?1:0)) {
+							if (p.getFullName().equals(gameState.getCurrentPitchers()[top==0?1:0].getFullName())) {
+								break;
+							}
+							currentPitcherIndex++;
+						}
+						int nextPitcherIndex = currentPitcherIndex < 4 ? currentPitcherIndex + 1: 0;
+						changePitcher(importedPitcherRotation.get(top==0?1:0).get(nextPitcherIndex), gameState.getTop()==0?1:0, null);
 					}
-					
+					if (gameState.getInning() == 6) {  // field position subs
+						for (int lp = 0; lp < 8; lp++) {
+							MLBPlayer newPlayer = importedAllstarSubs.get(top).get(lp);
+							batters.get(lp).add(newPlayer);
+							System.out.println("Batter subbed to: " + newPlayer.getFirstLastName());
+						}
+					}
 				}
 				
 				while (gameState.getOuts() < OUTS_PER_INNING) {
@@ -1184,21 +1203,33 @@ public class BaseballSimulator {
 					printlnToScreen("GAME OVER AFTER " + (inning - 1) + " 1/2");
 					break;
 				}
+			} // top/bottom
+			if (allStarGameMode && gameState.getInning() == 9 && boxScores[0].getScore(inning) == boxScores[1].getScore(inning)) { // Tied all star game
+				printlnToScreen("ALL STAR GAME ENDS IN A TIE AFTER 9 INNINGS " + boxScores[0].getScore(inning) + " to " + boxScores[1].getScore(inning));
+				tiedAllStarGame= true;
+				break;
 			}
 			gameState.incrementInning();
-		}
-		printlnToScreen("GAME OVER! WP: " + getPlayerFromId(gameState.getPitchersOfRecord().get("W")).getFirstLastName() + " LP: " + getPlayerFromId(gameState.getPitchersOfRecord().get("L")).getFirstLastName());
-		gameState.setGameStarted(false);
-		// Were there extra innings?
-		if (gameState.getInning() > (INNINGS_PER_GAME + 1)) {
-			printlnToScreen("EXTRA INNINGS: " + (gameState.getInning() - 1));
-		}
-		if (gameState.getSaveOppty(0) && boxScores[0].getFinalScore() > boxScores[1].getFinalScore()) {
-			printlnToScreen("SAVE FOR " + gameState.getCurrentPitchers()[0].getFirstLastName());
-			gameState.getCurrentPitchers()[0].getMlbPitchingStats().getPitchingStats().setSaves(1);
-		} else if (gameState.getSaveOppty(1) && boxScores[1].getFinalScore() > boxScores[0].getFinalScore()) {
-			printlnToScreen("SAVE FOR " + gameState.getCurrentPitchers()[1].getFirstLastName());
-			gameState.getCurrentPitchers()[1].getMlbPitchingStats().getPitchingStats().setSaves(1);
+		} // inning
+		if (!tiedAllStarGame) {
+			printlnToScreen("GAME OVER! WP: " + getPlayerFromId(gameState.getPitchersOfRecord().get("W")).getFirstLastName() + " LP: " + getPlayerFromId(gameState.getPitchersOfRecord().get("L")).getFirstLastName());
+			gameState.setGameStarted(false);
+			int winningPitcherId = gameState.getPitchersOfRecord().get("W");
+			// Were there extra innings?
+			if (gameState.getInning() > (INNINGS_PER_GAME + 1)) {
+				printlnToScreen("EXTRA INNINGS: " + (gameState.getInning() - 1));
+			}
+			int gameEndingVisPitcherId = gameState.getCurrentPitchers()[0].getMlbPlayerId();
+			int gameEndingHomePitcherId = gameState.getCurrentPitchers()[1].getMlbPlayerId();
+			// Make sure pitcher can't get both win and save
+			if (gameState.getSaveOppty(0) && boxScores[0].getFinalScore() > boxScores[1].getFinalScore() && winningPitcherId != gameEndingVisPitcherId) {
+				printlnToScreen("SAVE FOR " + gameState.getCurrentPitchers()[0].getFirstLastName());
+				gameState.getCurrentPitchers()[0].getMlbPitchingStats().getPitchingStats().setSaves(1);
+			} 
+			else if (gameState.getSaveOppty(1) && boxScores[1].getFinalScore() > boxScores[0].getFinalScore() && winningPitcherId != gameEndingHomePitcherId) {
+				printlnToScreen("SAVE FOR " + gameState.getCurrentPitchers()[1].getFirstLastName());
+				gameState.getCurrentPitchers()[1].getMlbPitchingStats().getPitchingStats().setSaves(1);
+			}
 		}
 		// Output Box Score
 		if (!seasonSimulationMode && !seasonSimulationPlayoffsMode && !multiIterationTournament) {
@@ -2068,6 +2099,7 @@ public class BaseballSimulator {
 		String[] displayTeamYearString = {"",""};
 		displayTeamYearString[0] = boxScores[0].getTeam().getShortTeamName().equals(boxScores[1].getTeam().getShortTeamName()) ? boxScores[0].getTeamAndYearDisplay() : boxScores[0].getTeam().getShortTeamName();
 		displayTeamYearString[1] = boxScores[0].getTeam().getShortTeamName().equals(boxScores[1].getTeam().getShortTeamName()) ? boxScores[1].getTeamAndYearDisplay() : boxScores[1].getTeam().getShortTeamName();
+		boolean allStarGameTie = boxScores[0].getFinalScore() == boxScores[1].getFinalScore() && allStarGameMode;
 		if (!series) {
 			int winner = boxScores[0].getFinalScore() > boxScores[1].getFinalScore() ? 0 : 1;
 			System.out.println("\n" + boxScores[winner].getYear() + " " + boxScores[winner].getTeam().getFullTeamName() + " " + boxScores[winner].getFinalScore() + " " + 
@@ -2201,16 +2233,18 @@ public class BaseballSimulator {
 				PitchingStats ps = entry.getValue().getMlbPitchingStats().getPitchingStats();
 				PitchingStats pitcherSeasonStats = getPitchersSeasonPitchingStats(rosters[top], entry.getValue().getMlbPlayerId());
 				String pitcherNameString = entry.getValue().getFirstLastName();
-				if (!series && entry.getValue().getMlbPlayerId().intValue() == pitchersOfRecord.get("W").intValue()) {
-					pitcherNameString += " (W)";
+				if (!allStarGameTie) { // No winner, loser or save in tie game (AS game only)
+					if (!series && entry.getValue().getMlbPlayerId().intValue() == pitchersOfRecord.get("W").intValue()) {
+						pitcherNameString += " (W)";
+					}
+					else if (!series && entry.getValue().getMlbPlayerId().intValue() == pitchersOfRecord.get("L").intValue()) {
+						pitcherNameString += " (L)";
+					}
+					if (!series && ps.getSaves() > 0) {
+						pitcherNameString += " (S)";
+					}
 				}
-				else if (!series && entry.getValue().getMlbPlayerId().intValue() == pitchersOfRecord.get("L").intValue()) {
-					pitcherNameString += " (L)";
-				}
-				if (!series && ps.getSaves() > 0) {
-					pitcherNameString += " (S)";
-				}
-				else if (!series && ps.getBlownSaves() > 0) {
+				if (!series && ps.getBlownSaves() > 0) {
 					pitcherNameString += " (BS)";
 				}
 				else if (!series && ps.getHolds() > 0) {
@@ -2848,7 +2882,8 @@ public class BaseballSimulator {
 	}
 	
 	@SuppressWarnings("resource")
-    private static boolean handleImportLineupCommand(String command, boolean fromIncompleteLineup, List<List<MLBPlayer>> importedPitcherRotation) {
+    private static boolean handleImportLineupCommand(String command, boolean fromIncompleteLineup, List<List<MLBPlayer>> importedPitcherRotation,
+    		List<List<MLBPlayer>> importedAllstarSubs) {
     	String[] commandArray = command.split(" ");
 		if (commandArray.length < 3) {
 			System.out.print("INVALID COMMAND!\n");
@@ -2871,6 +2906,11 @@ public class BaseballSimulator {
 			ArrayList<MLBPlayer> importBatters = new ArrayList<>();
 			boolean DHFoundInLineup = false;
 			while (line != null) {
+				// skip comments
+				if (line.contains("/")) {
+					line = reader.readLine();
+					continue;
+				}
 				lineupCount++;
 				if (line.contains("<") && line.contains(">")) {
 					id = line.substring(line.indexOf("<") + 1, line.indexOf(">")).trim();
@@ -2880,7 +2920,6 @@ public class BaseballSimulator {
 					}
 				}
 				System.out.println(line);
-				line = reader.readLine();
 				MLBPlayer player;
 				try {
 					player = getPlayerFromId(Integer.parseInt(id));
@@ -2916,15 +2955,21 @@ public class BaseballSimulator {
 					return false;
 					
 				}
-				if (positionsUsed.contains(lineupPos) && !lineupPos.equalsIgnoreCase("P")) {
+				if (positionsUsed.contains(lineupPos) && !lineupPos.equalsIgnoreCase("P") && !allStarGameMode) {
 					System.out.println("Position: " + lineupPos + " is already used.  Import failed!");
 					closeFileReader(reader);
 					return false;
 				}
-				if (lineupCount < 10) {
+				if ((lineupCount < 10) || (allStarGameMode && lineupCount > 14)) {
 					MLBPlayer importBatter = new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), lineupPos, player.getArmThrows(), 
 						player.getBats(), player.getJerseyNumber());
-					importBatters.add(importBatter);	
+					
+					if (allStarGameMode && lineupCount > 14) {
+						importedAllstarSubs.get(top).add(importBatter);
+					}
+					else {
+						importBatters.add(importBatter);
+					}
 				}
 				else {
 					importedPitcherRotation.get(top).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), lineupPos, 
@@ -2934,9 +2979,14 @@ public class BaseballSimulator {
 				if (!(lineupPos.equalsIgnoreCase("P") && positionsUsed.contains("P"))) {
 					positionsUsed.add(lineupPos);
 				}
+				line = reader.readLine(); // Get next line in import file
 			}
-			if (lineupCount < 10 || lineupCount > 14) {
+			if (lineupCount < 10 || lineupCount > 14  && !allStarGameMode) {
 				System.out.println("Must have 10 - 14 players in lineup! (9 batters and 1-5 pitchers).  Import failed!");
+				return false;
+			}
+			if (lineupCount < 14  && allStarGameMode) {
+				System.out.println("Must have 14 players in lineup! (9 batters 5 pitchers and 0-8 position subs).  Import failed!");
 				return false;
 			}
 			if (useDH && !DHFoundInLineup) {
@@ -2951,12 +3001,12 @@ public class BaseballSimulator {
 			lineupCount = 0;
 			for (MLBPlayer importBatter : importBatters) {
 				lineupCount++;
-				if (boxScores[top].getBatters() != null && boxScores[top].getBatters().get(lineupCount-1).size() > 0) { // Only remove if lineup has already been created
+				if (boxScores[top].getBatters() != null && boxScores[top].getBatters().get(lineupCount-1).size() > 0 && !allStarGameMode) { // Only remove if lineup has already been created
 					boxScores[top].getBatters().get(lineupCount-1).remove(0);
 				}
 				boxScores[top].getBatters().get(lineupCount-1).add(importBatter);
 			}
-			if (gameState.getCurrentPitchers()[top] != null) { // Only remove if lineup has already been created
+			if (gameState.getCurrentPitchers()[top] != null && !allStarGameMode) { // Only remove if lineup has already been created
 				boxScores[top].getPitchers().remove(gameState.getCurrentPitchers()[top].getMlbPlayerId());
 			}
 			MLBPlayer firstGameStarter = importedPitcherRotation.get(top).get(0);
@@ -3048,7 +3098,7 @@ public class BaseballSimulator {
 		if (newPitcher != null) {
 			boolean enteredWithSaveOppty = gameState.getSaveOppty(top);
 			int scoreDiff = boxScores[top].getScore(gameState.getInning()) - boxScores[top==0?1:0].getScore(gameState.getInning());
-			if (scoreDiff > 0  && 
+			if (scoreDiff > 0  && gameState.getInning() > 5 &&  /* Added greater than 5th innning as there must be a win eligible pitcher involved */
 			  ((scoreDiff <= 3 && gameState.getCurrentBasesSituation() != GameState.BASES_LOADED) ||(scoreDiff <= 4  && gameState.getCurrentBasesSituation() == GameState.BASES_LOADED))) {
 					printlnToScreen(newPitcher.getFirstLastName() + " enters game with save opportunity");
 					gameState.setSaveOppty(true, top);
@@ -3227,4 +3277,5 @@ public class BaseballSimulator {
 			System.out.print(text);
 		}
 	}
+	
 }
