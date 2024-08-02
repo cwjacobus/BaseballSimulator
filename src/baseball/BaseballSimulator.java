@@ -66,6 +66,9 @@ public class BaseballSimulator {
 		// 1978 NYY 1996 NYY AUTO 8
 		// 1978 NYY 2022 HOU GAME
 		// 1978 NYY 2022 HOU GAME V 1978NYY.txt H 2022HOU.txt
+		
+		// TBD Make processing args a method
+		
 		int seriesLength = 1;
 		int seasonSimYear = 0;
 		boolean bestOfSeries = false;
@@ -137,7 +140,12 @@ public class BaseballSimulator {
 				args[3].equalsIgnoreCase("AAS") || args[3].equalsIgnoreCase("NAS")) {
 					allStarGameMode = true;
 					if (args.length < 9) {
-						System.out.println("Rosters must be imported for an all star game");
+						System.out.println("Rosters must be imported for an all star game.");
+						return;
+					}
+					if (seriesLength != 1) {
+						// Limit AS games to a single game as there can be ties until code is changed to handle series with ties
+						System.out.println("All star game can not be a multiple game series.");
 						return;
 					}
 			}
@@ -1002,8 +1010,9 @@ public class BaseballSimulator {
 						int nextPitcherIndex = currentPitcherIndex < 4 ? currentPitcherIndex + 1: 0;
 						changePitcher(importedPitcherRotation.get(top==0?1:0).get(nextPitcherIndex), gameState.getTop()==0?1:0, null);
 					}
+					int numOfBattersToBeSubbed = useDH ? 9 : 8;
 					if (gameState.getInning() == 6) {  // field position subs
-						for (int lp = 0; lp < 8; lp++) {
+						for (int lp = 0; lp < numOfBattersToBeSubbed; lp++) {
 							MLBPlayer newPlayer = importedAllstarSubs.get(top).get(lp);
 							batters.get(lp).add(newPlayer);
 							System.out.println("Batter subbed to: " + newPlayer.getFirstLastName());
@@ -1207,6 +1216,7 @@ public class BaseballSimulator {
 			if (allStarGameMode && gameState.getInning() == 9 && boxScores[0].getScore(inning) == boxScores[1].getScore(inning)) { // Tied all star game
 				printlnToScreen("ALL STAR GAME ENDS IN A TIE AFTER 9 INNINGS " + boxScores[0].getScore(inning) + " to " + boxScores[1].getScore(inning));
 				tiedAllStarGame= true;
+				gameState.incrementInning();
 				break;
 			}
 			gameState.incrementInning();
