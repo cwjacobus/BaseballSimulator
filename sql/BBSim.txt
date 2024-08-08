@@ -145,6 +145,9 @@ bs.mlb_player_id = p.mlb_player_id and bs.mlb_team_id = t.mlb_franchise_id and b
 // Get reliever 2
 select p.full_name, t.short_name, year, p.mlb_player_id, saves, holds, innings_pitched, games_started from mlb_pitching_stats bs, mlb_player p, mlb_franchise t where bs.mlb_player_id = p.mlb_player_id and bs.mlb_team_id = t.mlb_franchise_id and bs.mlb_team_id = 114 and bs.games_started < 12 and saves < 5 and bs.year=2019 order by innings_pitched desc;
 
+// Get list of MLB teams grouped by franchise
+select MLB_FRANCHISE_ID,FULL_NAME,SHORT_NAME,LEAGUE,FIRST_YEAR_PLAYED,LAST_YEAR_PLAYED from mlb_team order by MLB_FRANCHISE_ID, FIRST_YEAR_PLAYED;
+
 // Get franchise from team short name and year
 select t.*, f.FIRST_YEAR_PLAYED from mlb_team t, mlb_franchise f where t.MLB_FRANCHISE_ID = f.MLB_FRANCHISE_ID and t.short_name = 'MON' and f.FIRST_YEAR_PLAYED <= 1970 order by (1970 - f.FIRST_YEAR_PLAYED) limit 1;
 

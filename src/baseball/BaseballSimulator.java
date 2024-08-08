@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -672,7 +673,8 @@ public class BaseballSimulator {
 		totalWins.put(boxScores[1].getTeam().getShortTeamName() + "" + boxScores[1].getYear(), 0);
 		totalRuns.put(boxScores[0].getTeam().getShortTeamName() + "" + boxScores[0].getYear(), 0);
 		totalRuns.put(boxScores[1].getTeam().getShortTeamName() + "" + boxScores[1].getYear(), 0);
-		System.out.println("\n");
+		determineSeriesMVP(seriesStats);
+		System.out.println("Series Game Results:");
 		int seriesGameIndex = 0;
 		for (BoxScore[] bsArray : seriesBoxScores) {
 			if (bsArray[0] == null || bsArray[1] == null) {
@@ -700,6 +702,23 @@ public class BaseballSimulator {
 		System.out.println(displayTeamName(homeWinner, boxScores) + ": " + df.format((double)totalRuns.get(boxScores[homeWinner].getTeam().getShortTeamName() + "" + 
 			boxScores[homeWinner].getYear())/seriesGameIndex) + " " + displayTeamName(homeWinner==1?0:1, boxScores) + ": " + df.format((double)totalRuns.get(boxScores[homeWinner==1?0:1].getTeam().getShortTeamName() + 
 			"" + boxScores[homeWinner==1?0:1].getYear())/seriesGameIndex));
+	}
+	
+	@SuppressWarnings("unchecked")
+	private static void determineSeriesMVP(SeriesStats[] seriesStats) {
+		Map<Integer, Integer> mvpOffenseCandidates = new LinkedHashMap<Integer, Integer>();
+		for (int t = 0; t < 2; t++) {
+			seriesStats[t].getBatters().entrySet().stream().forEach(entry -> mvpOffenseCandidates.put(entry.getValue().getMlbPlayerId(), 
+				entry.getValue().getMlbBattingStats().getBattingStats().getHomeRuns() + entry.getValue().getMlbBattingStats().getBattingStats().getHits() +
+				entry.getValue().getMlbBattingStats().getBattingStats().getRbis() + entry.getValue().getMlbBattingStats().getBattingStats().getRuns() +
+				entry.getValue().getMlbBattingStats().getBattingStats().getStolenBases()/2));
+		}
+		LinkedHashMap<Integer, Integer> sortedMvpOffenseCandidates = mvpOffenseCandidates.entrySet().stream().sorted(Entry.comparingByValue())
+			.collect(LinkedHashMap::new, (map, entry) -> map.put(entry.getKey(), entry.getValue()), Map::putAll);
+		// Get last sorted player
+		Entry<Integer, Integer> mvpOffenseId = (Entry<Integer, Integer>)sortedMvpOffenseCandidates.entrySet().toArray()[sortedMvpOffenseCandidates.size() - 1];
+		MLBPlayer mvpOffense = getPlayerFromId(mvpOffenseId.getKey());
+		System.out.println("\nSeries Offensive MVP: " + mvpOffense.getFullName() + "\n");
 	}
 	
 	private static void outputSeasonResults(Map<Integer, Map<Integer, TeamSeasonResults>> seasonResults, Integer seasonSimYear) {
