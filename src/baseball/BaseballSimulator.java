@@ -36,6 +36,7 @@ public class BaseballSimulator {
 	static boolean seasonSimulationPlayoffsMode = false;
 	static boolean tournamentMode = false;
 	static boolean allStarGameMode = false;
+	static boolean worldSeriesMode = false;
 	static int autoBeforeInning = 1000;
 	static GameState gameState = new GameState();
 	static BoxScore[] boxScores = new BoxScore[2];
@@ -61,6 +62,7 @@ public class BaseballSimulator {
 		// Argument examples
 		// TOURNAMENT All_Time_Tournament.txt
 		// SEASON 2023
+		// WORLDSERIES WorldSeries_1970s.txt
 		// 1978 NYY 1996 NYY SIM 7
 		// 1978 NYY 2022 HOU SIM 7 V 1978NYY.txt H 2022HOU.txt
 		// 1978 AAS 1978 NAS SIM 1 V 1978_AL_Allstars.txt H 1978_NL_Allstars.txt
@@ -74,7 +76,7 @@ public class BaseballSimulator {
 		int seasonSimYear = 0;
 		boolean bestOfSeries = false;
 		if (args == null || args.length < 2 || args.length == 4 ||
-		   (args.length == 2 && !(args[0].equalsIgnoreCase("SEASON") || args[0].equalsIgnoreCase("TOURNAMENT"))) || 
+		   (args.length == 2 && !(args[0].equalsIgnoreCase("SEASON") || args[0].equalsIgnoreCase("TOURNAMENT") || args[0].equalsIgnoreCase("WORLDSERIES"))) || 
 		   (args.length == 3 && !args[0].equalsIgnoreCase("TOURNAMENT")) ||
 		   (args.length == 5 && !args[4].equalsIgnoreCase("GAME")) ||
 		   (args.length == 6 && !(args[4].equalsIgnoreCase("SIM") || args[4].equalsIgnoreCase("AUTO")))) {
@@ -97,7 +99,7 @@ public class BaseballSimulator {
 		rosters[0] = new Roster();
 		rosters[1] = new Roster();
 		// Start process args
-		if (args.length > 4 && args[4] != null) {
+		if (args.length > 4 && args[4] != null) {  // GAME SIM or AUTO
 			if (args[4].equalsIgnoreCase("GAME")) {
 				autoBeforeInning = 0;
 				simulationMode = false;
@@ -215,7 +217,7 @@ public class BaseballSimulator {
 				seasonSimYear = Integer.parseInt(args[1]);
 			}
 			if (seasonSimYear < 2013) {
-				System.out.println("Season simulations only years 2013-2021!"); // 2013 HOU moved to AL West to make 6 Div of 5 teams
+				System.out.println("Season simulations only years 2013-2023!"); // 2013 HOU moved to AL West to make 6 Div of 5 teams
 				return;
 			}
 			createSchedule(seasonSimYear, seasonSched);
@@ -236,7 +238,8 @@ public class BaseballSimulator {
 				}
 			}
 			tournamentMode = true;
-	        List<TournamentTeam> seededTournamentTeams = importTournamentTeamsFromFile(args[1]);
+	        List<TournamentTeam> seededTournamentTeams = importTeamsFromFile(args[1], false);
+	        
 	        if (seededTournamentTeams != null) {
 	        	List<TournamentTeam> alSeededTournamentTeams = new ArrayList<TournamentTeam>();
 	        	List<TournamentTeam> nlSeededTournamentTeams = new ArrayList<TournamentTeam>();
@@ -273,6 +276,16 @@ public class BaseballSimulator {
 	        	}
 			}
 	        return;
+		}
+		else if (args[0].equalsIgnoreCase("WORLDSERIES")) {
+			worldSeriesMode = true;
+			List<TournamentTeam> worldSeriesTeams = importTeamsFromFile(args[1], true);
+			System.out.println("World Series Reenactment");
+			for (TournamentTeam ws : worldSeriesTeams) {
+				System.out.println(ws);
+			}
+			return;
+			
 		} // End parameter processing
 		
 		for (int t = 0; t < 2; t++) {
@@ -706,6 +719,7 @@ public class BaseballSimulator {
 	
 	@SuppressWarnings("unchecked")
 	private static void determineSeriesMVP(SeriesStats[] seriesStats) {
+		// Determine offensive MVP
 		Map<Integer, Integer> mvpOffenseCandidates = new LinkedHashMap<Integer, Integer>();
 		for (int t = 0; t < 2; t++) {
 			seriesStats[t].getBatters().entrySet().stream().forEach(entry -> mvpOffenseCandidates.put(entry.getValue().getMlbPlayerId(), 
@@ -715,10 +729,15 @@ public class BaseballSimulator {
 		}
 		LinkedHashMap<Integer, Integer> sortedMvpOffenseCandidates = mvpOffenseCandidates.entrySet().stream().sorted(Entry.comparingByValue())
 			.collect(LinkedHashMap::new, (map, entry) -> map.put(entry.getKey(), entry.getValue()), Map::putAll);
-		// Get last sorted player
+		// Get last sorted player (most points)
 		Entry<Integer, Integer> mvpOffenseId = (Entry<Integer, Integer>)sortedMvpOffenseCandidates.entrySet().toArray()[sortedMvpOffenseCandidates.size() - 1];
-		MLBPlayer mvpOffense = getPlayerFromId(mvpOffenseId.getKey());
-		System.out.println("\nSeries Offensive MVP: " + mvpOffense.getFullName() + "\n");
+		MLBPlayer mvpOffense = seriesStats[0].getBatters().get(mvpOffenseId.getKey());
+		if (mvpOffense == null) {
+			mvpOffense = seriesStats[0].getBatters().get(mvpOffenseId.getKey());
+		}
+		System.out.println("\nSeries Offensive MVP: " + mvpOffense.getFullName() + " H: " + mvpOffense.getMlbBattingStats().getBattingStats().getHits() + 
+			" HR: " + mvpOffense.getMlbBattingStats().getBattingStats().getHomeRuns() + " RBI: " + mvpOffense.getMlbBattingStats().getBattingStats().getRbis() + 
+			" R: " + mvpOffense.getMlbBattingStats().getBattingStats().getRuns() + " SB: " + mvpOffense.getMlbBattingStats().getBattingStats().getStolenBases() + "\n");
 	}
 	
 	private static void outputSeasonResults(Map<Integer, Map<Integer, TeamSeasonResults>> seasonResults, Integer seasonSimYear) {
@@ -2860,37 +2879,49 @@ public class BaseballSimulator {
 		}
 	}
 	
-	@SuppressWarnings("resource")
-	private static List<TournamentTeam> importTournamentTeamsFromFile(String importFile) {
-			List<TournamentTeam> tournamentTeams = new ArrayList<TournamentTeam>();
+	private static List<TournamentTeam> importTeamsFromFile(String importFile, boolean worldSeries) {
+		// Used for both tournament and world series play
+		List<TournamentTeam> importedTeams = new ArrayList<TournamentTeam>();
 		String[] lineArray = {"", ""};
 		BufferedReader reader = null;
+		int numOfArgs = worldSeries ? 3 : 2;
 		try {
 			reader = new BufferedReader(new FileReader(importDir + importFile));
 			String line = reader.readLine();
 			while (line != null) {
 				lineArray = line.split(" ");
-				if (lineArray.length != 2) {
-					System.out.println("Invalid Tournament Team input line: " + line);
+				if (lineArray.length != numOfArgs) {
+					System.out.println("Invalid input line: " + line);
 					closeFileReader(reader);
 					return null;
 				}
-				MLBTeam matchingTeam = null;
-				int ttYear = Integer.parseInt(lineArray[0]);
-				for (MLBTeam t : allMlbTeamsList) {
-					if (t.getShortTeamName().equalsIgnoreCase(lineArray[1]) && t.getFirstYearPlayed() <= ttYear && 
-						(t.getLastYearPlayed() == null || t.getLastYearPlayed() == 0 || t.getLastYearPlayed() >= ttYear)) {
-							matchingTeam = t;
-							break;
-					}
-				}
-				if (matchingTeam == null) {
+				MLBTeam matchingTeam1 = null;
+				int year = Integer.parseInt(lineArray[0]);
+				final String team1String = lineArray[1];
+				matchingTeam1 = allMlbTeamsList.stream()
+						  .filter(t -> t.getShortTeamName().equalsIgnoreCase(team1String) && t.getFirstYearPlayed() <= year && 
+									(t.getLastYearPlayed() == null || t.getLastYearPlayed() == 0 || t.getLastYearPlayed() >= year))
+						  .findAny().orElse(null);
+				if (matchingTeam1 == null) {
 					System.out.println("No MLB Team matching: " + lineArray[0] + " " + lineArray[1]);
 					closeFileReader(reader);
 					return null;
 				}
-				TournamentTeam tTeam = new TournamentTeam(ttYear, matchingTeam);
-				tournamentTeams.add(tTeam);
+				MLBTeam matchingTeam2 = null;
+				if (worldSeries) {
+					final String team2String = lineArray[2];
+					matchingTeam2 = allMlbTeamsList.stream()
+						  .filter(t -> t.getShortTeamName().equalsIgnoreCase(team2String) && t.getFirstYearPlayed() <= year && 
+									(t.getLastYearPlayed() == null || t.getLastYearPlayed() == 0 || t.getLastYearPlayed() >= year))
+						  .findAny().orElse(null);
+					if (matchingTeam2 == null) {
+						System.out.println("No MLB Team matching: " + lineArray[0] + " " + lineArray[2]);
+						closeFileReader(reader);
+						return null;
+					}
+				}
+				TournamentTeam tTeam = new TournamentTeam(year, matchingTeam1, matchingTeam2);
+				importedTeams.add(tTeam);
 				line = reader.readLine();
 			}
 		}
@@ -2907,10 +2938,10 @@ public class BaseballSimulator {
 		finally {
 			closeFileReader(reader);
 		}
-		return tournamentTeams;
+		return importedTeams;
 	}
 	
-	@SuppressWarnings("resource")
+	//@SuppressWarnings("resource")
     private static boolean handleImportLineupCommand(String command, boolean fromIncompleteLineup, List<List<MLBPlayer>> importedPitcherRotation,
     		List<List<MLBPlayer>> importedAllstarSubs) {
     	String[] commandArray = command.split(" ");
