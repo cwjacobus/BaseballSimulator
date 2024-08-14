@@ -8,6 +8,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import baseball.BattingStats;
@@ -19,6 +20,7 @@ import db.MLBFranchise;
 import db.MLBPitchingStats;
 import db.MLBPlayer;
 import db.MLBTeam;
+import db.MLBWorldSeries;
 
 public class DAO {
 	
@@ -52,6 +54,11 @@ public class DAO {
 					FieldingStats fs = mfs.getFieldingStats();
 					insertSQL = "INSERT IGNORE INTO MLB_FIELDING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, POSITION, ASSISTS, PUT_OUTS, ERRORS, GAMES) VALUES (" +
 						mfs.getMlbPlayerId() + ", " + mfs.getMlbTeamId() + ", " + mfs.getYear() + ", '" + mfs.getPosition() + "', " + fs.getAssists() + ", " + fs.getPutOuts() + ", " + fs.getErrors() + ", " + mfs.getGames() + ");";
+				}
+				else if (mlbData instanceof MLBWorldSeries) {
+					MLBWorldSeries mws = (MLBWorldSeries)mlbData;
+					insertSQL = "INSERT IGNORE INTO MLB_WORLD_SERIES (YEAR, TEAM_1, TEAM_2, WINNING_TEAM) VALUES (" +
+						mws.getYear() + ", '" + mws.getTeam1() + "', '" + mws.getTeam2() + "', '" + mws.getWinner() + "');";
 				}
 				stmt.addBatch(insertSQL);
 				mlbDataCount++;
@@ -483,6 +490,23 @@ public class DAO {
 			e.printStackTrace();
 		}
 		return fieldingStatsMap;
+	}
+	
+	public static List<MLBWorldSeries> getMLBWorldSeriesList(Integer startYear, Integer endYear) {
+		List<MLBWorldSeries> worldSeriesList = new ArrayList<>();
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "SELECT * FROM MLB_WORLD_SERIES WHERE YEAR >= " + startYear + " AND YEAR <= " + endYear + " ORDER BY YEAR";
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				worldSeriesList.add(new MLBWorldSeries(rs.getInt("YEAR"), rs.getString("TEAM_1"), rs.getString("TEAM_2"), rs.getString("WINNING_TEAM")));
+			}
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return worldSeriesList;
 	}
 	
 	public static void setConnection() {

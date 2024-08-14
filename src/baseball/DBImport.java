@@ -1,6 +1,7 @@
 package baseball;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -27,6 +28,7 @@ import db.MLBFranchise;
 import db.MLBPitchingStats;
 import db.MLBPlayer;
 import db.MLBTeam;
+import db.MLBWorldSeries;
 
 public class DBImport {
 	
@@ -41,7 +43,7 @@ public class DBImport {
 		ArrayList<MLBTeam> teamsForYearList;
 		boolean fieldingOnly = false;
 		
-		if (args.length < 3) {
+		if (args.length < 3 && !args[0].equalsIgnoreCase("WORLDSERIES")) {
 			System.out.println("INVALID ARGS");
 			return;
 		}
@@ -49,7 +51,7 @@ public class DBImport {
 		allTeamsList = DAO.getAllTeamsList();
 		String fn = args[0];
 		
-		if (!args[1].equalsIgnoreCase("ALL")) {
+		if (!args[0].equalsIgnoreCase("WORLDSERIES") && !args[1].equalsIgnoreCase("ALL")) {
 			try {
 				startYear = Integer.parseInt(args[1]);
 			}
@@ -63,6 +65,9 @@ public class DBImport {
 		}
 		if (fn.equals("TEAM")) {
 			importFranchisesAndTeams(startYear, allYears);
+		}
+		if (fn.equals("WORLDSERIES")) {
+			importWorldSeries();
 		}
 		else if (fn.equals("PLAYER")) {
 			if (args.length < 4) {
@@ -545,5 +550,55 @@ public class DBImport {
 			}
 		}
 		return teamsByYear;
+	}
+	
+	private static void importWorldSeries() {
+		System.out.println("Import World Series");
+		
+		ArrayList<Object> importedWs = new ArrayList<Object>();
+		String[] lineArray = {"", ""};
+		BufferedReader reader = null;
+		try {
+			reader = new BufferedReader(new FileReader("C:\\Users\\cjaco\\Documents\\Sports\\BBSim\\WorldSeries_AllResults.txt"));
+			String line = reader.readLine();
+			while (line != null) {
+				lineArray = line.split(":");
+				if (lineArray[1].contains("NONE")) { // Skip years with no WS
+					line = reader.readLine();
+					continue;
+				}
+				int year = Integer.parseInt(lineArray[0].trim());
+				String team1String = "";
+				team1String = lineArray[1].substring(0, lineArray[1].indexOf('(')).trim();
+				
+				String team2String = lineArray[4].substring(0, lineArray[4].indexOf('(')).trim();
+				MLBWorldSeries ws = new MLBWorldSeries(year, team1String, team2String, team1String);
+				System.out.println(ws);
+				importedWs.add(ws);
+				line = reader.readLine();
+			}
+			DAO.createBatchDataFromList(importedWs);
+		}
+		catch (IOException e) {
+			System.out.println("Import file not found.  Import failed!");
+			closeFileReader(reader);
+		}
+		catch (NumberFormatException e) {
+			System.out.println("Invalid year: " + lineArray[0]);
+			closeFileReader(reader);
+		}
+		finally {
+			closeFileReader(reader);
+		}
+	}
+	
+	private static void closeFileReader(BufferedReader reader) {
+		try {
+			if (reader != null) {
+				reader.close();
+			}
+		}
+		catch (IOException e) {	
+		}
 	}
 }

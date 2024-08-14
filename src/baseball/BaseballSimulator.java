@@ -25,6 +25,8 @@ import db.MLBFieldingStats;
 import db.MLBPitchingStats;
 import db.MLBPlayer;
 import db.MLBTeam;
+import db.MLBWorldSeries;
+
 import static baseball.BaseballConstants.*;
 
 public class BaseballSimulator {
@@ -62,7 +64,7 @@ public class BaseballSimulator {
 		// Argument examples
 		// TOURNAMENT All_Time_Tournament.txt
 		// SEASON 2023
-		// WORLDSERIES WorldSeries_1970s.txt
+		// WORLDSERIES 1970 1979
 		// 1978 NYY 1996 NYY SIM 7
 		// 1978 NYY 2022 HOU SIM 7 V 1978NYY.txt H 2022HOU.txt
 		// 1978 AAS 1978 NAS SIM 1 V 1978_AL_Allstars.txt H 1978_NL_Allstars.txt
@@ -76,8 +78,8 @@ public class BaseballSimulator {
 		int seasonSimYear = 0;
 		boolean bestOfSeries = false;
 		if (args == null || args.length < 2 || args.length == 4 ||
-		   (args.length == 2 && !(args[0].equalsIgnoreCase("SEASON") || args[0].equalsIgnoreCase("TOURNAMENT") || args[0].equalsIgnoreCase("WORLDSERIES"))) || 
-		   (args.length == 3 && !args[0].equalsIgnoreCase("TOURNAMENT")) ||
+		   (args.length == 2 && !(args[0].equalsIgnoreCase("SEASON") || args[0].equalsIgnoreCase("TOURNAMENT"))) || 
+		   (args.length == 3 && !(args[0].equalsIgnoreCase("TOURNAMENT") || args[0].equalsIgnoreCase("WORLDSERIES"))) ||
 		   (args.length == 5 && !args[4].equalsIgnoreCase("GAME")) ||
 		   (args.length == 6 && !(args[4].equalsIgnoreCase("SIM") || args[4].equalsIgnoreCase("AUTO")))) {
 				System.out.println("Invalid args - expecting <visYear> <vis> <homeYear> <homeYear> <MODE>[SIM|GAME|AUTO] <AUTO_AFTER>|<SERIES_LENGTH> - ex. 2019 HOU 2019 NYY SIM 7 or 2019 HOU 2019 NYY AUTO 9");
@@ -238,7 +240,7 @@ public class BaseballSimulator {
 				}
 			}
 			tournamentMode = true;
-	        List<TournamentTeam> seededTournamentTeams = importTeamsFromFile(args[1], false);
+	        List<TournamentTeam> seededTournamentTeams = importTournamentTeamsFromFile(args[1]);
 	        
 	        if (seededTournamentTeams != null) {
 	        	List<TournamentTeam> alSeededTournamentTeams = new ArrayList<TournamentTeam>();
@@ -279,9 +281,19 @@ public class BaseballSimulator {
 		}
 		else if (args[0].equalsIgnoreCase("WORLDSERIES")) {
 			worldSeriesMode = true;
-			List<TournamentTeam> worldSeriesTeams = importTeamsFromFile(args[1], true);
+			Integer startYear;
+			Integer endYear;
+			try {
+				startYear = Integer.parseInt(args[1]);
+				endYear = Integer.parseInt(args[2]);
+			}
+			catch (Exception e) {
+				System.out.println("Invalid year!");
+				return;
+			}
+			List<MLBWorldSeries> worldSeries = DAO.getMLBWorldSeriesList(startYear, endYear);
 			System.out.println("World Series Reenactment");
-			for (TournamentTeam ws : worldSeriesTeams) {
+			for (MLBWorldSeries ws : worldSeries) {
 				System.out.println(ws);
 			}
 			return;
@@ -2879,48 +2891,33 @@ public class BaseballSimulator {
 		}
 	}
 	
-	private static List<TournamentTeam> importTeamsFromFile(String importFile, boolean worldSeries) {
-		// Used for both tournament and world series play
+	private static List<TournamentTeam> importTournamentTeamsFromFile(String importFile) {
 		List<TournamentTeam> importedTeams = new ArrayList<TournamentTeam>();
 		String[] lineArray = {"", ""};
 		BufferedReader reader = null;
-		int numOfArgs = worldSeries ? 3 : 2;
 		try {
 			reader = new BufferedReader(new FileReader(importDir + importFile));
 			String line = reader.readLine();
 			while (line != null) {
 				lineArray = line.split(" ");
-				if (lineArray.length != numOfArgs) {
+				if (lineArray.length != 2) {
 					System.out.println("Invalid input line: " + line);
 					closeFileReader(reader);
 					return null;
 				}
-				MLBTeam matchingTeam1 = null;
+				MLBTeam matchingTeam = null;
 				int year = Integer.parseInt(lineArray[0]);
 				final String team1String = lineArray[1];
-				matchingTeam1 = allMlbTeamsList.stream()
+				matchingTeam = allMlbTeamsList.stream()
 						  .filter(t -> t.getShortTeamName().equalsIgnoreCase(team1String) && t.getFirstYearPlayed() <= year && 
 									(t.getLastYearPlayed() == null || t.getLastYearPlayed() == 0 || t.getLastYearPlayed() >= year))
 						  .findAny().orElse(null);
-				if (matchingTeam1 == null) {
+				if (matchingTeam == null) {
 					System.out.println("No MLB Team matching: " + lineArray[0] + " " + lineArray[1]);
 					closeFileReader(reader);
 					return null;
 				}
-				MLBTeam matchingTeam2 = null;
-				if (worldSeries) {
-					final String team2String = lineArray[2];
-					matchingTeam2 = allMlbTeamsList.stream()
-						  .filter(t -> t.getShortTeamName().equalsIgnoreCase(team2String) && t.getFirstYearPlayed() <= year && 
-									(t.getLastYearPlayed() == null || t.getLastYearPlayed() == 0 || t.getLastYearPlayed() >= year))
-						  .findAny().orElse(null);
-					if (matchingTeam2 == null) {
-						System.out.println("No MLB Team matching: " + lineArray[0] + " " + lineArray[2]);
-						closeFileReader(reader);
-						return null;
-					}
-				}
-				TournamentTeam tTeam = new TournamentTeam(year, matchingTeam1, matchingTeam2);
+				TournamentTeam tTeam = new TournamentTeam(year, matchingTeam);
 				importedTeams.add(tTeam);
 				line = reader.readLine();
 			}

@@ -104,6 +104,16 @@ GAMES int(11),
 CONSTRAINT FS_CONST1 UNIQUE (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, POSITION)
 );
 
+CREATE TABLE MLB_WORLD_SERIES
+(
+MLB_WORLD_SERIES_ID int(11) PRIMARY KEY AUTO_INCREMENT,
+YEAR int(11),
+TEAM_1 varchar(50),
+TEAM_2 varchar(50),
+WINNING_TEAM varchar(50),
+CONSTRAINT WS_CONST1 UNIQUE (YEAR)
+);
+
 insert into MLB_TEAM (TEAM_ID, FULL_NAME, SHORT_NAME, LEAGUE, ACTIVE) values (147, 'New York Yankees', 'NYY', 'AL', true);
 
 // set some short names for some cities with multiple franchises with same short name
