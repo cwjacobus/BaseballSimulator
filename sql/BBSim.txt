@@ -221,6 +221,8 @@ update mlb_player set PRIMARY_POSITION='LF' where full_name = 'Melendez, MJ';
 update mlb_player set PRIMARY_POSITION='OF' where mlb_player_id=117582; /* Leach, Tommy 1909 Pirates */
 update mlb_player set PRIMARY_POSITION='1B' where mlb_player_id=117857; /* Lockman, Whitey 1954 Giants */
 update mlb_player set PRIMARY_POSITION='3B' where mlb_player_id=118342; /* Martin, Pepper 1934 Cardinals */
+/* for world series play */
+update mlb_player set PRIMARY_POSITION='3B' where mlb_player_id=120475; /* Petrocelli, Rico 1975 Red Sox */
 
 delete from mlb_fielding_stats where MLB_PLAYER_ID=660271 and year=2021;  /* Delete Shohei Ohtani P fielding record */
 

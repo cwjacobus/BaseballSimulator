@@ -8,6 +8,7 @@ public class BaseballConstants {
 	static final int OUTS_PER_INNING = 3;
 	static final int INNINGS_PER_GAME = 9;
 	static final int NUM_OF_PLAYERS_IN_LINEUP = 9;
+	static final int MAX_WS_SERIES = 7;
 	
 	// MLBDivisions 2013-2022
 		static final int AL_EAST = 0;

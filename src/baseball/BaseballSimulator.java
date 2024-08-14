@@ -292,10 +292,7 @@ public class BaseballSimulator {
 				return;
 			}
 			List<MLBWorldSeries> worldSeries = DAO.getMLBWorldSeriesList(startYear, endYear);
-			System.out.println("World Series Reenactment");
-			for (MLBWorldSeries ws : worldSeries) {
-				System.out.println(ws);
-			}
+			playWorldSeriesGames(worldSeries);
 			return;
 			
 		} // End parameter processing
@@ -745,7 +742,7 @@ public class BaseballSimulator {
 		Entry<Integer, Integer> mvpOffenseId = (Entry<Integer, Integer>)sortedMvpOffenseCandidates.entrySet().toArray()[sortedMvpOffenseCandidates.size() - 1];
 		MLBPlayer mvpOffense = seriesStats[0].getBatters().get(mvpOffenseId.getKey());
 		if (mvpOffense == null) {
-			mvpOffense = seriesStats[0].getBatters().get(mvpOffenseId.getKey());
+			mvpOffense = seriesStats[1].getBatters().get(mvpOffenseId.getKey());
 		}
 		System.out.println("\nSeries Offensive MVP: " + mvpOffense.getFullName() + " H: " + mvpOffense.getMlbBattingStats().getBattingStats().getHits() + 
 			" HR: " + mvpOffense.getMlbBattingStats().getBattingStats().getHomeRuns() + " RBI: " + mvpOffense.getMlbBattingStats().getBattingStats().getRbis() + 
@@ -865,6 +862,54 @@ public class BaseballSimulator {
 		alSeededPlayoffTeams.stream().forEach(entry -> alSeededTournamentTeams.add(new TournamentTeam(seasonSimYear, new MLBTeam(entry.getTeamId()))));
 		nlSeededPlayoffTeams.stream().forEach(entry -> nlSeededTournamentTeams.add(new TournamentTeam(seasonSimYear, new MLBTeam(entry.getTeamId()))));
 		playTournamentGames(seasonSimYear, alSeededTournamentTeams, nlSeededTournamentTeams, true, false); // play post season playoff games
+	}
+	
+	private static void playWorldSeriesGames(List<MLBWorldSeries> worldSeries) {
+		System.out.println("World Series Reenactment - Years: " + worldSeries.get(0).getYear() + 
+			(worldSeries.size() > 1 ? " to " + worldSeries.get(worldSeries.size() - 1).getYear() : "") + "\n");
+		boolean aLHome = false;
+		// WS HFA rules
+		// 1902 -> 1993 AL odd years NL even years
+		// 1995 -> 2001 AL even years NL odd years
+		// 2002 -> 2016 AS game winner
+		// 2017 -> 2023 best record
+		// TBD below 2010-2023 (14 years)
+		MLBTeam[] wsTeams = {null, null};
+		int[] wsYears = {0, 0};
+		for (MLBWorldSeries ws : worldSeries) {
+			if ((ws.getYear() % 2 == 1 && ws.getYear() <= 1994) || (ws.getYear() % 2 == 0 && (ws.getYear() >= 1995 && ws.getYear() <= 2001)) || 
+				(ws.getYear() >= 2002 && ws.getYear() <= 2009)) {
+					aLHome = true;
+			}
+			else {
+				aLHome = false;
+			}
+			SeriesStats[] wsStats = new SeriesStats[2];
+			MLBTeam team1 =  getTeamByYearAndFullName(ws.getYear(), ws.getTeam1(), allMlbTeamsList);
+			MLBTeam team2 =  getTeamByYearAndFullName(ws.getYear(), ws.getTeam2(), allMlbTeamsList);
+			if ((team1.getLeague().equals("AL") && aLHome) || (team1.getLeague().equals("NL") && !aLHome)) {
+				wsTeams[0] = team2;  // AL home, NL vis
+				wsTeams[1] = team1;
+			}
+			else {
+				wsTeams[0] = team1; // NL home, AL vis
+				wsTeams[1] = team2;
+			}
+			wsYears[0] = wsYears[1] = ws.getYear();
+			System.out.println("\n" + ws.getYear() + " World Series: " + wsTeams[0] + " at " + wsTeams[1]);
+			for (int t = 0; t < 2; t++) {
+				battersOnMultTeams.add(DAO.getBattersOnMultipleTeamsByPrimaryTeam(ws.getYear())); 
+				pitchersOnMultTeams.add(DAO.getPitchersOnMultipleTeamsByPrimaryTeam(ws.getYear()));
+			}
+			seriesBoxScores = new BoxScore[MAX_WS_SERIES][2];
+			if (setUpDataAndPlayGames(wsTeams, wsYears, MAX_WS_SERIES, true, wsStats, null, null, null, null, 1, true, false)) {
+				outputSeriesResults(MAX_WS_SERIES, wsStats, true);
+			}
+			else {
+				System.out.println("World Series: " + ws + " could not be run");
+				return;
+			}
+		}
 	}
 	
 	private static String playTournamentGames(int seasonSimYear, List<TournamentTeam> alSeededTournamentTeams, List<TournamentTeam> nlSeededTournamentTeams, 
@@ -3289,7 +3334,18 @@ public class BaseballSimulator {
 		return boxScores[0].getTeam().getShortTeamName().equals(boxScores[1].getTeam().getShortTeamName()) ? boxScores[top].getTeamAndYearDisplay() : boxScores[top].getTeam().getShortTeamName();
 	}
 	
-	private static MLBTeam getTeamByYearAndShortName(Integer year, String shortName, ArrayList<MLBTeam> allTeams) {
+	private static MLBTeam getTeamByYearAndFullName(Integer year, String fullName, List<MLBTeam> allTeams) {
+		for (MLBTeam team : allTeams) {
+			// Null last year means active in current year
+			int lastYear = (team.getLastYearPlayed() == null || team.getLastYearPlayed() == 0) ? Calendar.getInstance().get(Calendar.YEAR) : team.getLastYearPlayed();
+			if (team.getFirstYearPlayed() <= year && lastYear >= year && team.getFullTeamName().equalsIgnoreCase(fullName)) {
+				return team;
+			}
+		}
+		return null;
+	}
+	
+	private static MLBTeam getTeamByYearAndShortName(Integer year, String shortName, List<MLBTeam> allTeams) {
 		for (MLBTeam team : allTeams) {
 			// Null last year means active in current year
 			int lastYear = (team.getLastYearPlayed() == null || team.getLastYearPlayed() == 0) ? Calendar.getInstance().get(Calendar.YEAR) : team.getLastYearPlayed();
@@ -3300,7 +3356,7 @@ public class BaseballSimulator {
 		return null;
 	}
 	
-	private static MLBTeam getTeamByYearAndTeamId(Integer year, Integer teamId, ArrayList<MLBTeam> allTeams) {
+	private static MLBTeam getTeamByYearAndTeamId(Integer year, Integer teamId, List<MLBTeam> allTeams) {
 		for (MLBTeam team : allTeams) {
 			// Null last year means active in current year
 			int lastYear = (team.getLastYearPlayed() == null || team.getLastYearPlayed() == 0) ? Calendar.getInstance().get(Calendar.YEAR) : team.getLastYearPlayed();
