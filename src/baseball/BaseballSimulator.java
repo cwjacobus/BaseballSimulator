@@ -1,8 +1,12 @@
 package baseball;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,7 +68,7 @@ public class BaseballSimulator {
 		// Argument examples
 		// TOURNAMENT All_Time_Tournament.txt
 		// SEASON 2023
-		// WORLDSERIES 1970 1979
+		// WORLDSERIES 1970 1979 outputFile.txt
 		// 1978 NYY 1996 NYY SIM 7
 		// 1978 NYY 2022 HOU SIM 7 V 1978NYY.txt H 2022HOU.txt
 		// 1978 AAS 1978 NAS SIM 1 V 1978_AL_Allstars.txt H 1978_NL_Allstars.txt
@@ -77,9 +81,10 @@ public class BaseballSimulator {
 		int seriesLength = 1;
 		int seasonSimYear = 0;
 		boolean bestOfSeries = false;
-		if (args == null || args.length < 2 || args.length == 4 ||
+		if (args == null || args.length < 2 ||
 		   (args.length == 2 && !(args[0].equalsIgnoreCase("SEASON") || args[0].equalsIgnoreCase("TOURNAMENT"))) || 
 		   (args.length == 3 && !(args[0].equalsIgnoreCase("TOURNAMENT") || args[0].equalsIgnoreCase("WORLDSERIES"))) ||
+		   (args.length == 4 && !args[0].equalsIgnoreCase("WORLDSERIES")) ||
 		   (args.length == 5 && !args[4].equalsIgnoreCase("GAME")) ||
 		   (args.length == 6 && !(args[4].equalsIgnoreCase("SIM") || args[4].equalsIgnoreCase("AUTO")))) {
 				System.out.println("Invalid args - expecting <visYear> <vis> <homeYear> <homeYear> <MODE>[SIM|GAME|AUTO] <AUTO_AFTER>|<SERIES_LENGTH> - ex. 2019 HOU 2019 NYY SIM 7 or 2019 HOU 2019 NYY AUTO 9");
@@ -283,6 +288,21 @@ public class BaseballSimulator {
 			worldSeriesMode = true;
 			Integer startYear;
 			Integer endYear;
+			FileOutputStream fileOutputStream = null;
+			BufferedOutputStream bufferedOutputStream = null;
+			PrintStream printStream = null;
+			if (args.length > 3) {
+				try {
+					fileOutputStream = new FileOutputStream(importDir + args[3]);
+					bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+					printStream = new PrintStream(bufferedOutputStream);
+					System.setOut(printStream);
+				}
+				catch (FileNotFoundException e) {
+					System.out.println("Invalid export location!");
+					return;
+				}
+			}
 			try {
 				startYear = Integer.parseInt(args[1]);
 				endYear = Integer.parseInt(args[2]);
@@ -293,6 +313,17 @@ public class BaseballSimulator {
 			}
 			List<MLBWorldSeries> worldSeries = DAO.getMLBWorldSeriesList(startYear, endYear);
 			playWorldSeriesGames(worldSeries);
+			if (fileOutputStream != null && bufferedOutputStream != null && printStream != null) {
+				try {
+					fileOutputStream.flush();
+					fileOutputStream.close();
+					bufferedOutputStream.close();
+					printStream.close();
+				}
+				catch (IOException e) {
+					System.out.println("IOException: " + e.getMessage());
+				}
+			}
 			return;
 			
 		} // End parameter processing
@@ -513,6 +544,9 @@ public class BaseballSimulator {
 				if (bestOfSeries && t == 0 && (s == 2 || (seriesLength == 7 && s == 5) || (seriesLength == 5 && s == 4))) { // home/vis change
 					swapHomeVisitorForBestOfSeries(teams, years, lineupBatters, seriesStats);
 				}
+				// Move setting of starting pitcher
+				// reset useDh
+				// change 9th hitter in lineupBatters to starting pitcher if useDH is false else to previous DH
 				boxScores[t] = new BoxScore();
 				boxScores[t].setYear(years[t]);
 				boxScores[t].setBatters(lineupBatters.get(t));
@@ -904,10 +938,11 @@ public class BaseballSimulator {
 			seriesBoxScores = new BoxScore[MAX_WS_SERIES][2];
 			if (setUpDataAndPlayGames(wsTeams, wsYears, MAX_WS_SERIES, true, wsStats, null, null, null, null, 1, true, false)) {
 				outputSeriesResults(MAX_WS_SERIES, wsStats, true);
+				System.out.println("Actual " + ws.getYear() + " WS winner: " + ws.getWinner());
 			}
 			else {
 				System.out.println("World Series: " + ws + " could not be run");
-				return;
+				//return;
 			}
 		}
 	}
@@ -2099,9 +2134,24 @@ public class BaseballSimulator {
 						}
 					}
 					if (positionsUsed.size() < 8) { // Still not enough players in lineup
-						System.out.println("Can not create a lineup for the " + years[t] + " " + teams[t].getFullTeamName() + " with players:");
-						for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
-							System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPositionByFieldingStats());
+						if (years[t] == 1980 && teams[t].getShortTeamName().equals("PHI")) {
+							// Very specific manual override needed to run 1980 World Series
+							// Problem is Pete Rose is listed as a 3B in DB but he played 1B in 1980
+							// Cant change his position in DB as it will break '76 Reds
+							// Manually insert Mike Schmidt at 1B batting 8th
+							String firstBase = positions.get(3);
+							MLBPlayer mikeSchmidt = rosters[t].getBatters().get(121836);
+							playersInLineupList.add(mikeSchmidt.getMlbPlayerId());
+							batters.get(t).get(7).add(new MLBPlayer(mikeSchmidt.getMlbPlayerId(), mikeSchmidt.getFullName(), firstBase, mikeSchmidt.getArmThrows(), mikeSchmidt.getBats(), 
+								mikeSchmidt.getJerseyNumber(), mikeSchmidt.getMlbFieldingStats()));
+							positionsUsed.add(firstBase);  // 1B
+							
+						}
+						else {
+							System.out.println("Can not create a lineup for the " + years[t] + " " + teams[t].getFullTeamName() + " with players:");
+							for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
+								System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPositionByFieldingStats());
+							}
 						}
 					}
 					//return batters;
