@@ -489,7 +489,8 @@ public class BaseballSimulator {
 			seriesStats[t] = new SeriesStats(teams[t], years[t], seriesLength);
 		}
 		// Home team determines using DH
-		useDH = (teams[1].getLeague().equalsIgnoreCase("AL") && years[1] >= 1973) || (teams[1].getLeague().equalsIgnoreCase("NL") && (years[1] == 2020 || years[1] >= 2022));
+		useDH = determineUseDH(teams[1].getLeague(), years[1]);
+		//useDH = (teams[1].getLeague().equalsIgnoreCase("AL") && years[1] >= 1973) || (teams[1].getLeague().equalsIgnoreCase("NL") && (years[1] == 2020 || years[1] >= 2022));
 		boolean importedLineup = visTeamImportFile != null || homeTeamImportFile != null;
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> lineupBatters = new ArrayList<>();
 		List<List<MLBPlayer>> importedPitcherRotation = new ArrayList<>();
@@ -543,6 +544,7 @@ public class BaseballSimulator {
 			for (int t = 0; t < 2; t++) {
 				if (bestOfSeries && t == 0 && (s == 2 || (seriesLength == 7 && s == 5) || (seriesLength == 5 && s == 4))) { // home/vis change
 					swapHomeVisitorForBestOfSeries(teams, years, lineupBatters, seriesStats);
+					useDH = determineUseDH(teams[1].getLeague(), years[1]);
 				}
 				// Move setting of starting pitcher
 				// reset useDh
@@ -574,6 +576,14 @@ public class BaseballSimulator {
 					boxScores[t].getBatters().set(8, new ArrayList<MLBPlayer>());  // Clear out prior games pitcher spots
 					boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
 				}	
+				else if (bestOfSeries && (s == 2 || (seriesLength == 7 && s == 5) || (seriesLength == 5 && s == 4))) {  // Set DH
+					boxScores[t].getBatters().set(8, new ArrayList<MLBPlayer>());  // Clear out prior games 9th batter
+					ArrayList<Integer> playersInLineupList = new ArrayList<Integer>();
+					boxScores[t].getBatters().stream().forEach(entry -> entry.stream().forEach(entry2 -> playersInLineupList.add(entry2.getMlbPlayerId())));
+					MLBPlayer dh = getMlbPlayerWithMostPlateAppearances(teams[t].getTeamId(), years[t], playersInLineupList, t, battersOnMultTeams.get(t));
+					dh.setPrimaryPosition("DH");
+					boxScores[t].getBatters().get(8).add(dh); // Set DH as batting ninth
+				}
 			}
 			if (simulationMode || autoBeforeMode) { // Set game started for SIM mode
 				gameState.setGameStarted(true);
@@ -3439,6 +3449,12 @@ public class BaseballSimulator {
 		if (!seasonSimulationMode && !seasonSimulationPlayoffsMode && !tournamentMode) {
 			System.out.print(text);
 		}
+	}
+	
+	private static boolean determineUseDH(String league, int year)  {
+		boolean useDH = (league.equalsIgnoreCase("AL") && year >= 1973) || year == 2020 || year >= 2022;
+		
+		return useDH;
 	}
 	
 }

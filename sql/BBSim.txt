@@ -223,6 +223,7 @@ update mlb_player set PRIMARY_POSITION='1B' where mlb_player_id=117857; /* Lockm
 update mlb_player set PRIMARY_POSITION='3B' where mlb_player_id=118342; /* Martin, Pepper 1934 Cardinals */
 /* for world series play */
 update mlb_player set PRIMARY_POSITION='3B' where mlb_player_id=120475; /* Petrocelli, Rico 1975 Red Sox */
+update mlb_player set PRIMARY_POSITION='1B' where mlb_player_id=111663; /* Buckner, Bill 1986 Red Sox (may cause bad lineup for '73 Dodgers) */
 
 delete from mlb_fielding_stats where MLB_PLAYER_ID=660271 and year=2021;  /* Delete Shohei Ohtani P fielding record */
 
@@ -262,6 +263,10 @@ ps.EARNED_RUNS_ALLOWED as er, ps.EARNED_RUNS_ALLOWED*9/ps.INNINGS_PITCHED as era
 ps.HOLDS as holds, ps.SAVES as s, ps.BLOWN_SAVES as bs, ps.GAMES_STARTED as gs, ps.BALKS as bk, ps.WILD_PITCHES as wp, ps.SAC_FLIES as sf, ps.BATTERS_FACED as bf, ps.WINS as w, ps.LOSSES as l 
 from mlb_player p, mlb_pitching_stats ps, mlb_team t 
 where p.mlb_player_id = ps.mlb_player_id and p.full_name like '%Sadecki%' and (ps.MLB_TEAM_ID = t.TEAM_ID and t.first_year_played <= ps.year and (t.last_year_played >= ps.year or t.last_year_played is null)) order by ps.year;
+
+// Get a players fielding stats, team name, year by name
+select p.full_name as name, fs.year, t.full_name as team, fs.* from mlb_player p, mlb_fielding_stats fs, mlb_team t 
+where p.mlb_player_id = fs.mlb_player_id and p.full_name like '%Ortiz, D%' and (fs.MLB_TEAM_ID = t.TEAM_ID and t.first_year_played <= fs.year and (t.last_year_played >= fs.year or t.last_year_played is null)) order by fs.year;
 
 // Get batters who played on more than 1 team in a given year
 select p.full_name as name, t.short_name as team, p.primary_position as pos, bs.AT_BATS as ab, bs.HITS as h, bs.HITS/bs.AT_BATS as avg, bs.DOUBLES as d, bs.TRIPLES as t, bs.HOME_RUNS as hr, bs.WALKS as bb, 
