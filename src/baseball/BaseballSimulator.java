@@ -327,7 +327,6 @@ public class BaseballSimulator {
 			return;
 			
 		} // End parameter processing
-		
 		for (int t = 0; t < 2; t++) {
 			battersOnMultTeams.add(DAO.getBattersOnMultipleTeamsByPrimaryTeam(years[t])); 
 			pitchersOnMultTeams.add(DAO.getPitchersOnMultipleTeamsByPrimaryTeam(years[t]));
@@ -941,6 +940,8 @@ public class BaseballSimulator {
 			}
 			wsYears[0] = wsYears[1] = ws.getYear();
 			System.out.println("\n" + ws.getYear() + " World Series: " + wsTeams[0] + " at " + wsTeams[1]);
+			battersOnMultTeams = new ArrayList<>();  // clear out battersOnMultTeams from prev season
+			pitchersOnMultTeams = new ArrayList<>(); // clear out pitchersOnMultTeams from prev season
 			for (int t = 0; t < 2; t++) {
 				battersOnMultTeams.add(DAO.getBattersOnMultipleTeamsByPrimaryTeam(ws.getYear())); 
 				pitchersOnMultTeams.add(DAO.getPitchersOnMultipleTeamsByPrimaryTeam(ws.getYear()));
@@ -952,7 +953,7 @@ public class BaseballSimulator {
 			}
 			else {
 				System.out.println("World Series: " + ws + " could not be run");
-				//return;
+				return;
 			}
 		}
 	}
@@ -1038,6 +1039,8 @@ public class BaseballSimulator {
 						tournamentMode = !mlbPlayoffs;
 						seriesBoxScores = new BoxScore[seriesMax][2];
 						if (!mlbPlayoffs) {  // Already have multiple players
+							battersOnMultTeams = new ArrayList<>();  // clear out battersOnMultTeams from prev season
+							pitchersOnMultTeams = new ArrayList<>(); // clear out pitchersOnMultTeams from prev season
 							for (int t = 0; t < 2; t++) {
 								battersOnMultTeams.add(DAO.getBattersOnMultipleTeamsByPrimaryTeam(tournamentYears[t]));
 								pitchersOnMultTeams.add(DAO.getPitchersOnMultipleTeamsByPrimaryTeam(tournamentYears[t]));

@@ -224,6 +224,10 @@ update mlb_player set PRIMARY_POSITION='3B' where mlb_player_id=118342; /* Marti
 /* for world series play */
 update mlb_player set PRIMARY_POSITION='3B' where mlb_player_id=120475; /* Petrocelli, Rico 1975 Red Sox */
 update mlb_player set PRIMARY_POSITION='1B' where mlb_player_id=111663; /* Buckner, Bill 1986 Red Sox (may cause bad lineup for '73 Dodgers) */
+update mlb_player set PRIMARY_POSITION='OF' where mlb_player_id=121533; /* Rudi, Joe 1972 A's */
+update mlb_player set PRIMARY_POSITION='2B' where mlb_player_id=112923; /* Cullen, Tim 1972 A's */
+/* 2004 updates for players marked as DH */
+update mlb_player set PRIMARY_POSITION='CF' where mlb_player_id=115135; /* Griffey, Ken Jr. 1995 Mariners */
 
 delete from mlb_fielding_stats where MLB_PLAYER_ID=660271 and year=2021;  /* Delete Shohei Ohtani P fielding record */
 
