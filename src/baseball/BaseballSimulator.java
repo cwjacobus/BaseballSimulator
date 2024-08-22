@@ -122,8 +122,8 @@ public class BaseballSimulator {
 					if (args[5].charAt(0) == 'B') {
 						bestOfSeries = true;
 						seriesLength = Integer.parseInt(args[5].substring(1, args[5].length()));
-						if (seriesLength != 5 && seriesLength != 7) {
-							System.out.println("Best of series can only be 5 or 7 games");
+						if (seriesLength != 3 && seriesLength != 5 && seriesLength != 7) {
+							System.out.println("Best of series can only be 3, 5 or 7 games");
 							return;
 						}
 					}
@@ -534,14 +534,14 @@ public class BaseballSimulator {
 		Map<String, Integer> boSeriesWins  = new HashMap<String, Integer>() {
 			private static final long serialVersionUID = 1L;
 		{
-		    put(teams[0].getShortTeamName(), 0);
-		    put(teams[1].getShortTeamName(), 0);
+		    put(boxScores[0].getTeamAndYearDisplay(), 0);
+		    put(boxScores[1].getTeamAndYearDisplay(), 0);
 		}};
 		for (int s = 0; s < seriesLength; s++) {
 			gameState = new GameState();
 			boxScores = new BoxScore[2];
 			for (int t = 0; t < 2; t++) {
-				if (bestOfSeries && t == 0 && (s == 2 || (seriesLength == 7 && s == 5) || (seriesLength == 5 && s == 4))) { // home/vis change
+				if (bestOfSeries && t == 0 && ((seriesLength != 3 && s == 2) || (seriesLength == 7 && s == 5) || (seriesLength == 5 && s == 4))) { // home/vis change
 					swapHomeVisitorForBestOfSeries(teams, years, lineupBatters, seriesStats);
 					useDH = determineUseDH(teams[1].getLeague(), years[1]);
 				}
@@ -575,7 +575,7 @@ public class BaseballSimulator {
 					boxScores[t].getBatters().set(8, new ArrayList<MLBPlayer>());  // Clear out prior games pitcher spots
 					boxScores[t].getBatters().get(8).add(startingPitcher); // Set pitcher as batting ninth, if no DH
 				}	
-				else if (bestOfSeries && (s == 2 || (seriesLength == 7 && s == 5) || (seriesLength == 5 && s == 4))) {  // Set DH
+				else if (bestOfSeries && ((seriesLength != 3 && s == 2) || (seriesLength == 7 && s == 5) || (seriesLength == 5 && s == 4))) {  // Set DH
 					boxScores[t].getBatters().set(8, new ArrayList<MLBPlayer>());  // Clear out prior games 9th batter
 					ArrayList<Integer> playersInLineupList = new ArrayList<Integer>();
 					boxScores[t].getBatters().stream().forEach(entry -> entry.stream().forEach(entry2 -> playersInLineupList.add(entry2.getMlbPlayerId())));
@@ -597,13 +597,14 @@ public class BaseballSimulator {
 			}
 			if (bestOfSeries) {
 				if (boxScores[0].getFinalScore() > boxScores[1].getFinalScore()) {
-					boSeriesWins.put(boxScores[0].getTeam().getShortTeamName(), boSeriesWins.get(boxScores[0].getTeam().getShortTeamName()) + 1);
+					boSeriesWins.put(boxScores[0].getTeamAndYearDisplay(), boSeriesWins.get(boxScores[0].getTeamAndYearDisplay()) + 1);
 				}
 				else {
-					boSeriesWins.put(boxScores[1].getTeam().getShortTeamName(), boSeriesWins.get(boxScores[1].getTeam().getShortTeamName()) + 1);
+					boSeriesWins.put(boxScores[1].getTeamAndYearDisplay(), boSeriesWins.get(boxScores[1].getTeamAndYearDisplay()) + 1);
 				}
-				if ((seriesLength == 7 && (boSeriesWins.get(boxScores[0].getTeam().getShortTeamName()) == 4 || boSeriesWins.get(boxScores[1].getTeam().getShortTeamName()) == 4)) ||
-				    (seriesLength == 5 && (boSeriesWins.get(boxScores[0].getTeam().getShortTeamName()) == 3 || boSeriesWins.get(boxScores[1].getTeam().getShortTeamName()) == 3))) {
+				int winsNeededToWinSeries = seriesLength/2 + 1;
+				if (boSeriesWins.get(boxScores[0].getTeamAndYearDisplay()) == winsNeededToWinSeries || 
+					boSeriesWins.get(boxScores[1].getTeamAndYearDisplay()) == winsNeededToWinSeries) {
 						break;
 				}
 			}
@@ -895,8 +896,13 @@ public class BaseballSimulator {
 			System.out.println(seedIndex + ". " + getTeamByYearAndTeamId(seasonSimYear, tr.getTeamId(), allMlbTeamsList).getFullTeamName());
 			seedIndex++;
 		}
-		System.out.println("\n"  + seasonSimYear + " Play Playoff games");
-		playPostSeasonGames(seasonSimYear, alSeededPlayoffTeams, nlSeededPlayoffTeams);
+		if (seasonSimYear >= 2022) { // Only support post season game play 2022 and beyond
+			System.out.println("\n"  + seasonSimYear + " Play Playoff games");
+			playPostSeasonGames(seasonSimYear, alSeededPlayoffTeams, nlSeededPlayoffTeams);
+		}
+		else  {
+			System.out.println("\nDon't currently support post season game play before 2022");
+		}
 	}
 	
 	private static void playPostSeasonGames(int seasonSimYear, List<TeamSeasonResults> alSeededPlayoffTeams, List<TeamSeasonResults> nlSeededPlayoffTeams) {
@@ -970,8 +976,8 @@ public class BaseballSimulator {
 		for (int round = 0; round < 4; round++) {
 			nlTournamentWinnersBySeed.put(round, new ArrayList<Integer>());
 			alTournamentWinnersBySeed.put(round, new ArrayList<Integer>());
-			if (round <= 1) {
-				System.out.println("Round " + (round + 1));
+			if (!mlbPlayoffs) {
+				System.out.println("Round #" + (round + 1));
 			}
 			for (int seriesIndex = 0; seriesIndex < 2; seriesIndex++) { // 2 series in first 2 rounds, 1 in last 2
 				if (round > 1 && seriesIndex > 0) {
@@ -989,37 +995,55 @@ public class BaseballSimulator {
 						TournamentTeam higherSeededTeam;
 						TournamentTeam lowerSeededTeam;
 						if (round == 0) {
-							seriesMax = 5;
+							if (league == 0 && mlbPlayoffs) {
+								System.out.println("ALWC #" + (seriesIndex + 1));
+							}
+							else if (league == 1 && mlbPlayoffs){
+								System.out.println("NLWC #" + (seriesIndex + 1));
+							}
+							seriesMax = mlbPlayoffs ? 3 : 5; // WC rounds best of 3
 							int higherSeed = (seriesIndex == 0) ? 2 : 3;
 							int lowerSeed = (seriesIndex == 0) ? 5 : 4;
 							higherSeededTeam = seededTournamentTeams.get(higherSeed);
 							lowerSeededTeam = seededTournamentTeams.get(lowerSeed);	
 						}
 						else if (round == 1) {
-							seriesMax = 7;
+							seriesMax = 5;
 							higherSeededTeam = seededTournamentTeams.get(seriesIndex == 0 ? 0 : 1);
 							if (league == 0) {
+								if (mlbPlayoffs) {
+									System.out.println("ALDS #" + (seriesIndex + 1));
+								}
 								lowerSeededTeam = seededTournamentTeams.get(seriesIndex == 0 ? alTournamentWinnersBySeed.get(round-1).get(1) : alTournamentWinnersBySeed.get(round-1).get(0));
 							}
 							else {
+								if (mlbPlayoffs) {
+									System.out.println("NLDS  #" + (seriesIndex + 1));
+								}
 								lowerSeededTeam = seededTournamentTeams.get(seriesIndex == 0 ? nlTournamentWinnersBySeed.get(round-1).get(1) : nlTournamentWinnersBySeed.get(round-1).get(0));
 							}
 						}
 						else if (round == 2) {
 							seriesMax = 7;
 							if (league == 0) {
-								System.out.println((mlbPlayoffs) ? "ALCS" : "Round 3");
+								if (mlbPlayoffs) {
+									System.out.println("ALCS");
+								}
 								higherSeededTeam = seededTournamentTeams.get(alTournamentWinnersBySeed.get(round-1).get(0));
 								lowerSeededTeam = seededTournamentTeams.get(alTournamentWinnersBySeed.get(round-1).get(1));
 							}
 							else {
-								System.out.println((mlbPlayoffs) ? "NLCS" : "Round 3");
+								if (mlbPlayoffs) {
+									System.out.println("NLCS");
+								}
 								higherSeededTeam = seededTournamentTeams.get(nlTournamentWinnersBySeed.get(round-1).get(0));
 								lowerSeededTeam = seededTournamentTeams.get(nlTournamentWinnersBySeed.get(round-1).get(1));
 							}
 						}
 						else {
-							System.out.println((mlbPlayoffs) ? "World Series" : "Round 4");
+							if (mlbPlayoffs) {
+								System.out.println("World Series");
+							}
 							seriesMax = 7;
 							// AL always higher seed
 							higherSeededTeam = alSeededTournamentTeams.get(alTournamentWinnersBySeed.get(round-1).get(0));
@@ -3393,8 +3417,10 @@ public class BaseballSimulator {
 	}
 	
 	private static String displayTeamName(int top, BoxScore[] boxScores) {
-		// If playing same team/different years, include year in team name display
-		return boxScores[0].getTeam().getShortTeamName().equals(boxScores[1].getTeam().getShortTeamName()) ? boxScores[top].getTeamAndYearDisplay() : boxScores[top].getTeam().getShortTeamName();
+		// If playing same team/different years, include year in team name display or non-playoff tournament
+		boolean useYear = (boxScores[0].getTeam().getShortTeamName().equals(boxScores[1].getTeam().getShortTeamName())) ||
+						  (tournamentMode && !seasonSimulationPlayoffsMode);
+		return useYear ? boxScores[top].getTeamAndYearDisplay() : boxScores[top].getTeam().getShortTeamName();
 	}
 	
 	private static MLBTeam getTeamByYearAndFullName(Integer year, String fullName, List<MLBTeam> allTeams) {
