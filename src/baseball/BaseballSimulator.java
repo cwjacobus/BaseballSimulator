@@ -896,12 +896,12 @@ public class BaseballSimulator {
 			System.out.println(seedIndex + ". " + getTeamByYearAndTeamId(seasonSimYear, tr.getTeamId(), allMlbTeamsList).getFullTeamName());
 			seedIndex++;
 		}
-		if (seasonSimYear >= 2022) { // Only support post season game play 2022 and beyond
+		if (seasonSimYear >= 2013 && seasonSimYear != 2020) { // Only support post season game play 2013 and beyond
 			System.out.println("\n"  + seasonSimYear + " Play Playoff games");
 			playPostSeasonGames(seasonSimYear, alSeededPlayoffTeams, nlSeededPlayoffTeams);
 		}
 		else  {
-			System.out.println("\nDon't currently support post season game play before 2022");
+			System.out.println("\nDon't currently support post season game play before 2013 or 2020");
 		}
 	}
 	
@@ -973,6 +973,7 @@ public class BaseballSimulator {
 		HashMap<Integer, ArrayList<Integer>> alTournamentWinnersBySeed = new HashMap<>();
 		List<TournamentTeam> seededTournamentTeams;
 		int[] tournamentYears = {0, 0};
+		boolean season2013To2021 = mlbPlayoffs && seasonSimYear >= 2013 && seasonSimYear <= 2021;
 		for (int round = 0; round < 4; round++) {
 			nlTournamentWinnersBySeed.put(round, new ArrayList<Integer>());
 			alTournamentWinnersBySeed.put(round, new ArrayList<Integer>());
@@ -980,6 +981,9 @@ public class BaseballSimulator {
 				System.out.println("Round #" + (round + 1));
 			}
 			for (int seriesIndex = 0; seriesIndex < 2; seriesIndex++) { // 2 series in first 2 rounds, 1 in last 2
+				if (round == 0 && season2013To2021 && seriesIndex > 0) {
+					break;  // Only 1 series in WC round 2013-2021
+				}
 				if (round > 1 && seriesIndex > 0) {
 					break;  // Only 1 series in ALCS and NLCS or WS (rounds 3 and 4)
 				}
@@ -990,7 +994,7 @@ public class BaseballSimulator {
 					seededTournamentTeams = (league == 0) ? alSeededTournamentTeams : nlSeededTournamentTeams;
 					SeriesStats[] tournamentSeriesStats = new SeriesStats[2];
 					Map<String, Integer> tournamentSeriesWinsMap = new HashMap<>();
-					if (!mlbPlayoffs || (mlbPlayoffs && seasonSimYear >= 2022)) {
+					if (!mlbPlayoffs || (mlbPlayoffs && seasonSimYear >= 2013 && seasonSimYear != 2020)) {
 						int seriesMax;
 						TournamentTeam higherSeededTeam;
 						TournamentTeam lowerSeededTeam;
@@ -1001,29 +1005,66 @@ public class BaseballSimulator {
 							else if (league == 1 && mlbPlayoffs){
 								System.out.println("NLWC #" + (seriesIndex + 1));
 							}
-							seriesMax = mlbPlayoffs ? 3 : 5; // WC rounds best of 3
+							seriesMax = 5;
+							if (mlbPlayoffs) {
+								seriesMax = season2013To2021 ? 1 : 3; // WC rounds best of 3 or 1 game
+							}
 							int higherSeed = (seriesIndex == 0) ? 2 : 3;
 							int lowerSeed = (seriesIndex == 0) ? 5 : 4;
+							if (season2013To2021) {  // 4 seed plays 5 seed 1 WC game 
+								higherSeed = 3;
+								lowerSeed = 4;
+							}
 							higherSeededTeam = seededTournamentTeams.get(higherSeed);
 							lowerSeededTeam = seededTournamentTeams.get(lowerSeed);	
 						}
-						else if (round == 1) {
+						else if (round == 1) { // Second Round
 							seriesMax = 5;
 							higherSeededTeam = seededTournamentTeams.get(seriesIndex == 0 ? 0 : 1);
 							if (league == 0) {
 								if (mlbPlayoffs) {
 									System.out.println("ALDS #" + (seriesIndex + 1));
 								}
-								lowerSeededTeam = seededTournamentTeams.get(seriesIndex == 0 ? alTournamentWinnersBySeed.get(round-1).get(1) : alTournamentWinnersBySeed.get(round-1).get(0));
+								if (seriesIndex == 0) {
+									if (season2013To2021) {
+										lowerSeededTeam = seededTournamentTeams.get(alTournamentWinnersBySeed.get(round-1).get(0));  // only 1 WC winner
+									}
+									else {
+										lowerSeededTeam = seededTournamentTeams.get(alTournamentWinnersBySeed.get(round-1).get(1));
+									}
+								}
+								else { // Second series
+									if (season2013To2021) {
+										lowerSeededTeam = seededTournamentTeams.get(2);  // 2 v 3 in ALDS
+									}
+									else {
+										lowerSeededTeam = seededTournamentTeams.get(alTournamentWinnersBySeed.get(round-1).get(0));
+									}
+								}
 							}
 							else {
 								if (mlbPlayoffs) {
 									System.out.println("NLDS  #" + (seriesIndex + 1));
 								}
-								lowerSeededTeam = seededTournamentTeams.get(seriesIndex == 0 ? nlTournamentWinnersBySeed.get(round-1).get(1) : nlTournamentWinnersBySeed.get(round-1).get(0));
+								if (seriesIndex == 0) {
+									if (season2013To2021) {
+										lowerSeededTeam = seededTournamentTeams.get(nlTournamentWinnersBySeed.get(round-1).get(0));  // only 1 WC winner
+									}
+									else {
+										lowerSeededTeam = seededTournamentTeams.get(nlTournamentWinnersBySeed.get(round-1).get(1));
+									}
+								}
+								else { // Second series
+									if (season2013To2021) {
+										lowerSeededTeam = seededTournamentTeams.get(2);  // 2 v 3 in NLDS
+									}
+									else {
+										lowerSeededTeam = seededTournamentTeams.get(nlTournamentWinnersBySeed.get(round-1).get(0));
+									}
+								}
 							}
 						}
-						else if (round == 2) {
+						else if (round == 2) { // Third Round (semis)
 							seriesMax = 7;
 							if (league == 0) {
 								if (mlbPlayoffs) {
@@ -1040,7 +1081,7 @@ public class BaseballSimulator {
 								lowerSeededTeam = seededTournamentTeams.get(nlTournamentWinnersBySeed.get(round-1).get(1));
 							}
 						}
-						else {
+						else { // Champ round
 							if (mlbPlayoffs) {
 								System.out.println("World Series");
 							}
@@ -1073,6 +1114,9 @@ public class BaseballSimulator {
 						setUpDataAndPlayGames(tournamentMlbTeams, tournamentYears, seriesMax, true, tournamentSeriesStats, null, null, null, null, 1, true, multiIterationTournament);
 						System.out.println();
 						int seriesLength = 0;
+						if (seriesMax == 1) {
+							seriesBoxScores[0] = boxScores; // if WC series is one game
+						}
 						for (BoxScore[] bsArray : seriesBoxScores) {
 							if (bsArray[0] == null || bsArray[1] == null) {
 								break;
@@ -1123,7 +1167,7 @@ public class BaseballSimulator {
 						}
 					}
 					else { // Before 2022
-						System.out.println("Don't currently support post season before 2022");
+						System.out.println("Don't currently support post season before 2013 or 2020");
 					}
 				}
 			}
