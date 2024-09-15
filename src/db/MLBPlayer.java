@@ -125,6 +125,7 @@ public class MLBPlayer {
 
 	public String getFirstLastName() {
 		String firstLastName = "";
+		
 		if (fullName != null && fullName.length() > 0 && fullName.indexOf(",") != -1) {
 			String[] flnArray = fullName.split(",");
 			firstLastName = flnArray[1].trim() + " " + flnArray[0];

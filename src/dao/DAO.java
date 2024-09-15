@@ -190,6 +190,22 @@ public class DAO {
 		return allTeams;
 	}
 	
+	public static ArrayList<Integer> getAllMlbPlayerIdsList() {
+		ArrayList<Integer> allMlbPlayerIdList = new ArrayList<>();
+		try {
+			Statement stmt = conn.createStatement();
+			String sql = "SELECT MLB_PLAYER_ID FROM MLB_PLAYER";
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				allMlbPlayerIdList.add(rs.getInt(1));
+			}
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return allMlbPlayerIdList;
+	}
+	
 	public static MLBPlayer getMLBBatterFromMLBPlayerIdAndYear(Integer mlbPlayerId, Integer year) {
 		MLBPlayer player = null;
 		try {

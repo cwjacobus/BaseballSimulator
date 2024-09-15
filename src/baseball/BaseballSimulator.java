@@ -3364,9 +3364,11 @@ public class BaseballSimulator {
 		HashMap<Integer, MLBPlayer> filteredBattersMap = new HashMap<Integer, MLBPlayer>();
 		HashMap<Integer, MLBPlayer> pitchersMap = DBImport.importMlbPlayers(year, false, mlbTeamsList); // import pitchers
 		HashMap<Integer, MLBPlayer> filteredPitchersMap = new HashMap<Integer, MLBPlayer>();
+		HashMap<Integer, MLBPlayer> newBattersMap = new HashMap<Integer, MLBPlayer>();
+		HashMap<Integer, MLBPlayer> newPitchersMap = new HashMap<Integer, MLBPlayer>();
 		//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
-		ArrayList<Object> battingStatsList = DBImport.importBattingStats(battersMap, year, filteredBattersMap);
-		ArrayList<Object> pitchingStatsList = DBImport.importPitchingStats(pitchersMap, year, filteredPitchersMap);
+		ArrayList<Object> battingStatsList = DBImport.importBattingStats(mlbTeamsList, year, battersMap, filteredBattersMap, newBattersMap);
+		ArrayList<Object> pitchingStatsList = DBImport.importPitchingStats(mlbTeamsList, year, pitchersMap, filteredPitchersMap, newPitchersMap);
 		ArrayList<Integer> inelligibleBatters = new ArrayList<>();
 		ArrayList<Integer> inelligiblePitchers = new ArrayList<>();
 		for (Map.Entry<Integer, MLBPlayer> entry : filteredBattersMap.entrySet()) {
