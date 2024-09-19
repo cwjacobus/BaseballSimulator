@@ -102,9 +102,9 @@ public class DAO {
 				}
 				else if (entry.getValue() instanceof MLBPlayer) {
 					MLBPlayer mlbPlayer = (MLBPlayer)entry.getValue();
-					insertSQL = "INSERT IGNORE INTO MLB_PLAYER (MLB_PLAYER_ID, FULL_NAME, PRIMARY_POSITION, ARM_THROWS, BATS, JERSEY_NUMBER) VALUES (" + 
+					insertSQL = "INSERT IGNORE INTO MLB_PLAYER (MLB_PLAYER_ID, FULL_NAME, PRIMARY_POSITION, ARM_THROWS, BATS, JERSEY_NUMBER, SEASON_STARTED) VALUES (" + 
 						mlbPlayer.getMlbPlayerId() + ", '" + mlbPlayer.getFullName().replace("'", "") + "', '" + mlbPlayer.getPrimaryPosition() +
-						"', '" + mlbPlayer.getArmThrows() +"', '" + mlbPlayer.getBats() + "', " + mlbPlayer.getJerseyNumber() + ");";;
+						"', '" + mlbPlayer.getArmThrows() + "', '" + mlbPlayer.getBats() + "', " + mlbPlayer.getJerseyNumber() + "," + mlbPlayer.getSeasonStarted() + ");";;
 				}
 				stmt.addBatch(insertSQL);
 				mlbDataCount++;
@@ -151,7 +151,7 @@ public class DAO {
 					dataMap.put(team.getTeamId(), team);
 				}
 				else if (table.equals("MLB_PLAYER")) {
-					MLBPlayer p = new MLBPlayer(rs.getInt("MLB_PLAYER_ID"), rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
+					MLBPlayer p = new MLBPlayer(rs.getInt("MLB_PLAYER_ID"), rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"), rs.getInt("SEASON_STARTED"));
 					if (!pitchers) {
 						p.setMlbBattingStats(new MLBBattingStats(rs.getInt("MLB_PLAYER_ID"), rs.getInt("MLB_TEAM_ID"),  year, new BattingStats(rs.getInt("AT_BATS"), rs.getInt("HITS"), rs.getInt("DOUBLES"), rs.getInt("TRIPLES"), 
 							rs.getInt("HOME_RUNS"), rs.getInt("WALKS"), rs.getInt("STRIKEOUTS"), rs.getInt("HIT_BY_PITCH"), rs.getInt("RUNS"), rs.getInt("RBIS"), rs.getInt("STOLEN_BASES"), rs.getInt("PLATE_APPEARANCES"), rs.getInt("CAUGHT_STEALING"))));
@@ -217,7 +217,8 @@ public class DAO {
 			sql += "FROM MLB_PLAYER P, MLB_BATTING_STATS BS WHERE P.MLB_PLAYER_ID = BS.MLB_PLAYER_ID AND BS.MLB_PLAYER_ID  = " + mlbPlayerId + " AND YEAR = " + year;
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
-				player = new MLBPlayer(mlbPlayerId, rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
+				player = new MLBPlayer(mlbPlayerId, rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), 
+					rs.getInt("JERSEY_NUMBER"), rs.getInt("SEASON_STARTED"));
 				player.setMlbBattingStats(new MLBBattingStats(mlbPlayerId, rs.getInt("MLB_TEAM_ID"),  year, new BattingStats(rs.getInt("SUM_AB"), rs.getInt("SUM_H"), rs.getInt("SUM_D"), rs.getInt("SUM_T"), 
 					rs.getInt("SUM_HR"), rs.getInt("SUM_BB"), rs.getInt("SUM_K"), rs.getInt("SUM_HBP"), rs.getInt("SUM_R"), rs.getInt("SUM_RBI"), rs.getInt("SUM_SB"), rs.getInt("SUM_PA"), rs.getInt("SUM_CS"))));
 			}	
@@ -241,7 +242,8 @@ public class DAO {
 			sql += "FROM MLB_PLAYER P, MLB_PITCHING_STATS BS WHERE P.MLB_PLAYER_ID = BS.MLB_PLAYER_ID AND BS.MLB_PLAYER_ID = " + mlbPlayerId + " AND YEAR = " + year;
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
-				player = new MLBPlayer(mlbPlayerId, rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), rs.getInt("JERSEY_NUMBER"));
+				player = new MLBPlayer(mlbPlayerId, rs.getString("FULL_NAME"),  rs.getString("PRIMARY_POSITION"), rs.getString("ARM_THROWS"), rs.getString("BATS"), 
+					rs.getInt("JERSEY_NUMBER"), rs.getInt("SEASON_STARTED"));
 				player.setMlbPitchingStats(new MLBPitchingStats(mlbPlayerId, rs.getInt("MLB_TEAM_ID"), year, new PitchingStats(rs.getDouble("SUM_IP"), rs.getInt("SUM_ERA"), rs.getInt("SUM_RA"), 
 					rs.getInt("SUM_BB"), rs.getInt("SUM_K"), rs.getInt("SUM_HRA"), rs.getInt("SUM_SBA"), rs.getInt("SUM_HB"), rs.getInt("SUM_HA"), rs.getInt("SUM_H"), rs.getInt("SUM_S"), 
 					rs.getInt("SUM_BS"), rs.getInt("SUM_GS"), rs.getInt("SUM_B"), rs.getInt("SUM_WP"), rs.getInt("SUM_SF"), rs.getInt("SUM_BF"), rs.getInt("SUM_W"), rs.getInt("SUM_L"))));

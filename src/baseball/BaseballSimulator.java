@@ -469,7 +469,7 @@ public class BaseballSimulator {
 				rosters[t].setBatters(allBatters.get(teams[t].getTeamId()));
 				rosters[t].setPitchers(allPitchers.get(teams[t].getTeamId()));
 				HashMap<Integer, ArrayList<MLBFieldingStats>> fieldingStatsMap = allFielders.get(teams[t].getTeamId());
-				if (years[t] >= 1999 && years[t] <= 2021) {
+				if (years[t] >= 1999) {
 					rosters[t].getBatters().entrySet().stream().forEach(entry -> entry.getValue().setMlbFieldingStats(fieldingStatsMap.get(entry.getValue().getMlbPlayerId())));
 				}
 			}
@@ -557,7 +557,7 @@ public class BaseballSimulator {
 				if (importedLineup && importedPitcherRotation.get(t) != null && importedPitcherRotation.get(t).size() > 0) {
 					MLBPlayer importedPitcher = importedPitcherRotation.get(t).get(s % importedPitcherRotation.get(t).size());
 					startingPitcher = new MLBPlayer(importedPitcher.getMlbPlayerId(), importedPitcher.getFullName(), "P", importedPitcher.getArmThrows(), 
-						importedPitcher.getBats(), importedPitcher.getJerseyNumber());
+						importedPitcher.getBats(), importedPitcher.getJerseyNumber(), importedPitcher.getSeasonStarted());
 				}
 				else {
 					if (!seasonSimulationMode || teamSeasonGameIndexMap == null) {
@@ -2132,7 +2132,7 @@ public class BaseballSimulator {
 			positionsUsed = new ArrayList<String>();
 			playersInLineupList = new ArrayList<Integer>();
 			batters.add(new ArrayList<ArrayList<MLBPlayer>>());
-			useFieldingStats = years[t] >= 1999 && years[t] <= 2021;
+			useFieldingStats = years[t] >= 1999;
 			// Get random starter 1-5
 			for (int i = 1 ; i <= NUM_OF_PLAYERS_IN_LINEUP; i++) {  // 1 - 9
 				batters.get(t).add(new ArrayList<MLBPlayer>());
@@ -2193,7 +2193,7 @@ public class BaseballSimulator {
 					if (!playersInLineupList.contains(sortedPlayer.getValue().getMlbPlayerId()) && positionNeeded) {  // Not already in lineup, save P for end
 						playersInLineupList.add(sortedPlayer.getValue().getMlbPlayerId());
 						batters.get(t).get(i-1).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), playerPosition, player.getArmThrows(), player.getBats(), 
-							player.getJerseyNumber(), player.getMlbFieldingStats()));
+							player.getJerseyNumber(), player.getSeasonStarted(), player.getMlbFieldingStats()));
 						positionsUsed.add(playerPosition);
 						if (Arrays.asList(MLBFieldingStats.outfieldPositions).contains(playerPosition)) {
 							nextOFPositionNeededIndex++;
@@ -2210,7 +2210,7 @@ public class BaseballSimulator {
 						if (missingPlayer != null) {
 							playersInLineupList.add(missingPlayer.getMlbPlayerId());
 							batters.get(t).get(i-1).add(new MLBPlayer(missingPlayer.getMlbPlayerId(), missingPlayer.getFullName(), missingPositions.get(0), missingPlayer.getArmThrows(),
-								missingPlayer.getBats(), missingPlayer.getJerseyNumber(), missingPlayer.getMlbFieldingStats()));
+								missingPlayer.getBats(), missingPlayer.getJerseyNumber(), missingPlayer.getSeasonStarted(), missingPlayer.getMlbFieldingStats()));
 							positionsUsed.add(missingPositions.get(0));
 						}
 					}
@@ -2224,7 +2224,7 @@ public class BaseballSimulator {
 							MLBPlayer mikeSchmidt = rosters[t].getBatters().get(121836);
 							playersInLineupList.add(mikeSchmidt.getMlbPlayerId());
 							batters.get(t).get(7).add(new MLBPlayer(mikeSchmidt.getMlbPlayerId(), mikeSchmidt.getFullName(), firstBase, mikeSchmidt.getArmThrows(), mikeSchmidt.getBats(), 
-								mikeSchmidt.getJerseyNumber(), mikeSchmidt.getMlbFieldingStats()));
+								mikeSchmidt.getJerseyNumber(), null, mikeSchmidt.getMlbFieldingStats()));
 							positionsUsed.add(firstBase);  // 1B
 							
 						}
@@ -2242,7 +2242,8 @@ public class BaseballSimulator {
 			if (useDH && !positionsUsed.contains("DH")) { // Set DH at ninth if no DH already set
 				player =  getMlbPlayerWithMostPlateAppearances(teams[t].getTeamId(), years[t], playersInLineupList, t, battersOnMultTeams.get(t));
 				player.setPrimaryPosition("DH");
-				batters.get(t).get(8).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), player.getPrimaryPosition(), player.getArmThrows(), player.getBats(), player.getJerseyNumber()));
+				batters.get(t).get(8).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), player.getPrimaryPosition(), player.getArmThrows(), player.getBats(), 
+					player.getJerseyNumber(), player.getSeasonStarted()));
 			}
 			printlnToScreen(null);
 		}
@@ -2834,13 +2835,14 @@ public class BaseballSimulator {
 				return false;
 			}
 			MLBPlayer newPitcher = new MLBPlayer(newPitcherFromRoster.getMlbPlayerId(), newPitcherFromRoster.getFullName(), newPitcherFromRoster.getPrimaryPosition(), 
-				newPitcherFromRoster.getArmThrows(), newPitcherFromRoster.getBats(), newPitcherFromRoster.getJerseyNumber());
+				newPitcherFromRoster.getArmThrows(), newPitcherFromRoster.getBats(), newPitcherFromRoster.getJerseyNumber(), newPitcherFromRoster.getSeasonStarted());
 			MLBPlayer replacedPitcher = gameState.getCurrentPitchers()[top==0?1:0];
 			int pitchBo = getBattingOrderForPlayer(replacedPitcher.getMlbPlayerId(), top==0?1:0);
 			changePitcher(newPitcher, top==0?1:0, lineUpPos);
 			MLBPlayer replacedPlayer = gameBatters.get(lineUpPos - 1).get(gameBatters.get(lineUpPos - 1).size() - 1);
 			MLBPlayer newBatter = new MLBPlayer(newBatterFromRoster.getMlbPlayerId(), newBatterFromRoster.getFullName(), replacedPlayer.getPrimaryPositionByFieldingStats(), 
-				newBatterFromRoster.getArmThrows(), newBatterFromRoster.getBats(), newBatterFromRoster.getJerseyNumber(), newBatterFromRoster.getMlbFieldingStats());
+				newBatterFromRoster.getArmThrows(), newBatterFromRoster.getBats(), newBatterFromRoster.getJerseyNumber(), newBatterFromRoster.getSeasonStarted(), 
+				newBatterFromRoster.getMlbFieldingStats());
 			gameBatters.get(pitchBo - 1).add(newBatter);
 			System.out.println("DOUBLE SWITCH: Batter changed to: " + newBatterFromRoster.getFirstLastName() + " at lineup position: " + lineUpPos + "\n");
 			return false;
@@ -2872,7 +2874,7 @@ public class BaseballSimulator {
 				return false;
 			}
 			MLBPlayer newPitcher = new MLBPlayer(newPitcherFromRoster.getMlbPlayerId(), newPitcherFromRoster.getFullName(), newPitcherFromRoster.getPrimaryPosition(), 
-				newPitcherFromRoster.getArmThrows(), newPitcherFromRoster.getBats(), newPitcherFromRoster.getJerseyNumber());
+				newPitcherFromRoster.getArmThrows(), newPitcherFromRoster.getBats(), newPitcherFromRoster.getJerseyNumber(), newPitcherFromRoster.getSeasonStarted());
 			changePitcher(newPitcher, top, null);
 			System.out.println();
 			return false;
@@ -2904,7 +2906,8 @@ public class BaseballSimulator {
 				return false;
 			}
 			MLBPlayer newBatter = new MLBPlayer(newBatterFromRoster.getMlbPlayerId(), newBatterFromRoster.getFullName(), currentBatter.getPrimaryPositionByFieldingStats(), 
-				newBatterFromRoster.getArmThrows(), newBatterFromRoster.getBats(), newBatterFromRoster.getJerseyNumber(), newBatterFromRoster.getMlbFieldingStats());
+				newBatterFromRoster.getArmThrows(), newBatterFromRoster.getBats(), newBatterFromRoster.getJerseyNumber(), newBatterFromRoster.getSeasonStarted(), 
+				newBatterFromRoster.getMlbFieldingStats());
 			int bo = gameState.getBattingOrder()[top];
 			gameBatters.get(bo - 1).add(newBatter);
 			if (currentBatter.getPrimaryPosition().equals("P")) {  // Pinch hitting for pitcher
@@ -2957,7 +2960,8 @@ public class BaseballSimulator {
 				return false;
 			}
 			MLBPlayer pinchRunner = new MLBPlayer(pinchRunnerFromRoster.getMlbPlayerId(), pinchRunnerFromRoster.getFullName(), replacedRunnerFromRoster.getPrimaryPositionByFieldingStats(), 
-				pinchRunnerFromRoster.getArmThrows(), pinchRunnerFromRoster.getBats(), pinchRunnerFromRoster.getJerseyNumber(), pinchRunnerFromRoster.getMlbFieldingStats());
+				pinchRunnerFromRoster.getArmThrows(), pinchRunnerFromRoster.getBats(), pinchRunnerFromRoster.getJerseyNumber(), pinchRunnerFromRoster.getSeasonStarted(), 
+				pinchRunnerFromRoster.getMlbFieldingStats());
 			int bo = getBattingOrderForPlayer(replacedRunnerId, top);
 			gameBatters.get(bo - 1).add(pinchRunner);
 			if (replacedRunnerFromRoster.getPrimaryPosition().equals("P")) {  // Pinch running for pitcher
@@ -3195,7 +3199,7 @@ public class BaseballSimulator {
 				}
 				if ((lineupCount < 10) || (allStarGameMode && lineupCount > 14)) {
 					MLBPlayer importBatter = new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), lineupPos, player.getArmThrows(), 
-						player.getBats(), player.getJerseyNumber());
+						player.getBats(), player.getJerseyNumber(), player.getSeasonStarted());
 					
 					if (allStarGameMode && lineupCount > 14) {
 						importedAllstarSubs.get(top).add(importBatter);
@@ -3206,7 +3210,7 @@ public class BaseballSimulator {
 				}
 				else {
 					importedPitcherRotation.get(top).add(new MLBPlayer(player.getMlbPlayerId(), player.getFullName(), lineupPos, 
-						player.getArmThrows(), player.getBats(), player.getJerseyNumber()));
+						player.getArmThrows(), player.getBats(), player.getJerseyNumber(), player.getSeasonStarted()));
 					rosters[top].getPitchers().put(player.getMlbPlayerId(), player);
 				}
 				if (!(lineupPos.equalsIgnoreCase("P") && positionsUsed.contains("P"))) {
@@ -3360,21 +3364,24 @@ public class BaseballSimulator {
 	}
 	
 	private static void importTeam(Integer year, int top, ArrayList<MLBTeam> mlbTeamsList) {
-		HashMap<Integer, MLBPlayer> battersMap = DBImport.importMlbPlayers(year, true, mlbTeamsList); // import batters
-		HashMap<Integer, MLBPlayer> filteredBattersMap = new HashMap<Integer, MLBPlayer>();
-		HashMap<Integer, MLBPlayer> pitchersMap = DBImport.importMlbPlayers(year, false, mlbTeamsList); // import pitchers
-		HashMap<Integer, MLBPlayer> filteredPitchersMap = new HashMap<Integer, MLBPlayer>();
 		HashMap<Integer, MLBPlayer> newBattersMap = new HashMap<Integer, MLBPlayer>();
 		HashMap<Integer, MLBPlayer> newPitchersMap = new HashMap<Integer, MLBPlayer>();
+		HashMap<Integer, MLBPlayer> battersMap = new HashMap<Integer, MLBPlayer>();
+		HashMap<Integer, MLBPlayer> pitchersMap = new HashMap<Integer, MLBPlayer>();
 		//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
-		ArrayList<Object> battingStatsList = DBImport.importBattingStats(mlbTeamsList, year, battersMap, filteredBattersMap, newBattersMap);
-		ArrayList<Object> pitchingStatsList = DBImport.importPitchingStats(mlbTeamsList, year, pitchersMap, filteredPitchersMap, newPitchersMap);
+		List<Integer> allMLBPlayersIdList = DAO.getAllMlbPlayerIdsList();
+		ArrayList<MLBBattingStats> battingStatsList = DBImport.importBattingStats(mlbTeamsList, year, newBattersMap, allMLBPlayersIdList);
+		ArrayList<MLBPitchingStats> pitchingStatsList = DBImport.importPitchingStats(mlbTeamsList, year, newPitchersMap, allMLBPlayersIdList);
 		ArrayList<Integer> inelligibleBatters = new ArrayList<>();
 		ArrayList<Integer> inelligiblePitchers = new ArrayList<>();
-		for (Map.Entry<Integer, MLBPlayer> entry : filteredBattersMap.entrySet()) {
-			MLBBattingStats mlbBattingStats;
-			for (Object o : battingStatsList) {
-				mlbBattingStats = (MLBBattingStats)o;
+		ArrayList<Integer> battersPlayerIdList = new ArrayList<>();
+		battingStatsList.stream().forEach(entry -> battersPlayerIdList.add(entry.getMlbPlayerId()));
+		battersMap = DBImport.importMlbPlayers(year, battersPlayerIdList);
+		ArrayList<Integer>pitchersPlayerIdList = new ArrayList<>(); 
+		pitchingStatsList.stream().forEach(entry -> pitchersPlayerIdList.add(entry.getMlbPlayerId()));
+		pitchersMap = DBImport.importMlbPlayers(year, pitchersPlayerIdList);
+		for (Map.Entry<Integer, MLBPlayer> entry : battersMap.entrySet()) {
+			for (MLBBattingStats mlbBattingStats : battingStatsList) {
 				if (mlbBattingStats.getMlbPlayerId() == entry.getKey() && mlbBattingStats.getMlbTeamId() == mlbTeamsList.get(0).getTeamId()) {
 					entry.getValue().setMlbBattingStats(mlbBattingStats);
 					break;
@@ -3385,7 +3392,7 @@ public class BaseballSimulator {
 				}
 			}
 		}
-		for (Map.Entry<Integer, MLBPlayer> entry : filteredPitchersMap.entrySet()) {
+		for (Map.Entry<Integer, MLBPlayer> entry : pitchersMap.entrySet()) {
 			MLBPitchingStats mlbPitchingStats;
 			for (Object o : pitchingStatsList) {
 				mlbPitchingStats = (MLBPitchingStats)o;
@@ -3401,13 +3408,13 @@ public class BaseballSimulator {
 		}
 		// Before adding to rosters, remove players that moved to other teams
 		for (Integer playerId : inelligibleBatters) {
-			filteredBattersMap.remove(playerId);
+			battersMap.remove(playerId);
 		}
 		for (Integer playerId : inelligiblePitchers) {
-			filteredPitchersMap.remove(playerId);	
+			pitchersMap.remove(playerId);	
 		}
-		rosters[top].setPitchers(sortHashMapByValue(filteredPitchersMap, "GS"));
-		rosters[top].setBatters(filteredBattersMap);
+		rosters[top].setPitchers(sortHashMapByValue(pitchersMap, "GS"));
+		rosters[top].setBatters(battersMap);
 	}
 	
 	private static MLBPlayer getPitcher(int top, String sortBy, int index, ArrayList<Integer> excludingPitchers) {
@@ -3434,7 +3441,8 @@ public class BaseballSimulator {
 			rosterPitcher = rosters[top].getPitchers().get(rosters[top].getPitchers().keySet().toArray()[index]);
 		}
 		if (rosterPitcher != null) {
-			return new MLBPlayer(rosterPitcher.getMlbPlayerId(), rosterPitcher.getFullName(), "P", rosterPitcher.getArmThrows(), rosterPitcher.getBats(), rosterPitcher.getJerseyNumber());
+			return new MLBPlayer(rosterPitcher.getMlbPlayerId(), rosterPitcher.getFullName(), "P", rosterPitcher.getArmThrows(), rosterPitcher.getBats(), 
+				rosterPitcher.getJerseyNumber(), rosterPitcher.getSeasonStarted());
 		}
 		else {
 			return null;
@@ -3459,7 +3467,8 @@ public class BaseballSimulator {
 		else {
 			return null;
 		}
-		return new MLBPlayer(rosterBatter.getMlbPlayerId(), rosterBatter.getFullName(), "P", rosterBatter.getArmThrows(), rosterBatter.getBats(), rosterBatter.getJerseyNumber());
+		return new MLBPlayer(rosterBatter.getMlbPlayerId(), rosterBatter.getFullName(), "P", rosterBatter.getArmThrows(), rosterBatter.getBats(), 
+			rosterBatter.getJerseyNumber(), rosterBatter.getSeasonStarted());
 	}
 	
 	private static String displayTeamName(int top, BoxScore[] boxScores) {

@@ -9,6 +9,7 @@ public class MLBPlayer {
 	private String armThrows;
 	private String bats;
 	private Integer jerseyNumber;
+	private Integer seasonStarted;
 	private MLBBattingStats mlbBattingStats;
 	private MLBPitchingStats mlbPitchingStats;
 	private ArrayList<MLBFieldingStats> mlbFieldingStats;
@@ -26,26 +27,28 @@ public class MLBPlayer {
 	}
 	
 	
-	public MLBPlayer(Integer mlbPlayerId, String fullName, String primaryPosition, String armThrows, String bats, Integer jerseyNumber) {
+	public MLBPlayer(Integer mlbPlayerId, String fullName, String primaryPosition, String armThrows, String bats, Integer jerseyNumber, Integer seasonStarted) {
 		this.mlbPlayerId = mlbPlayerId;
 		this.fullName = fullName;
 		this.primaryPosition = primaryPosition;
 		this.armThrows = armThrows;
 		this.bats = bats;
 		this.jerseyNumber = jerseyNumber;
+		this.seasonStarted = seasonStarted;
 		this.mlbBattingStats = new MLBBattingStats();
 		this.mlbPitchingStats = new MLBPitchingStats();
 		this.mlbFieldingStats = new ArrayList<>();
 	}
 	
 	public MLBPlayer(Integer mlbPlayerId, String fullName, String primaryPosition, String armThrows, String bats, 
-			Integer jerseyNumber, ArrayList<MLBFieldingStats> mlbFieldingStats) {
+			Integer jerseyNumber, Integer seasonStarted, ArrayList<MLBFieldingStats> mlbFieldingStats) {
 		this.mlbPlayerId = mlbPlayerId;
 		this.fullName = fullName;
 		this.primaryPosition = primaryPosition;
 		this.armThrows = armThrows;
 		this.bats = bats;
 		this.jerseyNumber = jerseyNumber;
+		this.seasonStarted = seasonStarted;
 		this.mlbBattingStats = new MLBBattingStats();
 		this.mlbPitchingStats = new MLBPitchingStats();
 		this.mlbFieldingStats = mlbFieldingStats;
@@ -97,6 +100,14 @@ public class MLBPlayer {
 
 	public void setJerseyNumber(Integer jerseyNumber) {
 		this.jerseyNumber = jerseyNumber;
+	}
+
+	public Integer getSeasonStarted() {
+		return seasonStarted;
+	}
+
+	public void setSeasonStarted(Integer seasonStarted) {
+		this.seasonStarted = seasonStarted;
 	}
 
 	public MLBBattingStats getMlbBattingStats() {
