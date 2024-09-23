@@ -40,6 +40,7 @@ public class DBImport {
 
 	public static void main(String[] args) {
 		// Example PLAYER 2022 2022 ALL
+		// Example PLAYER 2022 2022 ALL F
 		int startYear = 0;
 		int endYear = -1;
 		boolean allYears = false;

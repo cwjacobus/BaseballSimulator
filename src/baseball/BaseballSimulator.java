@@ -3368,10 +3368,11 @@ public class BaseballSimulator {
 		HashMap<Integer, MLBPlayer> newPitchersMap = new HashMap<Integer, MLBPlayer>();
 		HashMap<Integer, MLBPlayer> battersMap = new HashMap<Integer, MLBPlayer>();
 		HashMap<Integer, MLBPlayer> pitchersMap = new HashMap<Integer, MLBPlayer>();
-		//HashMap<Integer, MLBFieldingStats> fieldingStatsMap = new HashMap<Integer, MLBFieldingStats>();
+		HashMap<Integer, ArrayList<MLBFieldingStats>> fieldingStatsMap = new HashMap<>();
 		List<Integer> allMLBPlayersIdList = DAO.getAllMlbPlayerIdsList();
 		ArrayList<MLBBattingStats> battingStatsList = DBImport.importBattingStats(mlbTeamsList, year, newBattersMap, allMLBPlayersIdList);
 		ArrayList<MLBPitchingStats> pitchingStatsList = DBImport.importPitchingStats(mlbTeamsList, year, newPitchersMap, allMLBPlayersIdList);
+		ArrayList<Object> fieldingStatsList = DBImport.importFieldingStats(mlbTeamsList, battingStatsList, year);
 		ArrayList<Integer> inelligibleBatters = new ArrayList<>();
 		ArrayList<Integer> inelligiblePitchers = new ArrayList<>();
 		ArrayList<Integer> battersPlayerIdList = new ArrayList<>();
@@ -3403,6 +3404,24 @@ public class BaseballSimulator {
 				else if (mlbPitchingStats.getMlbPlayerId() == entry.getKey() && mlbPitchingStats.getMlbTeamId() != mlbTeamsList.get(0).getTeamId()) { // Stats dont belong to this team so remove from roster
 					inelligiblePitchers.add(entry.getKey());
 					break;
+				}
+			}
+		}
+		// build fieldingStatsMap from fieldingStatsList to use for roster batter's fielding stats
+		for (Object o : fieldingStatsList) {
+			MLBFieldingStats mlbFieldingStats = (MLBFieldingStats)o;
+			Integer playerId = mlbFieldingStats.getMlbPlayerId();
+			ArrayList<MLBFieldingStats> mlbFieldingStatsList = fieldingStatsMap.get(playerId) == null ? new ArrayList<>() : fieldingStatsMap.get(playerId);
+			mlbFieldingStatsList.add(mlbFieldingStats);
+			fieldingStatsMap.put(playerId, mlbFieldingStatsList);
+		}
+		for (Map.Entry<Integer, MLBPlayer> entry : battersMap.entrySet()) {
+			for (Object o : fieldingStatsList) {
+				MLBFieldingStats mlbFieldingStats = (MLBFieldingStats)o;
+				if (mlbFieldingStats.getMlbPlayerId().intValue() == entry.getKey().intValue() && 
+					mlbFieldingStats.getMlbTeamId() == mlbTeamsList.get(0).getTeamId()) {
+						entry.getValue().setMlbFieldingStats(fieldingStatsMap.get(mlbFieldingStats.getMlbPlayerId()));
+						break;
 				}
 			}
 		}
@@ -3447,7 +3466,6 @@ public class BaseballSimulator {
 		else {
 			return null;
 		}
-		
 	}
 	
 	private static MLBPlayer getMlbPlayerWithMostPlateAppearances(Integer teamId, Integer year, ArrayList<Integer> excludingBatters, int top, HashMap<Integer, Integer> battersOnMultTeams) {

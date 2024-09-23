@@ -59,5 +59,9 @@ public class MLBPitchingStats {
 	public void setPitchingStats(PitchingStats pitchingStats) {
 		this.pitchingStats = pitchingStats;
 	}
+	
+	public String toString() {
+		return "mlbPlayerId=" + mlbPlayerId + " mlbTeamId=" + mlbTeamId;
+	}
 
 }

@@ -113,5 +113,9 @@ public class MLBFieldingStats {
 		}
 		return armRating;
 	}
+	
+	public String toString() {
+		return mlbPlayerId + " " + games + "at" + position + " " + mlbTeamId;
+	}
 
 }

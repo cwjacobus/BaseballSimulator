@@ -334,3 +334,8 @@ INSERT IGNORE INTO MLB_PITCHING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, INNINGS
 HOME_RUNS_ALLOWED, STOLEN_BASES_ALLOWED, HIT_BATTERS, HITS_ALLOWED, HOLDS, SAVES, BLOWN_SAVES, GAMES_STARTED, BALKS, WILD_PITCHES, SAC_FLIES, 
 BATTERS_FACED, WINS, LOSSES) 
 VALUES ("110124", "147", "1976", "136.2", "39", "51", "54", "50", "9", "11", "3", "114", "0", "0", "0", "19", "1", "6", "1", "500", "10", "5");
+
+// Average counts since 1998 expansion
+SELECT count(*) / count(distinct year) FROM mlb_batting_stats where year > 1998;
+SELECT count(*) / count(distinct year) FROM mlb_pitching_stats where year > 1998;
+SELECT count(*) / count(distinct year) FROM mlb_fielding_stats where year > 1998;
