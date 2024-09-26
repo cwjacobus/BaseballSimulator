@@ -365,7 +365,7 @@ public class DBImport {
 					JSONObject team = null;
 					if (statsJSON.has("team")) {
 						team = new JSONObject(statsJSON.getString("team"));
-						if (Integer.parseInt(team.getString("id")) !=  mlbTeamId || (pitcher && stat.getInt("inningsPitched") < qualifyingInningsPitched) || 
+						if (Integer.parseInt(team.getString("id")) !=  mlbTeamId || (pitcher && stat.getDouble("inningsPitched") < qualifyingInningsPitched) || 
 							(!pitcher && stat.getInt("plateAppearances") < qualifyingPlateAppearances)) {
 								continue;
 						}
@@ -439,7 +439,7 @@ public class DBImport {
 					Integer playerId = Integer.parseInt(player.getString("id"));
 					String fullName = unaccent(player.getString("fullName"));
 					// Only include stats if they played enough games at the position, are a pitcher and have enough plate appearances
-					if (stat.getInt("inningsPitched") > qualifyingInningsPitched && position.getString("abbreviation").equals("P")) {
+					if (stat.getDouble("inningsPitched") > qualifyingInningsPitched && position.getString("abbreviation").equals("P")) {
 						count++;
 						MLBPitchingStats mbs = createMLBPitchingStats(playerId, pitchingStatsJSON, year);
 						pitchingStatsList.add(mbs);

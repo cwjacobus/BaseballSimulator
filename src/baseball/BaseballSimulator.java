@@ -3373,8 +3373,6 @@ public class BaseballSimulator {
 		ArrayList<MLBBattingStats> battingStatsList = DBImport.importBattingStats(mlbTeamsList, year, newBattersMap, allMLBPlayersIdList);
 		ArrayList<MLBPitchingStats> pitchingStatsList = DBImport.importPitchingStats(mlbTeamsList, year, newPitchersMap, allMLBPlayersIdList);
 		ArrayList<Object> fieldingStatsList = DBImport.importFieldingStats(mlbTeamsList, battingStatsList, year);
-		ArrayList<Integer> inelligibleBatters = new ArrayList<>();
-		ArrayList<Integer> inelligiblePitchers = new ArrayList<>();
 		ArrayList<Integer> battersPlayerIdList = new ArrayList<>();
 		battingStatsList.stream().forEach(entry -> battersPlayerIdList.add(entry.getMlbPlayerId()));
 		battersMap = DBImport.importMlbPlayers(year, battersPlayerIdList);
@@ -3387,10 +3385,6 @@ public class BaseballSimulator {
 					entry.getValue().setMlbBattingStats(mlbBattingStats);
 					break;
 				}
-			else if (mlbBattingStats.getMlbPlayerId() == entry.getKey() && mlbBattingStats.getMlbTeamId() != mlbTeamsList.get(0).getTeamId()) { // Stats dont belong to this team so remove from roster
-					inelligibleBatters.add(entry.getKey());
-					break;
-				}
 			}
 		}
 		for (Map.Entry<Integer, MLBPlayer> entry : pitchersMap.entrySet()) {
@@ -3399,10 +3393,6 @@ public class BaseballSimulator {
 				mlbPitchingStats = (MLBPitchingStats)o;
 				if (mlbPitchingStats.getMlbPlayerId() == entry.getKey() && mlbPitchingStats.getMlbTeamId() == mlbTeamsList.get(0).getTeamId()) {
 					entry.getValue().setMlbPitchingStats(mlbPitchingStats);
-					break;
-				}
-				else if (mlbPitchingStats.getMlbPlayerId() == entry.getKey() && mlbPitchingStats.getMlbTeamId() != mlbTeamsList.get(0).getTeamId()) { // Stats dont belong to this team so remove from roster
-					inelligiblePitchers.add(entry.getKey());
 					break;
 				}
 			}
@@ -3424,13 +3414,6 @@ public class BaseballSimulator {
 						break;
 				}
 			}
-		}
-		// Before adding to rosters, remove players that moved to other teams
-		for (Integer playerId : inelligibleBatters) {
-			battersMap.remove(playerId);
-		}
-		for (Integer playerId : inelligiblePitchers) {
-			pitchersMap.remove(playerId);	
 		}
 		rosters[top].setPitchers(sortHashMapByValue(pitchersMap, "GS"));
 		rosters[top].setBatters(battersMap);
