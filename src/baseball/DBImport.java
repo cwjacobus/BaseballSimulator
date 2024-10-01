@@ -35,8 +35,8 @@ import db.MLBWorldSeries;
 public class DBImport {
 	
 	static int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-	static int qualifyingPlateAppearances = 100;
-	static double qualifyingInningsPitched = 40.0;
+	static int qualifyingPlateAppearances;
+	static double qualifyingInningsPitched;
 
 	public static void main(String[] args) {
 		// Example PLAYER 2022 2022 ALL
@@ -232,14 +232,23 @@ public class DBImport {
 					JSONObject person = people.getJSONObject(i);
 					JSONObject primaryPosition = new JSONObject(person.getString("primaryPosition"));
 					Integer playerId = Integer.parseInt(person.getString("id"));
+					if (playerId == 0) {
+						continue;
+					}
 					Integer primaryNumber = null;
-					JSONObject batSide = new JSONObject(person.getString("batSide"));
-					String bats = batSide.getString("code");
-					JSONObject pitchHand = new JSONObject(person.getString("pitchHand"));
-					String pitchHandString = pitchHand.getString("code");
+					String bats = "";
+					if (person.has("batSide")) {
+						JSONObject batSide = new JSONObject(person.getString("batSide"));
+						bats = batSide.getString("code");
+					}
+					String pitchHandString = "";
+					if (person.has("pitchHand")) {
+						JSONObject pitchHand = new JSONObject(person.getString("pitchHand"));
+						pitchHandString = pitchHand.getString("code");
+					}
 					String fullName = unaccent(person.getString("lastFirstName"));
 					String primaryPositionAbbreviation = primaryPosition.getString("abbreviation");
-					if (person.getString("primaryNumber").length() > 0) {
+					if (person.has("primaryNumber") && person.getString("primaryNumber").length() > 0) {
 						try {
 							primaryNumber = Integer.parseInt(person.getString("primaryNumber"));
 						}
@@ -270,7 +279,7 @@ public class DBImport {
 	public static ArrayList<MLBBattingStats> importBattingStats(ArrayList<MLBTeam> teamsList, int year, HashMap<Integer, MLBPlayer> newHittersMap,
 		List<Integer> allMLBPlayersIdList) {
 		ArrayList<MLBBattingStats> battingStatsList = new ArrayList<>();
-		
+		qualifyingPlateAppearances = 100;
 		if (year == 2020) { // pandemic year
 			qualifyingPlateAppearances = 38;
 		}
@@ -302,6 +311,9 @@ public class DBImport {
 					JSONObject stat = new JSONObject(battingStatsJSON.getString("stat"));
 					JSONObject position = new JSONObject(battingStatsJSON.getString("position"));
 					Integer playerId = Integer.parseInt(player.getString("id"));
+					if (playerId == 0) {
+						continue;
+					}
 					String fullName = unaccent(player.getString("fullName"));
 					// Only include stats if they are not a pitcher and have enough plate appearances
 					if (stat.getInt("plateAppearances") > qualifyingPlateAppearances && !position.getString("abbreviation").equals("P")) {
@@ -343,7 +355,7 @@ public class DBImport {
 				String position = primaryPosition.getString("abbreviation");
 				boolean pitcher = position.equals("P");
 				Integer playerId = Integer.parseInt(player.getString("id"));
-				if (pitcher && !pitchers) {
+				if ((pitcher && !pitchers) || playerId == 0) {
 					continue; // Skip pitchers if we are importing hitters
 				}
 				if (pitcher) {
@@ -406,6 +418,7 @@ public class DBImport {
 		List<Integer> allMLBPlayersIdList) {
 		
 		ArrayList<MLBPitchingStats> pitchingStatsList = new ArrayList<>();
+		qualifyingInningsPitched = 40.0;
 		if (year == 2020) { // pandemic year
 			qualifyingInningsPitched = 16.0;
 		}
@@ -437,6 +450,9 @@ public class DBImport {
 					JSONObject stat = new JSONObject(pitchingStatsJSON.getString("stat"));
 					JSONObject position = new JSONObject(pitchingStatsJSON.getString("position"));
 					Integer playerId = Integer.parseInt(player.getString("id"));
+					if (playerId == 0) {
+						continue;
+					}
 					String fullName = unaccent(player.getString("fullName"));
 					// Only include stats if they played enough games at the position, are a pitcher and have enough plate appearances
 					if (stat.getDouble("inningsPitched") > qualifyingInningsPitched && position.getString("abbreviation").equals("P")) {
@@ -492,6 +508,9 @@ public class DBImport {
 					JSONObject stat = new JSONObject(fieldingStatsJSON.getString("stat"));
 					JSONObject position = new JSONObject(fieldingStatsJSON.getString("position"));
 					Integer playerId = Integer.parseInt(player.getString("id"));
+					if (playerId == 0) {
+						continue;
+					}
 					String fullName = unaccent(player.getString("fullName"));
 					boolean qualifiedBatter = battingStatsList.stream().anyMatch(batter -> batter.getMlbPlayerId().intValue() == playerId.intValue());
 					// Only include fielding stats if they played enough games at the position, are not a pitcher or DH and have enough plate appearances
@@ -528,9 +547,9 @@ public class DBImport {
 		try {
 			JSONObject team = new JSONObject(battingStatsJson.getString("team"));
 			JSONObject stat = new JSONObject(battingStatsJson.getString("stat"));
-			int cs = stat.getString("caughtStealing").length() == 0 ? 0 : Integer.parseInt(stat.getString("caughtStealing"));
-			int hbp = stat.getString("hitByPitch").length() == 0 ? 0 : Integer.parseInt(stat.getString("hitByPitch"));
-			int so = stat.getString("strikeOuts").length() == 0 ? 0 : Integer.parseInt(stat.getString("strikeOuts"));
+			int cs = (stat.has("caughtStealing") && stat.getString("caughtStealing").length() > 0) ? Integer.parseInt(stat.getString("caughtStealing")) : 0;
+			int hbp = (stat.has("hitByPitch") && stat.getString("hitByPitch").length() > 0) ? Integer.parseInt(stat.getString("hitByPitch")) : 0;
+			int so = (stat.has("strikeOuts") && stat.getString("strikeOuts").length() > 0) ? Integer.parseInt(stat.getString("strikeOuts")) : 0;
 			mbs = new MLBBattingStats(mlbPlayerId, Integer.parseInt(team.getString("id")), year,
 				new BattingStats(Integer.parseInt(stat.getString("atBats")), Integer.parseInt(stat.getString("hits")), Integer.parseInt(stat.getString("doubles")), 
 					Integer.parseInt(stat.getString("triples")), Integer.parseInt(stat.getString("homeRuns")), Integer.parseInt(stat.getString("baseOnBalls")), 
@@ -548,11 +567,11 @@ public class DBImport {
 		try {
 			JSONObject team = new JSONObject(pitchingStatsJson.getString("team"));
 			JSONObject stat = new JSONObject(pitchingStatsJson.getString("stat"));
-			int sb = stat.getString("stolenBases").length() == 0 ? 0 : Integer.parseInt(stat.getString("stolenBases"));
-			int hld = stat.getString("holds").length() == 0 ? 0 : Integer.parseInt(stat.getString("holds"));
-			int sf = stat.getString("sacFlies").length() == 0 ? 0 : Integer.parseInt(stat.getString("sacFlies"));
-			int sv = stat.getString("saves").length() == 0 ? 0 : Integer.parseInt(stat.getString("saves"));
-			int bs = stat.getString("blownSaves").length() == 0 ? 0 : Integer.parseInt(stat.getString("blownSaves"));
+			int sb = (stat.has("stolenBases") && stat.getString("stolenBases").length() > 0) ? Integer.parseInt(stat.getString("stolenBases")) : 0;
+			int hld = (stat.has("holds") && stat.getString("holds").length() > 0) ? Integer.parseInt(stat.getString("holds")) : 0;
+			int sf = (stat.has("sacFlies") && stat.getString("sacFlies").length() > 0) ? Integer.parseInt(stat.getString("sacFlies")) : 0;
+			int sv = (stat.has("saves") && stat.getString("saves").length() > 0) ? Integer.parseInt(stat.getString("saves")) : 0;
+			int bs = (stat.has("blownSaves") && stat.getString("blownSaves").length() > 0) ? Integer.parseInt(stat.getString("blownSaves")) : 0;
 			mps = new MLBPitchingStats(mlbPlayerId, Integer.parseInt(team.getString("id")), year,
 				new PitchingStats(Double.parseDouble(stat.getString("inningsPitched")), Integer.parseInt(stat.getString("earnedRuns")), Integer.parseInt(stat.getString("runs")), 
 					Integer.parseInt(stat.getString("baseOnBalls")), Integer.parseInt(stat.getString("strikeOuts")), Integer.parseInt(stat.getString("homeRuns")), 
