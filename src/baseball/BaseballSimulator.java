@@ -496,6 +496,9 @@ public class BaseballSimulator {
 		List<List<MLBPlayer>> importedAllstarSubs = new ArrayList<>();
 		if (!importedLineup) {
 			lineupBatters = setOptimalBattingLineup(teams, years);
+			if (lineupBatters == null) {
+				return false;
+			}
 			boxScores[0].setBatters(lineupBatters.get(0));
 			boxScores[1].setBatters(lineupBatters.get(1));
 			if (areLineupsIncomplete(lineupBatters)) {
@@ -2214,7 +2217,7 @@ public class BaseballSimulator {
 							positionsUsed.add(missingPositions.get(0));
 						}
 					}
-					if (positionsUsed.size() < 8) { // Still not enough players in lineup
+					if (positionsUsed.size() < 8 || (positionsUsed.size() == 8) && positionsUsed.contains("DH")) { // Still not enough players in lineup
 						if (years[t] == 1980 && teams[t].getShortTeamName().equals("PHI")) {
 							// Very specific manual override needed to run 1980 World Series
 							// Problem is Pete Rose is listed as a 3B in DB but he played 1B in 1980
@@ -2233,6 +2236,7 @@ public class BaseballSimulator {
 							for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
 								System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPositionByFieldingStats());
 							}
+							return null;
 						}
 					}
 					//return batters;
@@ -3514,11 +3518,16 @@ public class BaseballSimulator {
 	
 	private static String padSpaces(String defSpaces, double stat) {
 		String spaces = defSpaces;
-		if (stat < 100.0) {
-			spaces += " ";
+		if (stat >= 1000.0) {
+			spaces = " ";
 		}
-		if (stat < 10.0) {
-			spaces += " ";
+		else {
+			if (stat < 100.0) {
+				spaces += " ";
+			}
+			if (stat < 10.0) {
+				spaces += " ";
+			}
 		}
 		return spaces;
 	}

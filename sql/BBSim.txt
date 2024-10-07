@@ -339,3 +339,12 @@ VALUES ("110124", "147", "1976", "136.2", "39", "51", "54", "50", "9", "11", "3"
 SELECT count(*) / count(distinct year) FROM mlb_batting_stats where year > 1998;
 SELECT count(*) / count(distinct year) FROM mlb_pitching_stats where year > 1998;
 SELECT count(*) / count(distinct year) FROM mlb_fielding_stats where year > 1998;
+
+// Get pitcher counts by team and year
+select count(*), ps.year, t.full_name from mlb_pitching_stats ps, mlb_team t where ps.year < 1911 and (ps.MLB_TEAM_ID = t.TEAM_ID
+and t.first_year_played <= ps.year and (t.last_year_played >= ps.year or t.last_year_played is null)) group by ps.year, t.full_name order by ps.year;
+
+// Get stats counts by year
+select count(*), year from mlb_batting_stats group by year order by year;
+select count(*), year from mlb_pitching_stats group by year order by year;
+select count(*), year from mlb_fielding_stats group by year order by year;
