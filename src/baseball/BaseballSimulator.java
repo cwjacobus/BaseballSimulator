@@ -469,9 +469,7 @@ public class BaseballSimulator {
 				rosters[t].setBatters(allBatters.get(teams[t].getTeamId()));
 				rosters[t].setPitchers(allPitchers.get(teams[t].getTeamId()));
 				HashMap<Integer, ArrayList<MLBFieldingStats>> fieldingStatsMap = allFielders.get(teams[t].getTeamId());
-				if (years[t] >= 1999) {
-					rosters[t].getBatters().entrySet().stream().forEach(entry -> entry.getValue().setMlbFieldingStats(fieldingStatsMap.get(entry.getValue().getMlbPlayerId())));
-				}
+				rosters[t].getBatters().entrySet().stream().forEach(entry -> entry.getValue().setMlbFieldingStats(fieldingStatsMap.get(entry.getValue().getMlbPlayerId())));
 			}
 			if ((rosters[t].getBatters().size() == 0 || rosters[t].getPitchers().size() == 0) && !allStarGameMode) {
 				System.out.println("Players for " + years[t] + " " + teams[t].getFullTeamName() + " not found in database.  Import player stats from API.");
@@ -2135,7 +2133,7 @@ public class BaseballSimulator {
 			positionsUsed = new ArrayList<String>();
 			playersInLineupList = new ArrayList<Integer>();
 			batters.add(new ArrayList<ArrayList<MLBPlayer>>());
-			useFieldingStats = years[t] >= 1999;
+			useFieldingStats = true;
 			// Get random starter 1-5
 			for (int i = 1 ; i <= NUM_OF_PLAYERS_IN_LINEUP; i++) {  // 1 - 9
 				batters.get(t).add(new ArrayList<MLBPlayer>());
@@ -2651,7 +2649,6 @@ public class BaseballSimulator {
 	
 	private static Integer getOutfielderArmRating(MLBPlayer outfielder, int year) {
 		// Get arm rating from API
-		// Note: Fielding stats seem to only be from 1999 - present
 		Integer armRating = 0;
 		ArrayList<MLBFieldingStats> fieldingStatsList = outfielder.getMlbFieldingStats();
 		if (fieldingStatsList != null) {

@@ -348,3 +348,7 @@ and t.first_year_played <= ps.year and (t.last_year_played >= ps.year or t.last_
 select count(*), year from mlb_batting_stats group by year order by year;
 select count(*), year from mlb_pitching_stats group by year order by year;
 select count(*), year from mlb_fielding_stats group by year order by year;
+
+// Two way players queries
+select p.full_name, bs.year from mlb_batting_stats bs, mlb_player p where p.mlb_player_id = bs.mlb_player_id  and (bs.mlb_player_id in (select mlb_player_id from mlb_pitching_stats) or p.primary_position='P') order by bs.year;
+select distinct bs.mlb_player_id, p.full_name from mlb_batting_stats bs, mlb_player p where p.mlb_player_id = bs.mlb_player_id and (bs.mlb_player_id in (select mlb_player_id from mlb_pitching_stats) or p.primary_position='P') order by bs.year;

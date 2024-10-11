@@ -10,6 +10,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
@@ -134,6 +135,7 @@ public class DBImport {
 	}
 	
 	// Get player stats from API
+	// OUT OF DATE
 	private static void importFranchisesAndTeams(Integer year, boolean allYears) {
 		
 		HashMap<String, MLBTeam> allTeamsMap = new HashMap<String, MLBTeam>();
@@ -219,10 +221,6 @@ public class DBImport {
 		for (Integer mlbPlayerId : mlbPlayerIdList) {
 			allPlayersMap.put(mlbPlayerId, importMlbPlayer(mlbPlayerId, year));
 		}
-		/*for (Map.Entry<Integer, MLBPlayer> entry : allPlayersMap.entrySet()) {
-		      System.out.println(entry.getValue().getMlbPlayerId() + " " + entry.getValue().getFirstLastName() + " " + entry.getValue().getPrimaryPosition() +
-		           " " + entry.getValue().getArmThrows() + " " + entry.getValue().getBats() + " " + entry.getValue().getJerseyNumber());
-		 }*/
 		return allPlayersMap;
 	}
 	
@@ -329,7 +327,8 @@ public class DBImport {
 					}
 					String fullName = unaccent(player.getString("fullName"));
 					// Only include stats if they are not a pitcher and have enough plate appearances
-					if (stat.getInt("plateAppearances") > qualifyingPlateAppearances && !position.getString("abbreviation").equals("P")) {
+					if (stat.getInt("plateAppearances") > qualifyingPlateAppearances && (!position.getString("abbreviation").equals("P") ||
+							Arrays.asList(BaseballConstants.twoWayPlayers).contains(playerId))) {
 						count++;
 						teamCount++;
 						MLBBattingStats mbs = createMLBBattingStats(playerId, battingStatsJSON, year);
