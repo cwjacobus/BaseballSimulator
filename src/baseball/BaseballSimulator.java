@@ -493,7 +493,7 @@ public class BaseballSimulator {
 		List<List<MLBPlayer>> importedPitcherRotation = new ArrayList<>();
 		List<List<MLBPlayer>> importedAllstarSubs = new ArrayList<>();
 		if (!importedLineup) {
-			lineupBatters = setOptimalBattingLineup(teams, years);
+			lineupBatters = setOptimalBattingLineup(teams, years, bestOfSeries);
 			if (lineupBatters == null) {
 				return false;
 			}
@@ -2119,7 +2119,7 @@ public class BaseballSimulator {
     }
 	
 	// Lineup is home/vis->batting order (1-9) -> List of Players
-	private static ArrayList<ArrayList<ArrayList<MLBPlayer>>> setOptimalBattingLineup(MLBTeam[] teams, int[] years) {
+	private static ArrayList<ArrayList<ArrayList<MLBPlayer>>> setOptimalBattingLineup(MLBTeam[] teams, int[] years, boolean bestOfSeries) {
 		ArrayList<ArrayList<ArrayList<MLBPlayer>>> batters = new ArrayList<ArrayList<ArrayList<MLBPlayer>>>();
 		ArrayList<Integer> playersInLineupList;
 		HashMap<Integer, MLBPlayer> battingStatsSortedByStatMap;
@@ -2162,7 +2162,8 @@ public class BaseballSimulator {
 						continue;
 					}
 					String playerPosition;
-					if ((player.getMlbFieldingStats() == null || player.getMlbFieldingStats().isEmpty()) && useDH && useFieldingStats) { // DH
+					// Don't set a DH before 9th for a best of series since this will break when switch from DH to non-DH in the series
+					if ((player.getMlbFieldingStats() == null || player.getMlbFieldingStats().isEmpty()) && useDH && useFieldingStats && !bestOfSeries) { // DH
 						playerPosition = "DH";
 					}
 					else {
@@ -2216,7 +2217,7 @@ public class BaseballSimulator {
 						}
 					}
 					if (positionsUsed.size() < 8 || (positionsUsed.size() == 8) && positionsUsed.contains("DH")) { // Still not enough players in lineup
-						if (years[t] == 1980 && teams[t].getShortTeamName().equals("PHI")) {
+						/*if (years[t] == 1980 && teams[t].getShortTeamName().equals("PHI")) {
 							// Very specific manual override needed to run 1980 World Series
 							// Problem is Pete Rose is listed as a 3B in DB but he played 1B in 1980
 							// Cant change his position in DB as it will break '76 Reds
@@ -2227,15 +2228,13 @@ public class BaseballSimulator {
 							batters.get(t).get(7).add(new MLBPlayer(mikeSchmidt.getMlbPlayerId(), mikeSchmidt.getFullName(), firstBase, mikeSchmidt.getArmThrows(), mikeSchmidt.getBats(), 
 								mikeSchmidt.getJerseyNumber(), null, mikeSchmidt.getMlbFieldingStats()));
 							positionsUsed.add(firstBase);  // 1B
-							
 						}
-						else {
+						else {*/
 							System.out.println("Can not create a lineup for the " + years[t] + " " + teams[t].getFullTeamName() + " with players:");
 							for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
 								System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPositionByFieldingStats());
 							}
 							return null;
-						}
 					}
 					//return batters;
 				}
