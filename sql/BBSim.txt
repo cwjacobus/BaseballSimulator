@@ -352,3 +352,25 @@ select count(*), year from mlb_fielding_stats group by year order by year;
 // Two way players queries
 select p.full_name, bs.year from mlb_batting_stats bs, mlb_player p where p.mlb_player_id = bs.mlb_player_id  and (bs.mlb_player_id in (select mlb_player_id from mlb_pitching_stats) or p.primary_position='P') order by bs.year;
 select distinct bs.mlb_player_id, p.full_name from mlb_batting_stats bs, mlb_player p where p.mlb_player_id = bs.mlb_player_id and (bs.mlb_player_id in (select mlb_player_id from mlb_pitching_stats) or p.primary_position='P') order by bs.year;
+
+// 2025 MLB_TEAM changes
+INSERT INTO MLB_WORLD_SERIES (YEAR,TEAM_1,TEAM_2,WINNING_TEAM) VALUES (2024,'New York Yankees','Los Angeles Dodgers','Los Angeles Dodgers');
+ALTER TABLE MLB_TEAM DROP INDEX MT_CONST1;
+ALTER TABLE MLB_TEAM ADD CONSTRAINT MT_CONST1 UNIQUE (TEAM_ID, MLB_FRANCHISE_ID, FULL_NAME, LEAGUE, FIRST_YEAR_PLAYED, LAST_YEAR_PLAYED);
+UPDATE MLB_TEAM SET FULL_NAME='Los Angeles Angels' where MLB_TEAM_ID=149;
+UPDATE MLB_TEAM SET LAST_YEAR_PLAYED = 1952 WHERE MLB_TEAM_ID=98; // Cincinnati Reds
+UPDATE MLB_TEAM SET FIRST_YEAR_PLAYED=1953,LAST_YEAR_PLAYED = 1958 WHERE MLB_TEAM_ID=97; // Cincinnati Redlegs
+INSERT INTO MLB_TEAM (TEAM_ID,MLB_FRANCHISE_ID,FULL_NAME,SHORT_NAME,LEAGUE,FIRST_YEAR_PLAYED,LAST_YEAR_PLAYED) 
+ VALUES (113,113,'Cincinnati Reds','CIN','NL',1959,NULL); // Cincinnati Reds
+UPDATE MLB_TEAM SET FULL_NAME='Brooklyn Trolley Dodgers',FIRST_YEAR_PLAYED=1911,LAST_YEAR_PLAYED = 1912 WHERE MLB_TEAM_ID=87; // Trolley Dodgers
+INSERT INTO MLB_TEAM (TEAM_ID,MLB_FRANCHISE_ID,FULL_NAME,SHORT_NAME,LEAGUE,FIRST_YEAR_PLAYED,LAST_YEAR_PLAYED) 
+ VALUES (119,119,'Brooklyn Dodgers','BRO','NL',1913,1913); // Brooklyn Dodgers
+INSERT INTO MLB_TEAM (TEAM_ID,MLB_FRANCHISE_ID,FULL_NAME,SHORT_NAME,LEAGUE,FIRST_YEAR_PLAYED,LAST_YEAR_PLAYED) 
+ VALUES (119,119,'Brooklyn Dodgers','BRO','NL',1932,1957); // Brooklyn Dodgers
+UPDATE MLB_TEAM SET LAST_YEAR_PLAYED = 1935 WHERE MLB_TEAM_ID=83; // Boston Braves
+UPDATE MLB_TEAM SET FIRST_YEAR_PLAYED=1936,LAST_YEAR_PLAYED = 1940 WHERE MLB_TEAM_ID=82; // Boston Bees
+INSERT INTO MLB_TEAM (TEAM_ID,MLB_FRANCHISE_ID,FULL_NAME,SHORT_NAME,LEAGUE,FIRST_YEAR_PLAYED,LAST_YEAR_PLAYED) 
+ VALUES (113,113,'Boston Braves','BSN','NL',1941,1952); // Boston Braves
+UPDATE MLB_TEAM SET LAST_YEAR_PLAYED = 2024 WHERE MLB_TEAM_ID=128; // Oakland Athletics
+INSERT INTO MLB_TEAM (TEAM_ID,MLB_FRANCHISE_ID,FULL_NAME,SHORT_NAME,LEAGUE,FIRST_YEAR_PLAYED,LAST_YEAR_PLAYED) 
+ VALUES (133,133,'Athletics','ATH','AL',2025,NULL); // Athletics
