@@ -224,7 +224,7 @@ public class BaseballSimulator {
 				seasonSimYear = Integer.parseInt(args[1]);
 			}
 			if (seasonSimYear < 2013) {
-				System.out.println("Season simulations only years 2013-2023!"); // 2013 HOU moved to AL West to make 6 Div of 5 teams
+				System.out.println("Season simulations only years 2013-Present!"); // 2013 HOU moved to AL West to make 6 Div of 5 teams
 				return;
 			}
 			createSchedule(seasonSimYear, seasonSched);
@@ -425,15 +425,26 @@ public class BaseballSimulator {
 						teamSched.add(team2.getTeamId());  // 4 x per league opponent for 4 teams and 3 x league opponent for other 6 teams
 					}
 					leagueOpponentCount++;*/
-					for (int j = 0; j < 4; j++) {
-						teamSched.add(team2.getTeamId());  // 4 x per league opponent
+					for (int j = 0; j < 3; j++) {
+						teamSched.add(team2.getTeamId());  // 3 x per league opponent
 					}
 				}
 			}
-			Integer[] interleagueOpponents = team.getLeague().equals("AL") ? mlbDivisionTeams[division+3] : mlbDivisionTeams[division-3];
+			Integer[] interleagueOpponents1 = team.getLeague().equals("AL") ? mlbDivisionTeams[division+3] : mlbDivisionTeams[division-3];
+			Integer[] interleagueOpponents2;
+			if (division % 3 == 0) { // East plays East/West
+				interleagueOpponents2 = team.getLeague().equals("AL") ? mlbDivisionTeams[division+5] : mlbDivisionTeams[division-1];
+			}
+			else { // Central plays Central/East, West plays West/Central
+				interleagueOpponents2 = team.getLeague().equals("AL") ? mlbDivisionTeams[division+2] : mlbDivisionTeams[division-4];
+			}
+			// Combine arrays
+			Integer[] interleagueOpponents = new Integer[interleagueOpponents1.length + interleagueOpponents2.length];
+	        System.arraycopy(interleagueOpponents1, 0, interleagueOpponents, 0, interleagueOpponents1.length);
+	        System.arraycopy(interleagueOpponents2, 0, interleagueOpponents, interleagueOpponents1.length, interleagueOpponents2.length);
 			for (int i = 0; i < interleagueOpponents.length; i++) {
 				for (int j = 0; j < 2; j++) {
-					teamSched.add(interleagueOpponents[i]);  // 2 x per interleague opponent
+					teamSched.add(interleagueOpponents[i]);  // 2 x per interleague opponent (2 x 10)
 				}
 			}
 			seasonSched.put(team.getTeamId(), teamSched);
