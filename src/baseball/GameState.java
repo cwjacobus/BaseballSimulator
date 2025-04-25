@@ -21,6 +21,7 @@ public class GameState {
 	boolean[] closerIsPitching = {false, false}; 
 	boolean[] setupManIsPitching = {false, false};
 	boolean[] saveOppty = {false, false};
+	Integer numberOfPickoffAttempts = 0;
 	
 	public static final int BASES_EMPTY = 0;
 	public static final int MAN_ON_FIRST = 1;
@@ -277,5 +278,17 @@ public class GameState {
 
 	public void setGameStarted(boolean gameStarted) {
 		this.gameStarted = gameStarted;
+	}
+	
+	public void incrementNumberOfPickoffAttempts() {
+		this.numberOfPickoffAttempts++;
+	}
+
+	public Integer getNumberOfPickoffAttempts() {
+		return numberOfPickoffAttempts;
+	}
+
+	public void setNumberOfPickoffAttempts(Integer numberOfPickoffAttempts) {
+		this.numberOfPickoffAttempts = numberOfPickoffAttempts;
 	}
 }

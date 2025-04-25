@@ -1355,6 +1355,7 @@ public class BaseballSimulator {
 					if (gameState.getOuts() == OUTS_PER_INNING) {
 						gameState.setHitAndRun(false);  // clear hit and run, if on
 						gameState.setInfieldIn(false);  // clear infield in, if on
+						gameState.setNumberOfPickoffAttempts(0);
 						break;
 					}
 					int rando = getRandomNumberInRange(1, 1000);
@@ -1423,12 +1424,13 @@ public class BaseballSimulator {
 							break;
 						}
 						boxScore.incrementBaseRunners();
-					}
+					} // END NOT OUT
 					currentPitcherGameStats.incrementBattersFaced();
 					currentBatterGameStats.incrementPlateAppearances();
 					gameState.incrementBattingOrder(top);
 					gameState.setHitAndRun(false);  // clear hit and run, if on
 					gameState.setInfieldIn(false);  // clear infield in, if on
+					gameState.setNumberOfPickoffAttempts(0);
 				} // outs
 				// Did game end after top of inning?
 				if (inning >= 9 && boxScores[1].getScore(inning) > boxScores[0].getScore(inning) && top == 0) {
@@ -2776,6 +2778,31 @@ public class BaseballSimulator {
 			System.out.println();
 			return false;
 		}
+		else if (command.toUpperCase().indexOf("PICKOFF") != -1) {
+			commandArray = command.split(" ");
+			if (commandArray.length < 2) {
+				System.out.print("INVALID COMMAND!\n");
+				return false;
+			}
+			int pickoffBase = 1;
+			try {
+				pickoffBase = Integer.parseInt(commandArray[1]);
+			}
+			catch (Exception e) {
+			}
+			if (gameState.getBaseRunnerId(pickoffBase) == 0) {
+				System.out.print("NO BASE RUNNER ON " + pickoffBase + "!\n");
+				return false;
+			}
+			if (gameState.getNumberOfPickoffAttempts() >= MAX_PICKOFF_ATTEMPTS) {
+				System.out.print("MAXIMUM PICKOFF ATTEMPTS IS " + MAX_PICKOFF_ATTEMPTS + "!\n");
+				return false;
+			}
+			// pickoffAttempt(pickoffBase);
+			gameState.incrementNumberOfPickoffAttempts();
+			System.out.println("Pickoff attempt #" + gameState.getNumberOfPickoffAttempts() + " to: " + pickoffBase);
+			return false;
+		}
 		else if (command.toUpperCase().indexOf("PITCHERS") != -1) {
 			return handlePitchersCommand(command);
 		}
@@ -2889,7 +2916,7 @@ public class BaseballSimulator {
 			changePitcher(newPitcher, top, null);
 			System.out.println();
 			return false;
-		}
+		} // END SUBP
 		else if (command.toUpperCase().indexOf("SUBB") != -1) {
 			commandArray = command.split(" ");
 			if (commandArray.length < 2) {
@@ -2931,7 +2958,7 @@ public class BaseballSimulator {
 			}
 			System.out.println("Batter changed to: " + newBatterFromRoster.getFirstLastName() + "\n");
 			return false;
-		}
+		} // END SUBB
 		else if (command.toUpperCase().indexOf("SUBR") != -1) {
 			commandArray = command.split(" ");
 			if (commandArray.length < 3) {
@@ -3015,6 +3042,7 @@ public class BaseballSimulator {
 					gameState.incrementBattingOrder(gameState.getTop());
 					gameState.setHitAndRun(false);  // clear hit and run, if on
 					gameState.setInfieldIn(false);  // clear infield in, if on
+					gameState.setNumberOfPickoffAttempts(0);
 					return false;
 				case "SACBUNT":
 					if (gameState.getCurrentBasesSituation() == GameState.BASES_LOADED || gameState.getCurrentBasesSituation() == GameState.MAN_ON_SECOND_AND_THIRD || 
@@ -3028,6 +3056,7 @@ public class BaseballSimulator {
 						gameState.incrementBattingOrder(gameState.getTop());
 						gameState.setHitAndRun(false);  // clear hit and run, if on
 						gameState.setInfieldIn(false);  // clear infield in, if on
+						gameState.setNumberOfPickoffAttempts(0);
 					}
 					return false;
 				case "SUICIDESQUEEZE":
@@ -3043,6 +3072,7 @@ public class BaseballSimulator {
 						gameState.incrementBattingOrder(gameState.getTop());
 						gameState.setHitAndRun(false);  // clear hit and run, if on
 						gameState.setInfieldIn(false);  // clear infield in, if on
+						gameState.setNumberOfPickoffAttempts(0);
 					}
 					return false;
 				case "HITRUN":
@@ -3070,10 +3100,9 @@ public class BaseballSimulator {
 						" ER: " + currentPitcher.getMlbPitchingStats().getPitchingStats().getEarnedRunsAllowed());
 					return false;
 				case "?":
-					System.out.println("COMMANDS - SIM, AUTO<ing#>, STEAL<base#>, PITCHERS <HOME|VIS>, SUBP <HOME|VIS> <id#>, BATTERS <HOME|VIS>, SUBB <id#>, OUTFIELDERS, "
-						+ "INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN");
-					System.out.println("HITRUN, INFIELDIN, PITCHERCHECK, LINEUP <HOME|VIS>, DOUBLESTEAL, "
-							+ "SUICIDESQUEEZE SAFETYSQUEEZE DOUBLESWITCH <pitcherId#> <batterId#> <lineupPos#> IMPORT <HOME|VIS> <fileName>");
+					System.out.println("COMMANDS - SIM, AUTO <inn#>, STEAL <base#>, PICKOFF <base#>, PITCHERS <HOME|VIS>, SUBP <HOME|VIS> <id#>, BATTERS <HOME|VIS>, "
+						+ "SUBB <id#>, OUTFIELDERS, INTBB, SUBR <id#> <base#>, SACBUNT, HITRUN, INFIELDIN, PITCHERCHECK, LINEUP <HOME|VIS>, DOUBLESTEAL, "
+						+ "SUICIDESQUEEZE SAFETYSQUEEZE DOUBLESWITCH <pitcherId#> <batterId#> <lineupPos#> IMPORT <HOME|VIS> <fileName>");
 					return false;
 				default:
 					System.out.println("UNKNOWN COMMAND!");
