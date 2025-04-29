@@ -1998,6 +1998,34 @@ public class BaseballSimulator {
 		return runnerIsStealing;
 	}
 	
+	private static int pickoffAttempt(int pickoffBase, PitchingStats currentPitcherStats) {
+		gameState.incrementNumberOfPickoffAttempts();
+		long pickOffRando =  getRandomNumberInRange(1, 100);
+		System.out.println("Pickoff attempt #" + gameState.getNumberOfPickoffAttempts() + " to: " + pickoffBase);
+		if (pickOffRando > 96) {
+			printlnToScreen("ERROR - ALL BASE RUNNERS ADVANCE!");
+			if (gameState.getBaseRunner(3).getRunnerId() != 0) {
+				runScores(false);
+				gameState.incrementVirtualErrorOuts();
+			}
+			boxScores[gameState.getTop()==0?1:0].incrementErrors();
+			gameState.setNumberOfPickoffAttempts(0);
+			// All base runners advance
+			gameState.setBaseRunner(3, gameState.getBaseRunner(2));
+			gameState.setBaseRunner(2, gameState.getBaseRunner(1));
+			gameState.setBaseRunner(1, new BaseRunner());		
+		}
+		else if (pickOffRando >  (90 - Math.round((currentPitcherStats.getStolenBasesAllowed()*100.0)/currentPitcherStats.getBattersFaced()))) {
+			printlnToScreen(getPlayerFromId(gameState.getBaseRunner(pickoffBase).getRunnerId()).getFirstLastName() + " PICKED OFF at: " + pickoffBase + "!");
+			gameState.setBaseRunner(pickoffBase, new BaseRunner());
+			gameState.incrementOuts();
+		}
+		else {
+			printlnToScreen("SAFE!");
+		}
+		return 0;
+	}
+	
 	private static int stealBase(int baseToSteal) {
 		int outStealing = 0;
 		int fromBase = baseToSteal - 1;  
@@ -2798,9 +2826,7 @@ public class BaseballSimulator {
 				System.out.print("MAXIMUM PICKOFF ATTEMPTS IS " + MAX_PICKOFF_ATTEMPTS + "!\n");
 				return false;
 			}
-			// pickoffAttempt(pickoffBase);
-			gameState.incrementNumberOfPickoffAttempts();
-			System.out.println("Pickoff attempt #" + gameState.getNumberOfPickoffAttempts() + " to: " + pickoffBase);
+			pickoffAttempt(pickoffBase, rosters[gameState.getTop()==0?1:0].getPitchers().get(currentPitcher.getMlbPlayerId()).getMlbPitchingStats().getPitchingStats());
 			return false;
 		}
 		else if (command.toUpperCase().indexOf("PITCHERS") != -1) {
