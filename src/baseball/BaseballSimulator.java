@@ -2002,25 +2002,36 @@ public class BaseballSimulator {
 		gameState.incrementNumberOfPickoffAttempts();
 		long pickOffRando =  getRandomNumberInRange(1, 100);
 		System.out.println("Pickoff attempt #" + gameState.getNumberOfPickoffAttempts() + " to: " + pickoffBase);
-		if (pickOffRando > 96) {
-			printlnToScreen("ERROR - ALL BASE RUNNERS ADVANCE!");
+		if (pickOffRando > 96) { // 97 98 - BALK, 99 100 - ERROR
+			boolean error = pickOffRando > 98 ? true : false;
+			if (error) {
+				printlnToScreen("ERROR - ALL BASE RUNNERS ADVANCE!");
+			}
+			else {
+				printlnToScreen("BALK - ALL BASE RUNNERS ADVANCE!");
+			}
 			if (gameState.getBaseRunner(3).getRunnerId() != 0) {
 				runScores(false);
-				gameState.incrementVirtualErrorOuts();
+				if (error) {
+					gameState.incrementVirtualErrorOuts();
+				}
 			}
-			boxScores[gameState.getTop()==0?1:0].incrementErrors();
+			if (error) {
+				boxScores[gameState.getTop()==0?1:0].incrementErrors();
+			}
 			gameState.setNumberOfPickoffAttempts(0);
 			// All base runners advance
 			gameState.setBaseRunner(3, gameState.getBaseRunner(2));
 			gameState.setBaseRunner(2, gameState.getBaseRunner(1));
 			gameState.setBaseRunner(1, new BaseRunner());		
 		}
-		else if (pickOffRando >  (90 - Math.round((currentPitcherStats.getStolenBasesAllowed()*100.0)/currentPitcherStats.getBattersFaced()))) {
+		else if (pickOffRando >  (90 - Math.round((currentPitcherStats.getStolenBasesAllowed()*100.0)/currentPitcherStats.getBattersFaced()))) { // OUT
 			printlnToScreen(getPlayerFromId(gameState.getBaseRunner(pickoffBase).getRunnerId()).getFirstLastName() + " PICKED OFF at: " + pickoffBase + "!");
 			gameState.setBaseRunner(pickoffBase, new BaseRunner());
 			gameState.incrementOuts();
+			gameState.setNumberOfPickoffAttempts(0);
 		}
-		else {
+		else { // SAFE
 			printlnToScreen("SAFE!");
 		}
 		return 0;
