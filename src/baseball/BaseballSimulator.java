@@ -1332,7 +1332,7 @@ public class BaseballSimulator {
 					}
 					if (gameMode || (autoBeforeMode && inning >= autoBeforeInning)) {
 						myObj = new Scanner(System.in);
-						printToScreen("PITCH: ");
+						printToScreen("BATTER UP: ");
 					    String command = myObj.nextLine();
 					    if (currentPitcherGameStats == null && command.toUpperCase().indexOf("SUBP") == -1 && command.toUpperCase().indexOf("PITCH") == -1 && 
 					    		command.toUpperCase().indexOf("LINEUP") == -1) { // Allow PITCHERS, PITCHCHECK, LINEUP and SUBP commands
