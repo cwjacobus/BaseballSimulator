@@ -846,8 +846,8 @@ public class BaseballSimulator {
 			entry.getValue().getMlbBattingStats().getBattingStats().getAtBats()))));
 		
 		// Output DL
-		/*System.out.println("\nDL: " + disabledList.size());
-		disabledList.entrySet().stream().forEach(entry -> System.out.println(entry.getValue() + " " + entry.getKey()));*/
+		System.out.println("\nDL: " + disabledList.size() +  " players (currently not used)");
+		//disabledList.entrySet().stream().forEach(entry -> System.out.println(entry.getValue() + " " + entry.getKey()));
 	}
 	
 	private static void postSeason(Map<Integer, Map<Integer, TeamSeasonResults>> seasonResults, Integer seasonSimYear) {
@@ -1255,6 +1255,20 @@ public class BaseballSimulator {
 					if ((simulationMode || (autoBeforeMode && inning < autoBeforeInning)) && !allStarGameMode) {  // Only look to change pitchers in SIM mode and not AS game
 						int pitcherYear = boxScores[top==0?1:0].getYear();
 						ArrayList<Integer> excludingPitchers = new ArrayList<Integer>(boxScores[top==0?1:0].getPitchers().keySet());
+						int pitcherBFThreshold1;
+						int pitcherBFThreshold2;
+						if (pitcherYear <= 1960) {
+							pitcherBFThreshold1 = 40;
+							pitcherBFThreshold2 = 30;
+						}
+						else if (pitcherYear <= 2000) {
+							pitcherBFThreshold1 = 35;
+							pitcherBFThreshold2 = 25;
+						}
+						else {
+							pitcherBFThreshold1 = 30;
+							pitcherBFThreshold2 = 20;
+						}
 						// No Holds before 1999
 						if (pitcherYear >= 1999 && gameState.getInning() >= 7 && Math.abs(boxScores[1].getScore(9) - boxScores[0].getScore(9)) < 4 && !gameState.isCloserPitching(top) && !gameState.isSetupManPitching(top) && 
 							((top == 0 && boxScores[1].getScore(9) > boxScores[0].getScore(9)) || top == 1 && (boxScores[0].getScore(9) > boxScores[1].getScore(9)))) { 
@@ -1267,7 +1281,8 @@ public class BaseballSimulator {
 									gameState.setSetupManIsPitching(true, top);
 								}
 						}
-						else if (gameState.getInning() >= 9 && Math.abs(boxScores[1].getScore(9) - boxScores[0].getScore(9)) < 4 && !gameState.isCloserPitching(top) && ((top == 0 && 
+						// Look for a being ahead in a close game (3 or less runs) in the 9th or after to put in closer (1969 on)
+						else if (pitcherYear >= 1969 && gameState.getInning() >= 9 && Math.abs(boxScores[1].getScore(9) - boxScores[0].getScore(9)) < 4 && !gameState.isCloserPitching(top) && ((top == 0 && 
 							boxScores[1].getScore(9) > boxScores[0].getScore(9)) || top == 1 && (boxScores[0].getScore(9) > boxScores[1].getScore(9)))) { 
 								MLBPlayer newPitcher = getPitcher(top==0?1:0, "SV", 0, excludingPitchers);
 								if (newPitcher != null) {
@@ -1276,8 +1291,9 @@ public class BaseballSimulator {
 									gameState.setSetupManIsPitching(false, top);
 								}
 						}
-						else if (currentPitcherGameStats.getBattersFaced() > 30 || currentPitcherGameStats.getEarnedRunsAllowed() > 6 || 
-							(currentPitcherGameStats.getEarnedRunsAllowed() > 3 && currentPitcherGameStats.getBattersFaced() > 20)) {
+						// Look if pitcher needs to be replaced for fatigue
+						else if (currentPitcherGameStats.getBattersFaced() > pitcherBFThreshold1 || currentPitcherGameStats.getEarnedRunsAllowed() > 6 || 
+							(currentPitcherGameStats.getEarnedRunsAllowed() > 3 && currentPitcherGameStats.getBattersFaced() > pitcherBFThreshold2)) {
 								// Exclude closer and set up man when getting mid/long reliever
 								if (setupMen[top==0?1:0] != null) {
 									excludingPitchers.add(setupMen[top==0?1:0].getMlbPlayerId());
@@ -1315,7 +1331,7 @@ public class BaseballSimulator {
 					printlnToScreen(currentBatter.getFirstLastName() + " UP OUTS: " + gameState.getOuts() + " "  + gameState.getBaseSituations().get(gameState.getCurrentBasesSituation()) + 
 						" (" + runnerOnFirst + " " + runnerOnSecond + " " + runnerOnThird + ")");	
 					// Look for injury (.001 chance)
-					if (getRandomNumberInRange(1, 1000) == 1) {
+					if (getRandomNumberInRange(1, 1000) < 3) {
 						int injuredPlayerIndex = getRandomNumberInRange(1, 10);
 						MLBPlayer injuredPlayer = null;
 						if (injuredPlayerIndex == 10) { // Batter
