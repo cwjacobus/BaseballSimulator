@@ -2717,12 +2717,14 @@ public class BaseballSimulator {
 	private static Integer getOutfielderArmRating(MLBPlayer outfielder, int year) {
 		// Get arm rating from API
 		Integer armRating = 0;
-		ArrayList<MLBFieldingStats> fieldingStatsList = outfielder.getMlbFieldingStats();
-		if (fieldingStatsList != null) {
-			for (MLBFieldingStats fieldingStat : fieldingStatsList) {
-				if (fieldingStat.getPosition().equals(outfielder.getPrimaryPosition())) {
-					armRating = fieldingStat.getOutfielderArmRating();
-					break;
+		if (outfielder != null) {
+			ArrayList<MLBFieldingStats> fieldingStatsList = outfielder.getMlbFieldingStats();
+			if (fieldingStatsList != null) {
+				for (MLBFieldingStats fieldingStat : fieldingStatsList) {
+					if (fieldingStat.getPosition().equals(outfielder.getPrimaryPosition())) {
+						armRating = fieldingStat.getOutfielderArmRating();
+						break;
+					}
 				}
 			}
 		}
