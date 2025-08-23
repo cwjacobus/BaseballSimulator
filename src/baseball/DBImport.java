@@ -44,6 +44,7 @@ public class DBImport {
 		// Example PLAYER 2022 2022 ALL F
 		// Example PLAYER 2022 2022 NYY W
 		// Example PLAYER 2022 2022 BOS F W
+		// Example POST 1903 1905
 		int startYear = 0;
 		int endYear = -1;
 		boolean allYears = false;
@@ -81,9 +82,15 @@ public class DBImport {
 		if (fn.equals("WORLDSERIES")) {
 			importWorldSeries();
 		}
-		else if (fn.equals("PLAYER")) {
+		else if (fn.equals("PLAYER") || fn.equals("POST")) {
+			boolean postSeason = false;
 			if (args.length < 4) {
 				System.out.println("INVALID ARGS");
+				return;
+			}
+			postSeason = fn.equals("POST");
+			if (postSeason && !args[3].equalsIgnoreCase("ALL")) {
+				System.out.println("INVALID ARGS - POST SEASON MUST BE ALL TEAMS");
 				return;
 			}
 			if (!args[2].equalsIgnoreCase("ALL")) {
@@ -99,21 +106,32 @@ public class DBImport {
 				fieldingOnly = args[4].equalsIgnoreCase("F");
 			}
 			for (int year = startYear; year <= endYear; year++) {
-				System.out.println("Import players for: " + year);
+				System.out.println("Import " + (postSeason ? "post season " : "") + " players for: " + year);
 				if (!args[3].equalsIgnoreCase("ALL")) {
 					teamsForYearList = getTeamsByYear(year, args[3], allTeamsList);
 				}
 				else {
-					teamsForYearList = getTeamsByYear(year, null, allTeamsList);
+					if (postSeason && year < 1969 && endYear < 1969) { // Before 1969, only 2 PS teams from WS
+						List<MLBWorldSeries> wsList = DAO.getMLBWorldSeriesList(year, year);
+						teamsForYearList = new ArrayList<MLBTeam>();
+						if (wsList != null && wsList.size() > 0) {
+							MLBWorldSeries ws = wsList.get(0);
+							teamsForYearList.add(getTeamByYearAndFullName(ws.getYear(), ws.getTeam1(), allTeamsList));
+							teamsForYearList.add(getTeamByYearAndFullName(ws.getYear(), ws.getTeam2(), allTeamsList));
+						}
+					}
+					else {
+						teamsForYearList = getTeamsByYear(year, null, allTeamsList);
+					}
 				}
 				List<Integer> allMLBPlayersIdList = DAO.getAllMlbPlayerIdsList();
 				HashMap<Integer, MLBPlayer> newBattersMap = new HashMap<Integer, MLBPlayer>();
 				HashMap<Integer, MLBPlayer> newPitchersMap = new HashMap<Integer, MLBPlayer>();
-				System.out.println("Import all batting stats for " + year);
-				ArrayList<MLBBattingStats> battingStatsList = importBattingStats(teamsForYearList, year, newBattersMap, allMLBPlayersIdList);
+				System.out.println("Import all " + (postSeason ? "post season " : "") + "batting stats for " + year);
+				ArrayList<MLBBattingStats> battingStatsList = importBattingStats(teamsForYearList, year, newBattersMap, allMLBPlayersIdList, postSeason);
 				if (!fieldingOnly) {
-					System.out.println("Import all pitching stats for " + year);
-					ArrayList<MLBPitchingStats> pitchingStatsList = importPitchingStats(teamsForYearList, year, newPitchersMap, allMLBPlayersIdList);
+					System.out.println("Import all " + (postSeason ? "post season " : "") + "pitching stats for " + year);
+					ArrayList<MLBPitchingStats> pitchingStatsList = importPitchingStats(teamsForYearList, year, newPitchersMap, allMLBPlayersIdList, postSeason);
 					if (writeToDB) {
 						DAO.createBatchDataFromMap(newBattersMap);
 						DAO.createBatchDataFromMap(newPitchersMap);
@@ -121,12 +139,14 @@ public class DBImport {
 						DAO.createBatchDataFromList(new ArrayList<Object>(pitchingStatsList));
 					}
 				}
-				System.out.println("Import all fielding stats for " + year);
-				ArrayList<Object> fieldingStatsList = importFieldingStats(teamsForYearList, battingStatsList, year);  // hitters fielding
-				if (writeToDB) {
-					DAO.createBatchDataFromList(fieldingStatsList);
+				if (!postSeason) {
+					System.out.println("Import all fielding stats for " + year);
+					ArrayList<Object> fieldingStatsList = importFieldingStats(teamsForYearList, battingStatsList, year);  // hitters fielding
+					if (writeToDB) {
+						DAO.createBatchDataFromList(fieldingStatsList);
+					}
 				}
-				System.out.println(newBattersMap.size() + " new batters and " + newPitchersMap.size() + " new pitchers created for " + year);
+				System.out.println(newBattersMap.size() + " new batters and " + newPitchersMap.size() + " new pitchers created for " + year + "\n");
 			}
 		}
 		else {
@@ -284,7 +304,7 @@ public class DBImport {
 	}
 	
 	public static ArrayList<MLBBattingStats> importBattingStats(ArrayList<MLBTeam> teamsList, int year, HashMap<Integer, MLBPlayer> newBattersMap,
-		List<Integer> allMLBPlayersIdList) {
+		List<Integer> allMLBPlayersIdList, boolean postSeason) {
 		
 		ArrayList<MLBBattingStats> battingStatsList = new ArrayList<>();
 		qualifyingPlateAppearances = 100;
@@ -296,17 +316,21 @@ public class DBImport {
 		}
 		int count = 0;
 		int teamCount = 0;
+		String gameType = postSeason ? "P" : "R";
 		for (MLBTeam team : teamsList) {
 			teamCount = 0;
-			String getBattingStatsAPI = "https://statsapi.mlb.com/api/v1/stats?season=" + year + "&group=hitting&stats=season&gameType=R" + 
+			String getBattingStatsAPI = "https://statsapi.mlb.com/api/v1/stats?season=" + year + "&group=hitting&stats=season&gameType=" + gameType + 
 				"&playerPool=ALL&limit=1000&teamId=" + team.getTeamId(); // Limit must be set or else returns 50
 			try {
-				System.out.println("\n" + team.getFullTeamName() + " qualified batters");
 				URL obj = new URL(getBattingStatsAPI);
 				HttpURLConnection con = (HttpURLConnection)obj.openConnection();
 				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8)); 
 				JSONObject playerStats = new JSONObject(in.readLine());
 				JSONArray stats = new JSONArray(playerStats.getString("stats"));
+				if (stats.getJSONObject(0).getInt("totalSplits") == 0) { // Skip post season teams with no data (weren't in post season)
+					continue;
+				}
+				System.out.println("\n" + team.getFullTeamName() + " qualified batters");
 				JSONArray exemptions = null;
 				if (stats.getJSONObject(0).has("exemptions")) {
 					exemptions = new JSONArray(stats.getJSONObject(0).getString("exemptions")); // traded players
@@ -326,15 +350,21 @@ public class DBImport {
 						continue;
 					}
 					String fullName = unaccent(player.getString("fullName"));
-					// Only include stats if they are not a pitcher and have enough plate appearances
-					if (stat.getInt("plateAppearances") > qualifyingPlateAppearances && (!position.getString("abbreviation").equals("P") ||
-							Arrays.asList(BaseballConstants.twoWayPlayers).contains(playerId))) {
+					// Only include stats if they are not a pitcher and have enough plate appearances or postseason
+					if (postSeason || (stat.getInt("plateAppearances") > qualifyingPlateAppearances && (!position.getString("abbreviation").equals("P") ||
+							Arrays.asList(BaseballConstants.twoWayPlayers).contains(playerId)))) {
 						count++;
 						teamCount++;
 						MLBBattingStats mbs = createMLBBattingStats(playerId, battingStatsJSON, year);
 						battingStatsList.add(mbs);
-						System.out.println(fullName + " had " + stat.getInt("plateAppearances") + " plate appearances at " + 
-							position.getString("abbreviation"));
+						if (!postSeason) {
+							System.out.println(fullName + " had " + stat.getInt("plateAppearances") + " plate appearances at " + 
+								position.getString("abbreviation"));
+						}
+						else {
+							System.out.println(fullName + " played " + stat.getInt("gamesPlayed") + " post season games at " + 
+								position.getString("abbreviation"));
+						}
 						if (!allMLBPlayersIdList.contains(playerId)) {  // New player
 							MLBPlayer newPlayer = importMlbPlayer(playerId, year);
 							newBattersMap.put(playerId, newPlayer);
@@ -431,8 +461,9 @@ public class DBImport {
 	}
 	
 	public static ArrayList<MLBPitchingStats> importPitchingStats(ArrayList<MLBTeam> teamsList, int year, HashMap<Integer, MLBPlayer> newPitchersMap, 
-		List<Integer> allMLBPlayersIdList) {
+		List<Integer> allMLBPlayersIdList, boolean postSeason) {
 		
+		String gameType = postSeason ? "P" : "R";
 		ArrayList<MLBPitchingStats> pitchingStatsList = new ArrayList<>();
 		qualifyingInningsPitched = 40.0;
 		if (year == 2020) { // pandemic year
@@ -444,16 +475,19 @@ public class DBImport {
 		int count = 0;
 		int teamCount = 0;
 		for (MLBTeam team : teamsList) {
-			String getPitchingStatsAPI = "https://statsapi.mlb.com/api/v1/stats?season=" + year + "&group=pitching&stats=season&gameType=R" + 
+			String getPitchingStatsAPI = "https://statsapi.mlb.com/api/v1/stats?season=" + year + "&group=pitching&stats=season&gameType=" + gameType + 
 				"&playerPool=ALL&limit=1000&teamId=" + team.getTeamId(); // Limit must be set or else returns 50
 			teamCount = 0;
 			try {
-				System.out.println("\n" + team.getFullTeamName() + " qualified pitchers");
 				URL obj = new URL(getPitchingStatsAPI);
 				HttpURLConnection con = (HttpURLConnection)obj.openConnection();
 				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8)); 
 				JSONObject playerStats = new JSONObject(in.readLine());
 				JSONArray stats = new JSONArray(playerStats.getString("stats"));
+				if (stats.getJSONObject(0).getInt("totalSplits") == 0) { // Skip post season teams with no data (weren't in post season)
+					continue;
+				}
+				System.out.println("\n" + team.getFullTeamName() + " qualified pitchers");
 				JSONArray exemptions = null;
 				if (stats.getJSONObject(0).has("exemptions")) {
 					exemptions = new JSONArray(stats.getJSONObject(0).getString("exemptions")); // traded players
@@ -473,8 +507,8 @@ public class DBImport {
 						continue;
 					}
 					String fullName = unaccent(player.getString("fullName"));
-					// Only include stats if they played enough games at the position, are a pitcher and have enough plate appearances
-					if (stat.getDouble("inningsPitched") > qualifyingInningsPitched/* && position.getString("abbreviation").equals("P")*/) {
+					// Only include stats if they played enough games at the position, are a pitcher and have enough plate appearances or post season
+					if (postSeason || (stat.getDouble("inningsPitched") > qualifyingInningsPitched/* && position.getString("abbreviation").equals("P")*/)) {
 						count++;
 						teamCount++;
 						MLBPitchingStats mbs = createMLBPitchingStats(playerId, pitchingStatsJSON, year);
@@ -593,12 +627,14 @@ public class DBImport {
 			int sf = (stat.has("sacFlies") && stat.getString("sacFlies").length() > 0) ? Integer.parseInt(stat.getString("sacFlies")) : 0;
 			int sv = (stat.has("saves") && stat.getString("saves").length() > 0) ? Integer.parseInt(stat.getString("saves")) : 0;
 			int bs = (stat.has("blownSaves") && stat.getString("blownSaves").length() > 0) ? Integer.parseInt(stat.getString("blownSaves")) : 0;
+			int hbp = (stat.has("hitByPitch") && stat.getString("hitByPitch").length() > 0) ? Integer.parseInt(stat.getString("hitByPitch")) : 0;
+			int bk = (stat.has("balks") && stat.getString("balks").length() > 0) ? Integer.parseInt(stat.getString("balks")) : 0;
+			int wp = (stat.has("wildPitches") && stat.getString("wildPitches").length() > 0) ? Integer.parseInt(stat.getString("wildPitches")) : 0;
 			mps = new MLBPitchingStats(mlbPlayerId, Integer.parseInt(team.getString("id")), year,
 				new PitchingStats(Double.parseDouble(stat.getString("inningsPitched")), Integer.parseInt(stat.getString("earnedRuns")), Integer.parseInt(stat.getString("runs")), 
 					Integer.parseInt(stat.getString("baseOnBalls")), Integer.parseInt(stat.getString("strikeOuts")), Integer.parseInt(stat.getString("homeRuns")), 
-					sb, Integer.parseInt(stat.getString("hitByPitch")), Integer.parseInt(stat.getString("hits")), hld, sv, bs,
-					Integer.parseInt(stat.getString("gamesStarted")), Integer.parseInt(stat.getString("balks")), Integer.parseInt(stat.getString("wildPitches")),
-					sf, Integer.parseInt(stat.getString("battersFaced")), Integer.parseInt(stat.getString("wins")), Integer.parseInt(stat.getString("losses"))));
+					sb, hbp, Integer.parseInt(stat.getString("hits")), hld, sv, bs, Integer.parseInt(stat.getString("gamesStarted")), bk, wp, sf, 
+					Integer.parseInt(stat.getString("battersFaced")), Integer.parseInt(stat.getString("wins")), Integer.parseInt(stat.getString("losses"))));
 		}
 		catch (JSONException e) {
 			e.printStackTrace();
@@ -690,6 +726,17 @@ public class DBImport {
 		finally {
 			closeFileReader(reader);
 		}
+	}
+	
+	private static MLBTeam getTeamByYearAndFullName(Integer year, String fullName, List<MLBTeam> allTeams) {
+		for (MLBTeam team : allTeams) {
+			// Null last year means active in current year
+			int lastYear = (team.getLastYearPlayed() == null || team.getLastYearPlayed() == 0) ? Calendar.getInstance().get(Calendar.YEAR) : team.getLastYearPlayed();
+			if (team.getFirstYearPlayed() <= year && lastYear >= year && team.getFullTeamName().equalsIgnoreCase(fullName)) {
+				return team;
+			}
+		}
+		return null;
 	}
 	
 	private static void closeFileReader(BufferedReader reader) {

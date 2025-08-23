@@ -3465,8 +3465,8 @@ public class BaseballSimulator {
 		HashMap<Integer, MLBPlayer> pitchersMap = new HashMap<Integer, MLBPlayer>();
 		HashMap<Integer, ArrayList<MLBFieldingStats>> fieldingStatsMap = new HashMap<>();
 		List<Integer> allMLBPlayersIdList = DAO.getAllMlbPlayerIdsList();
-		ArrayList<MLBBattingStats> battingStatsList = DBImport.importBattingStats(mlbTeamsList, year, newBattersMap, allMLBPlayersIdList);
-		ArrayList<MLBPitchingStats> pitchingStatsList = DBImport.importPitchingStats(mlbTeamsList, year, newPitchersMap, allMLBPlayersIdList);
+		ArrayList<MLBBattingStats> battingStatsList = DBImport.importBattingStats(mlbTeamsList, year, newBattersMap, allMLBPlayersIdList, false);
+		ArrayList<MLBPitchingStats> pitchingStatsList = DBImport.importPitchingStats(mlbTeamsList, year, newPitchersMap, allMLBPlayersIdList, false);
 		ArrayList<Object> fieldingStatsList = DBImport.importFieldingStats(mlbTeamsList, battingStatsList, year);
 		ArrayList<Integer> battersPlayerIdList = new ArrayList<>();
 		battingStatsList.stream().forEach(entry -> battersPlayerIdList.add(entry.getMlbPlayerId()));
