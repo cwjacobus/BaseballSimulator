@@ -26,17 +26,19 @@ public class DAO {
 	
 	public static Connection conn;
 	
-	public static void createBatchDataFromList(ArrayList<Object> mlbDataList) {
+	public static void createBatchDataFromList(ArrayList<Object> mlbDataList, boolean postSeason) {
 		try {
 			conn.setAutoCommit(false);
 			Statement stmt = conn.createStatement();
 			int mlbDataCount = 0;
+			String battingStatsTable = postSeason ? "MLB_BATTING_STATS_POST" : "MLB_BATTING_STATS";
+			String pitchingStatsTable = postSeason ? "MLB_PITCHING_STATS_POST" : "MLB_PITCHING_STATS";
 			for (Object mlbData : mlbDataList) {
 				String insertSQL = "";
 				if (mlbData instanceof MLBBattingStats) {
 					MLBBattingStats mbs = (MLBBattingStats)mlbData;
 					BattingStats bs = mbs.getBattingStats();
-					insertSQL = "INSERT IGNORE INTO MLB_BATTING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, AT_BATS, HITS, DOUBLES, TRIPLES, HOME_RUNS, WALKS, STRIKEOUTS, HIT_BY_PITCH, RUNS, RBIS, STOLEN_BASES, PLATE_APPEARANCES, CAUGHT_STEALING) VALUES (" +
+					insertSQL = "INSERT IGNORE INTO " + battingStatsTable + " (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, AT_BATS, HITS, DOUBLES, TRIPLES, HOME_RUNS, WALKS, STRIKEOUTS, HIT_BY_PITCH, RUNS, RBIS, STOLEN_BASES, PLATE_APPEARANCES, CAUGHT_STEALING) VALUES (" +
 						mbs.getMlbPlayerId() + ", " + mbs.getMlbTeamId() + ", " + mbs.getYear() + ", " + bs.getAtBats() + ", " + bs.getHits() + ", " + bs.getDoubles() + ", " + bs.getTriples() + ", " + bs.getHomeRuns() +
 						", " + bs.getWalks() + ", " + bs.getStrikeOuts() + ", " + bs.getHitByPitch() + ", " + bs.getRuns() + ", " + bs.getRbis() + ", " + bs.getStolenBases() +
 						", " + bs.getPlateAppearances() + ", " + bs.getCaughtStealing() +");";
@@ -44,7 +46,7 @@ public class DAO {
 				else if (mlbData instanceof MLBPitchingStats) {
 					MLBPitchingStats mps = (MLBPitchingStats)mlbData;
 					PitchingStats ps = mps.getPitchingStats();
-					insertSQL = "INSERT IGNORE INTO MLB_PITCHING_STATS (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, INNINGS_PITCHED, WALKS, STRIKEOUTS, RUNS_ALLOWED, EARNED_RUNS_ALLOWED, HOME_RUNS_ALLOWED, STOLEN_BASES_ALLOWED, HIT_BATTERS, HITS_ALLOWED, HOLDS, SAVES, BLOWN_SAVES, GAMES_STARTED, BALKS, WILD_PITCHES, SAC_FLIES, BATTERS_FACED, WINS, LOSSES) VALUES (" +
+					insertSQL = "INSERT IGNORE INTO " + pitchingStatsTable + " (MLB_PLAYER_ID, MLB_TEAM_ID, YEAR, INNINGS_PITCHED, WALKS, STRIKEOUTS, RUNS_ALLOWED, EARNED_RUNS_ALLOWED, HOME_RUNS_ALLOWED, STOLEN_BASES_ALLOWED, HIT_BATTERS, HITS_ALLOWED, HOLDS, SAVES, BLOWN_SAVES, GAMES_STARTED, BALKS, WILD_PITCHES, SAC_FLIES, BATTERS_FACED, WINS, LOSSES) VALUES (" +
 						mps.getMlbPlayerId() + ", " + mps.getMlbTeamId() + ", " + mps.getYear() + ", " + ps.getInningsPitched() + ", " + ps.getWalks() + ", " + ps.getStrikeouts() + ", " + ps.getRunsAllowed() + ", " + ps.getEarnedRunsAllowed() +
 						", " + ps.getHomeRunsAllowed() + ", " + ps.getStolenBasesAllowed() + ", " + ps.getHitBatters() + ", " + ps.getHitsAllowed() + ", " + ps.getHolds() + ", " + ps.getSaves() + ", " + ps.getBlownSaves() +
 						", " + ps.getGamesStarted() + ", " + ps.getBalks() + ", " + ps.getWildPitches() + ", " + ps.getSacrificeFlies() + ", " + ps.getBattersFaced() + ", " + ps.getWins() + ", " + ps.getLosses() + ");";

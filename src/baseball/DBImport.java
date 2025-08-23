@@ -135,15 +135,15 @@ public class DBImport {
 					if (writeToDB) {
 						DAO.createBatchDataFromMap(newBattersMap);
 						DAO.createBatchDataFromMap(newPitchersMap);
-						DAO.createBatchDataFromList(new ArrayList<Object>(battingStatsList));
-						DAO.createBatchDataFromList(new ArrayList<Object>(pitchingStatsList));
+						DAO.createBatchDataFromList(new ArrayList<Object>(battingStatsList), postSeason);
+						DAO.createBatchDataFromList(new ArrayList<Object>(pitchingStatsList), postSeason);
 					}
 				}
 				if (!postSeason) {
 					System.out.println("Import all fielding stats for " + year);
 					ArrayList<Object> fieldingStatsList = importFieldingStats(teamsForYearList, battingStatsList, year);  // hitters fielding
 					if (writeToDB) {
-						DAO.createBatchDataFromList(fieldingStatsList);
+						DAO.createBatchDataFromList(fieldingStatsList, false);
 					}
 				}
 				System.out.println(newBattersMap.size() + " new batters and " + newPitchersMap.size() + " new pitchers created for " + year + "\n");
@@ -713,7 +713,7 @@ public class DBImport {
 				importedWs.add(ws);
 				line = reader.readLine();
 			}
-			DAO.createBatchDataFromList(importedWs);
+			DAO.createBatchDataFromList(importedWs, false);
 		}
 		catch (IOException e) {
 			System.out.println("Import file not found.  Import failed!");
