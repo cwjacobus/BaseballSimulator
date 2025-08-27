@@ -168,6 +168,11 @@ SELECT table_schema AS "Database", SUM(data_length + index_length) / 1024 / 1024
 // Get career home run leaders
 select p.full_name, sum(bs.HOME_RUNS) from mlb_batting_stats bs, mlb_player p where p.mlb_player_id = bs.mlb_player_id group by p.full_name having sum(bs.HOME_RUNS) > 100 order by sum(bs.HOME_RUNS) desc;
 
+// Get career home run, plate appearance and innings pitched leaders (top 25)
+select p.full_name, sum(bs.home_runs) from mlb_batting_stats_post bs, mlb_player p where p.mlb_player_id = bs.mlb_player_id group by p.full_name order by sum(bs.home_runs) desc limit 25;
+select p.full_name, sum(bs.plate_appearances) from mlb_batting_stats_post bs, mlb_player p where p.mlb_player_id = bs.mlb_player_id group by p.full_name order by sum(bs.plate_appearances) desc limit 25;
+select p.full_name, sum(bs.innings_pitched) from mlb_pitching_stats_post bs, mlb_player p where p.mlb_player_id = bs.mlb_player_id group by p.full_name order by sum(bs.innings_pitched) desc limit 25;
+
 // Get count of MLB Player
 select count(*) from mlb_player;
 
