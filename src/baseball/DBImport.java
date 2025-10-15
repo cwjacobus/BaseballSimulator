@@ -400,8 +400,8 @@ public class DBImport {
 				String position = primaryPosition.getString("abbreviation");
 				boolean pitcher = position.equals("P");
 				Integer playerId = Integer.parseInt(player.getString("id"));
-				if ((pitcher && !pitchers) || playerId == 0) {
-					continue; // Skip pitchers if we are importing hitters
+				if ((pitcher && !pitchers) || (!pitcher && pitchers) || playerId == 0) {
+					continue; // Skip pitchers if we are importing hitters and vice-versa
 				}
 				if (pitcher) {
 					getPlayerStatsAPI = String.format(getPlayerStatsAPIFormat, playerId, "pitching");
