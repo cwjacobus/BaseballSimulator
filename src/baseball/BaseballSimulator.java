@@ -2285,24 +2285,36 @@ public class BaseballSimulator {
 						}
 					}
 					if (positionsUsed.size() < 8 || (positionsUsed.size() == 8) && positionsUsed.contains("DH")) { // Still not enough players in lineup
-						/*if (years[t] == 1980 && teams[t].getShortTeamName().equals("PHI")) {
+					    if (years[t] == 2025 && teams[t].getShortTeamName().equals("CWS")) {
+					    	// Very specific manual override needed to run 2025 CWS
+							// Problem is not enough qualified first baseman
+							// Manually insert Curtis Mead at 1B batting 8th
+							String firstBase = positions.get(3);
+							MLBPlayer curtisMead = rosters[t].getBatters().get(678554);
+							playersInLineupList.add(curtisMead.getMlbPlayerId());
+							batters.get(t).get(7).add(new MLBPlayer(curtisMead.getMlbPlayerId(), curtisMead.getFullName(), firstBase, curtisMead.getArmThrows(), curtisMead.getBats(), 
+								curtisMead.getJerseyNumber(), null, curtisMead.getMlbFieldingStats()));
+							positionsUsed.add(firstBase);  // 1B
+						}
+						else if (years[t] == 1980 && teams[t].getShortTeamName().equals("PHI")) {
 							// Very specific manual override needed to run 1980 World Series
 							// Problem is Pete Rose is listed as a 3B in DB but he played 1B in 1980
 							// Cant change his position in DB as it will break '76 Reds
 							// Manually insert Mike Schmidt at 1B batting 8th
-							String firstBase = positions.get(3);
+							/*String firstBase = positions.get(3);
 							MLBPlayer mikeSchmidt = rosters[t].getBatters().get(121836);
 							playersInLineupList.add(mikeSchmidt.getMlbPlayerId());
 							batters.get(t).get(7).add(new MLBPlayer(mikeSchmidt.getMlbPlayerId(), mikeSchmidt.getFullName(), firstBase, mikeSchmidt.getArmThrows(), mikeSchmidt.getBats(), 
 								mikeSchmidt.getJerseyNumber(), null, mikeSchmidt.getMlbFieldingStats()));
-							positionsUsed.add(firstBase);  // 1B
+							positionsUsed.add(firstBase);  // 1B */
 						}
-						else {*/
+						else {
 							System.out.println("Can not create a lineup for the " + years[t] + " " + teams[t].getFullTeamName() + " with players:");
 							for (Map.Entry<Integer, MLBPlayer> mapElement : rosters[t].getBatters().entrySet()) {
 								System.out.println(mapElement.getValue().getFullName() + "<" + mapElement.getValue().getMlbPlayerId() + "> " + mapElement.getValue().getPrimaryPositionByFieldingStats());
 							}
 							return null;
+						}
 					}
 					//return batters;
 				}
