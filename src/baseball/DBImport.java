@@ -44,7 +44,7 @@ public class DBImport {
 		// Example PLAYER 2022 2022 ALL F
 		// Example PLAYER 2022 2022 NYY W
 		// Example PLAYER 2022 2022 BOS F W
-		// Example POST 1903 1905
+		// Example POST 1903 1905 ALL
 		int startYear = 0;
 		int endYear = -1;
 		boolean allYears = false;
